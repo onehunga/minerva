@@ -2,6 +2,7 @@ plugins {
     java
     id("org.springframework.boot") version "4.0.6"
     id("io.spring.dependency-management") version "1.1.7"
+    id("com.diffplug.spotless") version "8.4.0"
 }
 
 group = "de.fallstudie.minerva"
@@ -44,6 +45,40 @@ dependencies {
 dependencyManagement {
     imports {
         mavenBom("org.springframework.modulith:spring-modulith-bom:${property("springModulithVersion")}")
+    }
+}
+
+spotless {
+    java {
+        target("src/**/*.java")
+
+        eclipse().configProperties(
+            """
+            org.eclipse.jdt.core.formatter.tabulation.char=tab
+            org.eclipse.jdt.core.formatter.tabulation.size=4
+            org.eclipse.jdt.core.formatter.indentation.size=4
+            org.eclipse.jdt.core.formatter.lineSplit=100
+            """.trimIndent(),
+        )
+
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+        formatAnnotations()
+    }
+
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint()
+            .setEditorConfigPath(projectDir.path + "/.editorconfig")
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+
+    format("misc") {
+        target("*.md", ".gitignore", "*.yml", "*.yaml", "*.properties")
+        trimTrailingWhitespace()
+        endWithNewline()
     }
 }
 

@@ -1,3 +1,6 @@
+glob_matcher: doublestar
+be_quiet: true
+
 pre-commit:
   parallel: true
   jobs:
@@ -13,6 +16,10 @@ pre-commit:
       root: frontend
       glob: "**/*.{ts,vue}"
       run: bun run type-check
+    - name: backend/format-check
+      root: backend
+      glob: "**/*.java"
+      run: ./gradlew spotlessCheck -q
 
 pre-push:
   jobs:
@@ -20,6 +27,10 @@ pre-push:
       root: frontend
       glob: "**/*.spec.{ts,js,vue}"
       run: bun run test:unit
+    - name: backend/tests
+      root: backend
+      glob: "**/*.java"
+      run: ./gradlew :test -q
 
 
 # EXAMPLE USAGE:
