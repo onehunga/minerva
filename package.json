@@ -1,0 +1,9 @@
+{
+	"name": "minerva",
+	"scripts": {
+		"prepare": "lefthook install"
+	},
+	"devDependencies": {
+		"lefthook": "^2.1.6"
+	}
+}
