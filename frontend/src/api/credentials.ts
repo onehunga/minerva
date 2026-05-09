@@ -7,12 +7,16 @@ export type TokenPair = {
 
 const authPaths: Set<string> = new Set(["/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh"]);
 
+const refreshTokenStorage: Storage = sessionStorage;
+const refreshTokenStorageKey: string = "minerva.refreshToken";
+
 const tokens: ShallowRef<TokenPair | null> = shallowRef<TokenPair | null>(null);
 
 export const isAuthenticated: ComputedRef<boolean> = computed((): boolean => tokens.value !== null);
 
 export function setTokens(nextTokens: TokenPair): void {
 	tokens.value = nextTokens;
+	refreshTokenStorage.setItem(refreshTokenStorageKey, nextTokens.refreshToken);
 }
 
 /**
@@ -20,6 +24,7 @@ export function setTokens(nextTokens: TokenPair): void {
  */
 export function clearTokens(): void {
 	tokens.value = null;
+	refreshTokenStorage.removeItem(refreshTokenStorageKey);
 }
 
 export function isAuthPath(url: string | undefined): boolean {
@@ -42,6 +47,25 @@ export function getAuthorizationHeader(): string | null {
 
 let refreshPromise: Promise<TokenPair> | null = null;
 
+export async function initializeAuth(): Promise<void> {
+	const refreshToken: string | null = refreshTokenStorage.getItem(refreshTokenStorageKey);
+
+	if (refreshToken === null) {
+		return;
+	}
+
+	tokens.value = {
+		accessToken: "",
+		refreshToken,
+	};
+
+	try {
+		await refreshTokens();
+	} catch {
+		clearTokens();
+	}
+}
+
 export async function refreshTokens(): Promise<void> {
 	if (tokens.value === null) {
 		throw new Error("Cannot refresh without a refresh token.");
@@ -52,7 +76,7 @@ export async function refreshTokens(): Promise<void> {
 		return;
 	}
 
-	fetch("/api/v1/auth/refresh", {
+	refreshPromise = fetch("/api/v1/auth/refresh", {
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
@@ -62,8 +86,14 @@ export async function refreshTokens(): Promise<void> {
 		}),
 	})
 		.then(async (res: Response) => {
-			const tokens: TokenPair = (await res.json()) as TokenPair;
-			setTokens(tokens);
+			if (!res.ok) {
+				throw new Error("Token refresh failed.");
+			}
+
+			const nextTokens: TokenPair = (await res.json()) as TokenPair;
+			setTokens(nextTokens);
+
+			return nextTokens;
 		})
 		.catch((err: unknown) => {
 			clearTokens();
@@ -72,4 +102,6 @@ export async function refreshTokens(): Promise<void> {
 		.finally(() => {
 			refreshPromise = null;
 		});
+
+	await refreshPromise;
 }
