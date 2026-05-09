@@ -6,10 +6,7 @@ import axios, {
 	type InternalAxiosRequestConfig,
 } from "axios";
 
-export type TokenPair = {
-	accessToken: string;
-	refreshToken: string;
-};
+import { clearTokens, getAuthorizationHeader, isAuthPath, refreshTokens } from "@/api/credentials";
 
 type AuthRequestConfig = InternalAxiosRequestConfig & {
 	_retry?: boolean;
@@ -17,95 +14,26 @@ type AuthRequestConfig = InternalAxiosRequestConfig & {
 	skipAuthRefresh?: boolean;
 };
 
-type StoredTokens = {
-	accessToken: string | null;
-	refreshToken: string | null;
-};
-
-const authPaths: Set<string> = new Set(["/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh"]);
-
-const tokens: StoredTokens = {
-	accessToken: null,
-	refreshToken: null,
-};
-
-let refreshPromise: Promise<TokenPair> | null = null;
-
 export const client: AxiosInstance = axios.create({
 	baseURL: "/api",
 });
 
-export function setTokens(nextTokens: TokenPair): void {
-	tokens.accessToken = nextTokens.accessToken;
-	tokens.refreshToken = nextTokens.refreshToken;
-}
-
-export function clearTokens(): void {
-	tokens.accessToken = null;
-	tokens.refreshToken = null;
-	refreshPromise = null;
-}
-
-export function getTokens(): StoredTokens {
-	return {
-		accessToken: tokens.accessToken,
-		refreshToken: tokens.refreshToken,
-	};
-}
-
-function isAuthPath(url: string | undefined): boolean {
-	if (url === undefined) {
-		return false;
-	}
-
-	const path: string = url.startsWith("/api/") ? url.slice(4) : url;
-
-	return authPaths.has(path);
-}
-
-async function refreshTokens(): Promise<TokenPair> {
-	if (tokens.refreshToken === null) {
-		throw new Error("Cannot refresh without a refresh token.");
-	}
-
-	refreshPromise ??= client
-		.post<TokenPair>(
-			"/v1/auth/refresh",
-			{
-				refreshToken: tokens.refreshToken,
-			},
-			{
-				skipAuthHeader: true,
-				skipAuthRefresh: true,
-			} as AuthRequestConfig,
-		)
-		.then((response: AxiosResponse<TokenPair>): TokenPair => {
-			setTokens(response.data);
-
-			return response.data;
-		})
-		.finally((): void => {
-			refreshPromise = null;
-		});
-
-	return refreshPromise;
-}
-
 client.interceptors.request.use(
 	(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
 		const authConfig: AuthRequestConfig = config as AuthRequestConfig;
+		const authorizationHeader: string | null = getAuthorizationHeader();
 
 		if (
 			authConfig.skipAuthHeader === true ||
 			isAuthPath(authConfig.url) ||
-			tokens.accessToken === null
+			authorizationHeader === null
 		) {
 			return config;
 		}
 
 		const headers: AxiosHeaders = AxiosHeaders.from(config.headers);
 
-		headers.set("Authorization", `Bearer ${tokens.accessToken}`);
+		headers.set("Authorization", authorizationHeader);
 		config.headers = headers;
 
 		return config;
