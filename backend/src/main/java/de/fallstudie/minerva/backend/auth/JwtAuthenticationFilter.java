@@ -39,10 +39,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 			throw new IllegalStateException("Authentication already set");
 		}
 
-		final Identity identity = jwtService.validateIdentity(token);
-		final UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-				identity, null, AuthorityUtils.NO_AUTHORITIES);
-		SecurityContextHolder.getContext().setAuthentication(authentication);
+		try {
+			final Identity identity = jwtService.validateIdentity(token);
+			final UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+					identity, null, AuthorityUtils.NO_AUTHORITIES);
+			SecurityContextHolder.getContext().setAuthentication(authentication);
+		}
+		catch (RuntimeException ex) {
+			SecurityContextHolder.clearContext();
+			response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+			return;
+		}
 
 		filterChain.doFilter(request, response);
 	}
