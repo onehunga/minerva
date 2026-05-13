@@ -1,8 +1,9 @@
+logging:
+  level:
+    root: INFO
+    de.fallstudie: TRACE
+
 spring:
-  logging:
-    level:
-      root: INFO
-      de.fallstudie: TRACE
   application:
     name: backend
   datasource:
