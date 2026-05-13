@@ -8,10 +8,12 @@
 		"build": "run-p type-check \"build-only {@}\" --",
 		"preview": "vite preview",
 		"test:unit": "vitest",
+		"test:unit:ci": "vitest run",
 		"build-only": "vite build",
 		"type-check": "vue-tsc --build",
 		"lint": "run-s lint:*",
-		"lint:oxlint": "oxlint . --fix",
+		"lint:oxlint": "oxlint .",
+		"lint:oxlint:fix": "oxlint . --fix",
 		"lint:eslint": "eslint . --fix --cache",
 		"format": "oxfmt src/",
 		"format:check": "oxfmt src/ --check"

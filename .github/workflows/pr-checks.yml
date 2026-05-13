@@ -1,0 +1,84 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - development
+  workflow_dispatch:
+
+jobs:
+  frontend:
+    name: frontend / lint test build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Formatting
+        run: bun run format:check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Test
+        run: bun run test:unit:ci
+
+      - name: Build
+        run: bun run build
+
+  backend:
+    name: backend / check build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      SPRING_PROFILES_ACTIVE: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Check formatting
+        run: ./gradlew --no-daemon spotlessCheck
+
+      - name: Run backend checks
+        run: ./gradlew --no-daemon check
+
+      - name: Build backend
+        run: ./gradlew --no-daemon bootJar
+
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: backend/build/reports/tests/
+          if-no-files-found: ignore
