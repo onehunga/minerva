@@ -17,13 +17,19 @@ export default defineConfigWithVueTs(
 				"error",
 				{
 					parameter: true,
-					variableDeclaration: true,
 					propertyDeclaration: true,
 					memberVariableDeclaration: true,
-					arrowParameter: true,
 				},
 			],
-			"@typescript-eslint/explicit-function-return-type": "error",
+			"@typescript-eslint/explicit-function-return-type": "off",
+			"@typescript-eslint/explicit-module-boundary-types": [
+				"error",
+				{
+					allowDirectConstAssertionInArrowFunctions: true,
+					allowHigherOrderFunctions: true,
+					allowTypedFunctionExpressions: true,
+				},
+			],
 
 			"vue/no-unused-vars": "error",
 			"vue/no-unused-components": "error",
