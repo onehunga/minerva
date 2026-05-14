@@ -148,11 +148,17 @@ databaseChangeLog:
             tableName: workspace_roles
             columns:
               - column:
+                  name: id
+                  valueComputed: nextval('workspace_roles_seq')
+              - column:
                   name: name
                   value: ADMIN
         - insert:
             tableName: workspace_roles
             columns:
+              - column:
+                  name: id
+                  valueComputed: nextval('workspace_roles_seq')
               - column:
                   name: name
                   value: USER
