@@ -2,7 +2,7 @@ package de.fallstudie.minerva.backend.internal.bootstrap;
 
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleModel;
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleRepository;
+import de.fallstudie.minerva.backend.authorization.WorkspaceRoleService;
 import de.fallstudie.minerva.backend.user.UserModel;
 import de.fallstudie.minerva.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +20,7 @@ public class InitialAdminBootstrap implements ApplicationRunner {
 	private static final String ADMIN_USERNAME = "admin";
 
 	private final UserRepository userRepository;
-	private final WorkspaceRoleRepository workspaceRoleRepository;
+	private final WorkspaceRoleService workspaceRoleService;
 	private final PasswordEncoder passwordEncoder;
 
 	@Value("${INITIAL_ADMIN_PASSWORD:}")
@@ -37,7 +37,7 @@ public class InitialAdminBootstrap implements ApplicationRunner {
 			return;
 		}
 
-		WorkspaceRoleModel adminRole = workspaceRoleRepository.findByName(WorkspaceRoleName.ADMIN)
+		WorkspaceRoleModel adminRole = workspaceRoleService.find(WorkspaceRoleName.ADMIN)
 				.orElseThrow(() -> new IllegalStateException("ADMIN workspace role is missing"));
 
 		UserModel adminUser = new UserModel();
