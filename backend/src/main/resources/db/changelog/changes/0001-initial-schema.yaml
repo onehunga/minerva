@@ -61,6 +61,9 @@ databaseChangeLog:
                   type: VARCHAR(255)
                   constraints:
                     nullable: false
+              - column:
+                  name: workspace_role_id
+                  type: BIGINT
   - changeSet:
       id: 1778689677087-3
       author: julian
@@ -91,3 +94,76 @@ databaseChangeLog:
             referencedColumnNames: id
             referencedTableName: users
 
+  - changeSet:
+      id: 1778757202712-1
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            incrementBy: 50
+            sequenceName: workspace_roles_seq
+            startValue: 1
+  - changeSet:
+      id: 1778757202712-2
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_workspace_roles
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+            tableName: workspace_roles
+  - changeSet:
+      id: 1778757202712-3
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            tableName: workspace_roles
+            columnNames: name
+            constraintName: uc_workspace_roles_name
+  - changeSet:
+      id: 1778757202712-4
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - sql:
+            sql: ALTER TABLE workspace_roles ADD CONSTRAINT chk_workspace_roles_name CHECK (name IN ('ADMIN', 'USER'))
+  - changeSet:
+      id: 1778757202712-5
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - insert:
+            tableName: workspace_roles
+            columns:
+              - column:
+                  name: name
+                  value: ADMIN
+        - insert:
+            tableName: workspace_roles
+            columns:
+              - column:
+                  name: name
+                  value: USER
+  - changeSet:
+      id: 1778757202712-6
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: workspace_role_id
+            baseTableName: users
+            constraintName: FK_USERS_ON_WORKSPACE_ROLE
+            referencedColumnNames: id
+            referencedTableName: workspace_roles
