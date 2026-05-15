@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class AuthorizationErrorHandler {
 
 	@ExceptionHandler(InvalidUserException.class)
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
+	@ResponseStatus(HttpStatus.FORBIDDEN)
 	public String invalidUser() {
 		return "Invalid user";
 	}
