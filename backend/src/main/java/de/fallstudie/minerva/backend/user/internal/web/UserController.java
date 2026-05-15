@@ -1,6 +1,7 @@
-package de.fallstudie.minerva.backend.user;
+package de.fallstudie.minerva.backend.user.internal.web;
 
 import de.fallstudie.minerva.backend.auth.Identity;
+import de.fallstudie.minerva.backend.user.internal.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

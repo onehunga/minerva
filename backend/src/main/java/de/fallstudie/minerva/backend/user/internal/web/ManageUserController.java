@@ -18,7 +18,16 @@ public class ManageUserController {
 	private final ManageUsersService userService;
 	private final WorkspaceAuthorizationService workspaceAuthorizationService;
 
-	@PostMapping("/create")
+	@GetMapping
+	public UserRecordListResponse get(@AuthenticationPrincipal Identity identity)
+			throws AuthorizationException {
+		log.trace("Getting all users for workspace");
+
+		workspaceAuthorizationService.isWorkspaceAdmin(identity.userId());
+		return userService.getAllUsers();
+	}
+
+	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public void create(@AuthenticationPrincipal Identity identity,
 			@RequestBody CreateUserRequest createUserRequest) throws AuthorizationException {
@@ -28,14 +37,5 @@ public class ManageUserController {
 		workspaceAuthorizationService.isWorkspaceAdmin(identity.userId());
 		userService.createUser(createUserRequest.username(), createUserRequest.password(),
 				createUserRequest.role());
-	}
-
-	@GetMapping("/allUsers")
-	public UserRecordListResponse get(@AuthenticationPrincipal Identity identity)
-			throws AuthorizationException {
-		log.trace("Getting all users for workspace");
-
-		workspaceAuthorizationService.isWorkspaceAdmin(identity.userId());
-		return userService.getAllUsers();
 	}
 }
