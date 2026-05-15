@@ -1,4 +1,5 @@
 export * as api from "./user.api";
+export * from "./user.session";
 export * from "./user.store";
 
 export { default as CreateComponent } from "./components/CreateComponent.vue";
