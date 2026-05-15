@@ -1,7 +1,7 @@
 import { createApp, type App as VueApp } from "vue";
 import { createPinia, type Pinia } from "pinia";
 
-import { initializeUserSession } from "@/feature/user";
+import { initializeUserSession, UserRepository, UserRepositoryKey } from "@/feature/user";
 
 import App from "./App.vue";
 import router from "./router";
@@ -14,5 +14,7 @@ app.use(pinia);
 await initializeUserSession();
 
 app.use(router);
+
+app.provide(UserRepositoryKey, new UserRepository());
 
 app.mount("#app");

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { UserCreateForm, UserList, api } from "@/feature/user";
+import { UserCreateForm, UserList, model, useUserRepository } from "@/feature/user";
 import { onMounted, ref } from "vue";
 
-const users = ref<api.UserRecord[]>([]);
+const userRepository = useUserRepository();
+
+const users = ref<model.UserRecord[]>([]);
 const isLoading = ref(false);
 const errorMessage = ref("");
 
@@ -11,7 +13,7 @@ async function loadUsers(): Promise<void> {
 	errorMessage.value = "";
 
 	try {
-		const response = await api.getAllUsers();
+		const response = await userRepository.getAllUsers();
 		users.value = response.users;
 	} catch {
 		errorMessage.value = "Benutzer konnten nicht geladen werden.";

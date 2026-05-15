@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
-import type { api } from ".";
+import type { model } from ".";
 
 export const useUserStore = defineStore("user", function () {
-	const userDetails = ref<api.UserDetails | null>(null);
+	const userDetails = ref<model.UserDetails | null>(null);
 
-	function setUserDetails(details: api.UserDetails | null): void {
+	function setUserDetails(details: model.UserDetails | null): void {
 		userDetails.value = details;
 	}
 

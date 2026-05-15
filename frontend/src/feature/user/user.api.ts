@@ -1,22 +1,5 @@
 import { client, type TokenPair } from "@/api";
-
-export type UserRole = "ADMIN" | "USER";
-
-export type UserDetails = {
-	id: number;
-	username: string;
-	role: UserRole;
-};
-
-export type UserRecord = {
-	id: number;
-	username: string;
-	role: UserRole;
-};
-
-export type UserRecordList = {
-	users: UserRecord[];
-};
+import { model } from ".";
 
 export async function login(username: string, password: string): Promise<TokenPair> {
 	return client
@@ -27,14 +10,14 @@ export async function login(username: string, password: string): Promise<TokenPa
 		.then((res) => res.data);
 }
 
-export async function details(): Promise<UserDetails> {
+export async function details(): Promise<model.UserDetails> {
 	return client.get("/v1/users/me").then((res) => res.data);
 }
 
 export async function createUser(
 	username: string,
 	password: string,
-	role: UserRole,
+	role: model.UserRole,
 ): Promise<void> {
 	return client.post("/v1/users", {
 		username: username,
@@ -43,6 +26,6 @@ export async function createUser(
 	});
 }
 
-export async function getAllUsers(): Promise<UserRecordList> {
-	return (await client.get("/v1/users")).data;
+export async function getAllUsers(): Promise<model.UserRecordList> {
+	return client.get("/v1/users").then((res) => res.data);
 }

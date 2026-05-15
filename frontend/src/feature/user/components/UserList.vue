@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { UserRecord } from "../user.api";
+import type { model } from "..";
 
 defineProps<{
-	users: UserRecord[];
+	users: model.UserRecord[];
 }>();
 </script>
 

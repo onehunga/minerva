@@ -1,17 +1,19 @@
 import { setTokens } from "@/api";
-import { api, useUserStore } from "..";
+import { useUserStore, useUserRepository } from "..";
 import { storeToRefs } from "pinia";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function useUser() {
 	const userStore = useUserStore();
 
+	const userRepository = useUserRepository();
+
 	async function login(username: string, password: string): Promise<void> {
-		const tokens = await api.login(username, password);
+		const tokens = await userRepository.login(username, password);
 
 		setTokens(tokens);
 
-		const userDetails = await api.details();
+		const userDetails = await userRepository.details();
 
 		userStore.setUserDetails(userDetails);
 	}

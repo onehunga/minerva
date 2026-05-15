@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import * as api from "../user.api";
+import { useUserRepository, type model } from "..";
 
 const emit = defineEmits<{
 	(event: "created"): void;
 }>();
 
+const userRepository = useUserRepository();
+
 const username = ref("");
 const password = ref("");
-const role = ref<api.UserRole>("USER");
+const role = ref<model.UserRole>("USER");
 const isSubmitting = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
@@ -19,7 +21,7 @@ async function createUser(): Promise<void> {
 	isSubmitting.value = true;
 
 	try {
-		await api.createUser(username.value, password.value, role.value);
+		await userRepository.createUser(username.value, password.value, role.value);
 
 		username.value = "";
 		password.value = "";
