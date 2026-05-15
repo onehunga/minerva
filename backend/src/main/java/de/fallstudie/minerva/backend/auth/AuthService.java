@@ -31,21 +31,6 @@ public class AuthService {
 	private long refreshExpirationMillis;
 
 	@Transactional
-	public void register(RegisterRequest request) {
-		String username = RequestUtils.requireValue(request.username(), "Username is required");
-		String password = RequestUtils.requireValue(request.password(), "Password is required");
-
-		if (userRepository.existsByUsername(username)) {
-			throw new DuplicateUsernameException("Username already exists");
-		}
-
-		UserModel user = new UserModel();
-		user.setUsername(username);
-		user.setPassword(passwordEncoder.encode(password));
-		userRepository.save(user);
-	}
-
-	@Transactional
 	public TokenResponse login(LoginRequest request) {
 		String username = RequestUtils.requireValue(request.username(), "Username is required");
 		String password = RequestUtils.requireValue(request.password(), "Password is required");
