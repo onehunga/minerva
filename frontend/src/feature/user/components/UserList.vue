@@ -1,13 +1,34 @@
 <script setup lang="ts">
-import type { model } from "..";
+import { onMounted, ref } from "vue";
+import { useUserRepository, type model } from "..";
 
-defineProps<{
-	users: model.UserRecord[];
-}>();
+const userRepository = useUserRepository();
+
+const users = ref<model.UserRecord[]>([]);
+const isLoading = ref(false);
+const errorMessage = ref("");
+
+async function loadUsers(): Promise<void> {
+	isLoading.value = true;
+	errorMessage.value = "";
+
+	try {
+		const response = await userRepository.getAllUsers();
+		users.value = response.users;
+	} catch {
+		errorMessage.value = "Benutzer konnten nicht geladen werden.";
+	} finally {
+		isLoading.value = false;
+	}
+}
+
+onMounted(loadUsers);
 </script>
 
 <template>
-	<p v-if="users.length === 0">Es sind noch keine Benutzer vorhanden.</p>
+	<p v-if="isLoading">Benutzer werden geladen...</p>
+	<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
+	<p v-else-if="users.length === 0">Es sind noch keine Benutzer vorhanden.</p>
 
 	<table v-else class="user-list">
 		<thead>

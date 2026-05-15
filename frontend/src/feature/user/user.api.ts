@@ -1,5 +1,5 @@
 import { client, type TokenPair } from "@/api";
-import { model } from ".";
+import type { model } from ".";
 
 export async function login(username: string, password: string): Promise<TokenPair> {
 	return client

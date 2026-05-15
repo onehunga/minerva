@@ -1,28 +1,12 @@
 <script setup lang="ts">
-import { UserCreateForm, UserList, model, useUserRepository } from "@/feature/user";
-import { onMounted, ref } from "vue";
+import { UserCreateForm, UserList } from "@/feature/user";
+import { ref } from "vue";
 
-const userRepository = useUserRepository();
+const refreshKey = ref(0);
 
-const users = ref<model.UserRecord[]>([]);
-const isLoading = ref(false);
-const errorMessage = ref("");
-
-async function loadUsers(): Promise<void> {
-	isLoading.value = true;
-	errorMessage.value = "";
-
-	try {
-		const response = await userRepository.getAllUsers();
-		users.value = response.users;
-	} catch {
-		errorMessage.value = "Benutzer konnten nicht geladen werden.";
-	} finally {
-		isLoading.value = false;
-	}
+function refreshUsers(): void {
+	refreshKey.value += 1;
 }
-
-onMounted(loadUsers);
 </script>
 
 <template>
@@ -35,14 +19,12 @@ onMounted(loadUsers);
 		<div class="admin-content">
 			<section class="admin-section">
 				<h2>Benutzer</h2>
-				<p v-if="isLoading">Benutzer werden geladen...</p>
-				<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
-				<UserList v-else :users="users" />
+				<UserList :key="refreshKey" />
 			</section>
 
 			<section class="admin-section">
 				<h2>Benutzer erstellen</h2>
-				<UserCreateForm @created="loadUsers" />
+				<UserCreateForm @created="refreshUsers" />
 			</section>
 		</div>
 	</main>
