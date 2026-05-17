@@ -6,6 +6,9 @@ logging:
 spring:
   application:
     name: backend
+  mvc:
+    problemdetails:
+      enabled: true
   datasource:
     url: jdbc:postgresql://localhost:5432/minerva-dev
     username: minerva-dev

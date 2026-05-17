@@ -13,11 +13,4 @@ public class AuthExceptionHandler {
 		problemDetail.setDetail(exception.getMessage());
 		return problemDetail;
 	}
-
-	@ExceptionHandler(DuplicateUsernameException.class)
-	ProblemDetail handleDuplicateUsername(DuplicateUsernameException exception) {
-		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
-		problemDetail.setDetail(exception.getMessage());
-		return problemDetail;
-	}
 }
