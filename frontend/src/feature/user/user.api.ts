@@ -29,3 +29,7 @@ export async function createUser(
 export async function getAllUsers(): Promise<model.UserRecordList> {
 	return client.get("/v1/users").then((res) => res.data);
 }
+
+export async function deleteUser(userId: number): Promise<void> {
+	return client.delete(`/v1/users/${userId}`);
+}

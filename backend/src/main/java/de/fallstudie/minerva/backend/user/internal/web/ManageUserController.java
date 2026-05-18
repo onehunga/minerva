@@ -38,4 +38,14 @@ public class ManageUserController {
 		userService.createUser(createUserRequest.username(), createUserRequest.password(),
 				createUserRequest.role());
 	}
+
+	@DeleteMapping("/{userId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void delete(@AuthenticationPrincipal Identity identity, @PathVariable long userId)
+			throws AuthorizationException {
+		log.trace("Deleting user with id {}", userId);
+
+		workspaceAuthorizationService.isWorkspaceAdmin(identity.userId());
+		userService.deleteUser(userId);
+	}
 }

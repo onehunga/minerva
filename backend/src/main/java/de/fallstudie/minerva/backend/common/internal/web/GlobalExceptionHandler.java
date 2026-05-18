@@ -1,6 +1,7 @@
 package de.fallstudie.minerva.backend.common.internal.web;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
+import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -19,6 +20,13 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(DuplicateResourceException.class)
 	ProblemDetail handleDuplicateResourceException(DuplicateResourceException exception) {
 		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+		problemDetail.setDetail(exception.getMessage());
+		return problemDetail;
+	}
+
+	@ExceptionHandler(ResourceNotFoundException.class)
+	ProblemDetail handleResourceNotFoundException(ResourceNotFoundException exception) {
+		ProblemDetail problemDetail = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
 		problemDetail.setDetail(exception.getMessage());
 		return problemDetail;
 	}

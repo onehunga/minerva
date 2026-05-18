@@ -9,6 +9,7 @@ export interface IUserRepository {
 	details(): Promise<UserDetails>;
 	createUser(username: string, password: string, role: UserRole): Promise<void>;
 	getAllUsers(): Promise<UserRecordList>;
+	deleteUser(userId: number): Promise<void>;
 }
 
 /**
@@ -29,5 +30,9 @@ export class UserRepository implements IUserRepository {
 
 	async getAllUsers(): Promise<UserRecordList> {
 		return api.getAllUsers();
+	}
+
+	async deleteUser(userId: number): Promise<void> {
+		return api.deleteUser(userId);
 	}
 }

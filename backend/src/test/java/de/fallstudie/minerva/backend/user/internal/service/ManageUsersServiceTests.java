@@ -1,9 +1,11 @@
 package de.fallstudie.minerva.backend.user.internal.service;
 
+import de.fallstudie.minerva.backend.auth.RefreshTokenRepository;
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleModel;
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleService;
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
+import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.user.UserModel;
 import de.fallstudie.minerva.backend.user.UserRepository;
@@ -23,6 +25,7 @@ class ManageUsersServiceTests {
 	private PasswordEncoder passwordEncoder;
 	private WorkspaceRoleService workspaceRoleService;
 	private UserRepository userRepository;
+	private RefreshTokenRepository refreshTokenRepository;
 	private ManageUsersService manageUsersService;
 
 	@BeforeEach
@@ -30,8 +33,9 @@ class ManageUsersServiceTests {
 		passwordEncoder = mock(PasswordEncoder.class);
 		workspaceRoleService = mock(WorkspaceRoleService.class);
 		userRepository = mock(UserRepository.class);
+		refreshTokenRepository = mock(RefreshTokenRepository.class);
 		manageUsersService = new ManageUsersService(passwordEncoder, workspaceRoleService,
-				userRepository);
+				userRepository, refreshTokenRepository);
 	}
 
 	@Test
@@ -103,6 +107,30 @@ class ManageUsersServiceTests {
 				() -> manageUsersService.createUser("valid-user", "password1", "USER"));
 
 		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void deleteUserDeletesRefreshTokensAndUser() {
+		final var user = mock(UserModel.class);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+		manageUsersService.deleteUser(42L);
+
+		verify(refreshTokenRepository).deleteByUserId(42L);
+		verify(userRepository).delete(user);
+		verify(userRepository).flush();
+	}
+
+	@Test
+	void deleteUserRejectsUnknownUser() {
+		when(userRepository.findById(42L)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class, () -> manageUsersService.deleteUser(42L));
+
+		verify(refreshTokenRepository, never()).deleteByUserId(anyLong());
+		verify(userRepository, never()).delete(any());
 		verify(userRepository, never()).flush();
 	}
 

@@ -24,10 +24,16 @@ const testUsers: model.UserRecord[] = [
 ];
 
 class MockUserRepository extends UserRepository {
+	deletedUserIds: number[] = [];
+
 	override async getAllUsers(): Promise<model.UserRecordList> {
 		return {
 			users: testUsers,
 		};
+	}
+
+	override async deleteUser(userId: number): Promise<void> {
+		this.deletedUserIds.push(userId);
 	}
 }
 
@@ -51,6 +57,12 @@ class PendingUserRepository extends UserRepository {
 	}
 }
 
+class FailingDeleteUserRepository extends MockUserRepository {
+	override async deleteUser(): Promise<void> {
+		throw new Error("Failed to delete user");
+	}
+}
+
 describe("UserList", () => {
 	it("renders all loaded users", async () => {
 		const wrapper = mount(UserList, {
@@ -71,6 +83,54 @@ describe("UserList", () => {
 			expect(wrapper.text()).toContain(user.username);
 			expect(wrapper.text()).toContain(user.role);
 		}
+	});
+
+	it("deletes a user and removes it from the list", async () => {
+		const userRepository = new MockUserRepository();
+		const wrapper = mount(UserList, {
+			global: {
+				provide: {
+					[UserRepositoryKey]: userRepository,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		const janeRow = wrapper.findAll("tbody tr")[1];
+		if (janeRow === undefined) {
+			throw new Error("Expected jane row to exist");
+		}
+		await janeRow.get("button").trigger("click");
+		await flushPromises();
+
+		expect(userRepository.deletedUserIds).toEqual([2]);
+		expect(wrapper.text()).not.toContain("jane");
+		expect(wrapper.findAll("tbody tr")).toHaveLength(2);
+	});
+
+	it("renders an alert when deleting a user fails", async () => {
+		const wrapper = mount(UserList, {
+			global: {
+				provide: {
+					[UserRepositoryKey]: new FailingDeleteUserRepository(),
+				},
+			},
+		});
+
+		await flushPromises();
+
+		const janeRow = wrapper.findAll("tbody tr")[1];
+		if (janeRow === undefined) {
+			throw new Error("Expected jane row to exist");
+		}
+		await janeRow.get("button").trigger("click");
+		await flushPromises();
+
+		const alert = wrapper.get("[role='alert']");
+
+		expect(alert.text()).toBe('Benutzer "jane" konnte nicht gelöscht werden.');
+		expect(wrapper.text()).toContain("jane");
 	});
 
 	it("renders the empty state when no users are loaded", async () => {

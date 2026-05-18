@@ -1,43 +1,31 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useUserRepository, type model } from "..";
+import { useManageUsers, type model } from "..";
 
 const emit = defineEmits<{
 	(event: "created"): void;
 }>();
 
-const userRepository = useUserRepository();
+const { createErrorMessage, createSuccessMessage, createUser, isCreatingUser } = useManageUsers();
 
 const username = ref("");
 const password = ref("");
 const role = ref<model.UserRole>("USER");
-const isSubmitting = ref(false);
-const errorMessage = ref("");
-const successMessage = ref("");
 
-async function createUser(): Promise<void> {
-	errorMessage.value = "";
-	successMessage.value = "";
-	isSubmitting.value = true;
+async function submitUser(): Promise<void> {
+	const wasCreated = await createUser(username.value, password.value, role.value);
 
-	try {
-		await userRepository.createUser(username.value, password.value, role.value);
-
+	if (wasCreated) {
 		username.value = "";
 		password.value = "";
 		role.value = "USER";
-		successMessage.value = "Benutzer wurde erstellt.";
 		emit("created");
-	} catch {
-		errorMessage.value = "Benutzer konnte nicht erstellt werden.";
-	} finally {
-		isSubmitting.value = false;
 	}
 }
 </script>
 
 <template>
-	<form class="user-create-form" @submit.prevent="createUser">
+	<form class="user-create-form" @submit.prevent="submitUser">
 		<div class="form-field">
 			<label for="username">Benutzername</label>
 			<input
@@ -69,11 +57,13 @@ async function createUser(): Promise<void> {
 			</select>
 		</div>
 
-		<p v-if="errorMessage" class="form-message" role="alert">{{ errorMessage }}</p>
-		<p v-if="successMessage" class="form-message">{{ successMessage }}</p>
+		<p v-if="createErrorMessage" class="form-message" role="alert">
+			{{ createErrorMessage }}
+		</p>
+		<p v-if="createSuccessMessage" class="form-message">{{ createSuccessMessage }}</p>
 
-		<button type="submit" :disabled="isSubmitting">
-			{{ isSubmitting ? "Wird erstellt..." : "Benutzer erstellen" }}
+		<button type="submit" :disabled="isCreatingUser">
+			{{ isCreatingUser ? "Wird erstellt..." : "Benutzer erstellen" }}
 		</button>
 	</form>
 </template>

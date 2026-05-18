@@ -8,4 +8,5 @@ export { default as UserCreateForm } from "./components/UserCreateForm.vue";
 export { default as UserList } from "./components/UserList.vue";
 
 export * from "./composables/useUser";
+export * from "./composables/useManageUsers";
 export * from "./composables/useUserRepository";
