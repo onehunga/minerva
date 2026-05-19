@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class ManageUsersService {
+	private static final String ADMIN_USERNAME = "admin";
 	private static final int MIN_USERNAME_LENGTH = 3;
 	private static final int MAX_USERNAME_LENGTH = 50;
 	private static final int MIN_PASSWORD_LENGTH = 8;
@@ -51,6 +52,31 @@ public class ManageUsersService {
 		userRepository.flush();
 	}
 
+	@Transactional
+	public void updateUserRole(long userId, String workspaceRole) {
+		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
+		final var user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		final var currentRoleName = user.getWorkspaceRole().getName();
+
+		if (currentRoleName == workspaceRoleName) {
+			return;
+		}
+
+		if (currentRoleName == WorkspaceRoleName.ADMIN
+				&& workspaceRoleName == WorkspaceRoleName.USER) {
+			validateAdminCanBeDemoted(user);
+		}
+
+		final var role = workspaceRoleService.find(workspaceRoleName)
+				.orElseThrow(() -> new ValidationException("Workspace role does not exist"));
+
+		user.setWorkspaceRole(role);
+		userRepository.save(user);
+		userRepository.flush();
+	}
+
 	public UserRecordListResponse getAllUsers() {
 		final var users = userRepository.findAll().stream()
 				.map(user -> new UserRecordResponse(user.getId(), user.getUsername(),
@@ -68,6 +94,16 @@ public class ManageUsersService {
 		refreshTokenRepository.deleteByUserId(userId);
 		userRepository.delete(user);
 		userRepository.flush();
+	}
+
+	private void validateAdminCanBeDemoted(UserModel user) {
+		if (ADMIN_USERNAME.equals(user.getUsername())) {
+			throw new ValidationException("Initial admin user cannot be demoted");
+		}
+
+		if (userRepository.countByWorkspaceRole_Name(WorkspaceRoleName.ADMIN) <= 1) {
+			throw new ValidationException("At least one admin user must remain");
+		}
 	}
 
 	private String validateUsername(String username) {

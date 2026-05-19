@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted } from "vue";
-import { useManageUsers } from "..";
+import { useManageUsers, type model } from "..";
 
 const {
 	deleteErrorMessage,
@@ -9,10 +9,22 @@ const {
 	isLoadingUsers,
 	loadErrorMessage,
 	loadUsers,
+	roleErrorMessage,
+	updateUserRole,
+	updatingRoleUserId,
 	users,
 } = useManageUsers();
 
 onMounted(loadUsers);
+
+async function changeUserRole(user: model.UserRecord, event: Event): Promise<void> {
+	const select = event.target as HTMLSelectElement;
+	const wasUpdated = await updateUserRole(user, select.value as model.UserRole);
+
+	if (!wasUpdated) {
+		select.value = user.role;
+	}
+}
 </script>
 
 <template>
@@ -22,6 +34,7 @@ onMounted(loadUsers);
 
 	<template v-else>
 		<p v-if="deleteErrorMessage" role="alert">{{ deleteErrorMessage }}</p>
+		<p v-if="roleErrorMessage" role="alert">{{ roleErrorMessage }}</p>
 
 		<table class="user-list">
 			<thead>
@@ -34,7 +47,17 @@ onMounted(loadUsers);
 			<tbody>
 				<tr v-for="user in users" :key="user.id">
 					<td>{{ user.username }}</td>
-					<td>{{ user.role }}</td>
+					<td>
+						<select
+							:aria-label="`Rolle von ${user.username}`"
+							:value="user.role"
+							:disabled="updatingRoleUserId === user.id"
+							@change="changeUserRole(user, $event)"
+						>
+							<option value="USER">USER</option>
+							<option value="ADMIN">ADMIN</option>
+						</select>
+					</td>
 					<td>
 						<button
 							type="button"

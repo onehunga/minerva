@@ -111,6 +111,104 @@ class ManageUsersServiceTests {
 	}
 
 	@Test
+	void updateUserRolePromotesUserToAdmin() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+		final var adminRole = createRole(WorkspaceRoleName.ADMIN);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+		when(workspaceRoleService.find(WorkspaceRoleName.ADMIN)).thenReturn(Optional.of(adminRole));
+
+		manageUsersService.updateUserRole(42L, "ADMIN");
+
+		assertEquals(adminRole, user.getWorkspaceRole());
+		verify(userRepository).save(user);
+		verify(userRepository).flush();
+		verify(userRepository, never()).countByWorkspaceRole_Name(any());
+	}
+
+	@Test
+	void updateUserRoleDemotesAdminWhenAnotherAdminRemains() {
+		final var user = createUser("jane", WorkspaceRoleName.ADMIN);
+		final var userRole = createRole(WorkspaceRoleName.USER);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+		when(userRepository.countByWorkspaceRole_Name(WorkspaceRoleName.ADMIN)).thenReturn(2L);
+		when(workspaceRoleService.find(WorkspaceRoleName.USER)).thenReturn(Optional.of(userRole));
+
+		manageUsersService.updateUserRole(42L, "USER");
+
+		assertEquals(userRole, user.getWorkspaceRole());
+		verify(userRepository).save(user);
+		verify(userRepository).flush();
+	}
+
+	@Test
+	void updateUserRoleRejectsLastAdminDemotion() {
+		final var user = createUser("jane", WorkspaceRoleName.ADMIN);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+		when(userRepository.countByWorkspaceRole_Name(WorkspaceRoleName.ADMIN)).thenReturn(1L);
+
+		assertThrows(ValidationException.class,
+				() -> manageUsersService.updateUserRole(42L, "USER"));
+
+		verify(workspaceRoleService, never()).find(any());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updateUserRoleRejectsInitialAdminDemotion() {
+		final var user = createUser("admin", WorkspaceRoleName.ADMIN);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+		assertThrows(ValidationException.class,
+				() -> manageUsersService.updateUserRole(42L, "USER"));
+
+		verify(userRepository, never()).countByWorkspaceRole_Name(any());
+		verify(workspaceRoleService, never()).find(any());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updateUserRoleAllowsUnchangedRole() {
+		final var user = createUser("admin", WorkspaceRoleName.ADMIN);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+		manageUsersService.updateUserRole(42L, "ADMIN");
+
+		verify(userRepository, never()).countByWorkspaceRole_Name(any());
+		verify(workspaceRoleService, never()).find(any());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updateUserRoleRejectsInvalidRole() {
+		assertThrows(ValidationException.class,
+				() -> manageUsersService.updateUserRole(42L, "SUPERADMIN"));
+
+		verify(userRepository, never()).findById(anyLong());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updateUserRoleRejectsUnknownUser() {
+		when(userRepository.findById(42L)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> manageUsersService.updateUserRole(42L, "USER"));
+
+		verify(workspaceRoleService, never()).find(any());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
 	void deleteUserDeletesRefreshTokensAndUser() {
 		final var user = mock(UserModel.class);
 
@@ -140,5 +238,18 @@ class ManageUsersServiceTests {
 
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();
+	}
+
+	private UserModel createUser(String username, WorkspaceRoleName roleName) {
+		final var user = new UserModel();
+		user.setUsername(username);
+		user.setWorkspaceRole(createRole(roleName));
+		return user;
+	}
+
+	private WorkspaceRoleModel createRole(WorkspaceRoleName roleName) {
+		final var role = mock(WorkspaceRoleModel.class);
+		when(role.getName()).thenReturn(roleName);
+		return role;
 	}
 }

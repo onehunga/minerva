@@ -25,11 +25,16 @@ const testUsers: model.UserRecord[] = [
 
 class MockUserRepository extends UserRepository {
 	deletedUserIds: number[] = [];
+	updatedUserRoles: { userId: number; role: model.UserRole }[] = [];
 
 	override async getAllUsers(): Promise<model.UserRecordList> {
 		return {
-			users: testUsers,
+			users: testUsers.map((user) => ({ ...user })),
 		};
+	}
+
+	override async updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+		this.updatedUserRoles.push({ userId, role });
 	}
 
 	override async deleteUser(userId: number): Promise<void> {
@@ -63,6 +68,12 @@ class FailingDeleteUserRepository extends MockUserRepository {
 	}
 }
 
+class FailingUpdateUserRoleRepository extends MockUserRepository {
+	override async updateUserRole(): Promise<void> {
+		throw new Error("Failed to update user role");
+	}
+}
+
 describe("UserList", () => {
 	it("renders all loaded users", async () => {
 		const wrapper = mount(UserList, {
@@ -83,6 +94,72 @@ describe("UserList", () => {
 			expect(wrapper.text()).toContain(user.username);
 			expect(wrapper.text()).toContain(user.role);
 		}
+	});
+
+	it("renders role selects with the current user roles", async () => {
+		const wrapper = mount(UserList, {
+			global: {
+				provide: {
+					[UserRepositoryKey]: new MockUserRepository(),
+				},
+			},
+		});
+
+		await flushPromises();
+
+		const selects = wrapper.findAll("select");
+
+		expect(selects).toHaveLength(testUsers.length);
+		expect((selects[0]?.element as HTMLSelectElement | undefined)?.value).toBe("ADMIN");
+		expect((selects[1]?.element as HTMLSelectElement | undefined)?.value).toBe("USER");
+		expect((selects[2]?.element as HTMLSelectElement | undefined)?.value).toBe("USER");
+	});
+
+	it("updates a user role and reflects it in the list", async () => {
+		const userRepository = new MockUserRepository();
+		const wrapper = mount(UserList, {
+			global: {
+				provide: {
+					[UserRepositoryKey]: userRepository,
+				},
+			},
+		});
+
+		await flushPromises();
+
+		const janeRoleSelect = wrapper.findAll("select")[1];
+		if (janeRoleSelect === undefined) {
+			throw new Error("Expected jane role select to exist");
+		}
+		await janeRoleSelect.setValue("ADMIN");
+		await flushPromises();
+
+		expect(userRepository.updatedUserRoles).toEqual([{ userId: 2, role: "ADMIN" }]);
+		expect((janeRoleSelect.element as HTMLSelectElement).value).toBe("ADMIN");
+	});
+
+	it("renders an alert and restores the previous role when updating a role fails", async () => {
+		const wrapper = mount(UserList, {
+			global: {
+				provide: {
+					[UserRepositoryKey]: new FailingUpdateUserRoleRepository(),
+				},
+			},
+		});
+
+		await flushPromises();
+
+		const janeRoleSelect = wrapper.findAll("select")[1];
+		if (janeRoleSelect === undefined) {
+			throw new Error("Expected jane role select to exist");
+		}
+		await janeRoleSelect.setValue("ADMIN");
+		await flushPromises();
+
+		const alert = wrapper.get("[role='alert']");
+
+		expect(alert.text()).toBe('Rolle von Benutzer "jane" konnte nicht aktualisiert werden.');
+		expect((janeRoleSelect.element as HTMLSelectElement).value).toBe("USER");
 	});
 
 	it("deletes a user and removes it from the list", async () => {

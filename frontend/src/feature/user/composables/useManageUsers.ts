@@ -7,12 +7,15 @@ type ManageUsers = {
 	isLoadingUsers: Ref<boolean>;
 	loadErrorMessage: Ref<string>;
 	deleteErrorMessage: Ref<string>;
+	roleErrorMessage: Ref<string>;
 	deletingUserId: Ref<number | null>;
+	updatingRoleUserId: Ref<number | null>;
 	isCreatingUser: Ref<boolean>;
 	createErrorMessage: Ref<string>;
 	createSuccessMessage: Ref<string>;
 	loadUsers(): Promise<void>;
 	createUser(username: string, password: string, role: UserRole): Promise<boolean>;
+	updateUserRole(user: UserRecord, role: UserRole): Promise<boolean>;
 	deleteUser(user: UserRecord): Promise<boolean>;
 };
 
@@ -23,7 +26,9 @@ export function useManageUsers(): ManageUsers {
 	const isLoadingUsers = ref(false);
 	const loadErrorMessage = ref("");
 	const deleteErrorMessage = ref("");
+	const roleErrorMessage = ref("");
 	const deletingUserId = ref<number | null>(null);
+	const updatingRoleUserId = ref<number | null>(null);
 	const isCreatingUser = ref(false);
 	const createErrorMessage = ref("");
 	const createSuccessMessage = ref("");
@@ -32,6 +37,7 @@ export function useManageUsers(): ManageUsers {
 		isLoadingUsers.value = true;
 		loadErrorMessage.value = "";
 		deleteErrorMessage.value = "";
+		roleErrorMessage.value = "";
 
 		try {
 			const response = await userRepository.getAllUsers();
@@ -64,6 +70,29 @@ export function useManageUsers(): ManageUsers {
 		}
 	}
 
+	async function updateUserRole(user: UserRecord, role: UserRole): Promise<boolean> {
+		roleErrorMessage.value = "";
+
+		if (user.role === role) {
+			return true;
+		}
+
+		const previousRole = user.role;
+		updatingRoleUserId.value = user.id;
+
+		try {
+			await userRepository.updateUserRole(user.id, role);
+			user.role = role;
+			return true;
+		} catch {
+			user.role = previousRole;
+			roleErrorMessage.value = `Rolle von Benutzer "${user.username}" konnte nicht aktualisiert werden.`;
+			return false;
+		} finally {
+			updatingRoleUserId.value = null;
+		}
+	}
+
 	async function deleteUser(user: UserRecord): Promise<boolean> {
 		deleteErrorMessage.value = "";
 		deletingUserId.value = user.id;
@@ -85,12 +114,15 @@ export function useManageUsers(): ManageUsers {
 		isLoadingUsers,
 		loadErrorMessage,
 		deleteErrorMessage,
+		roleErrorMessage,
 		deletingUserId,
+		updatingRoleUserId,
 		isCreatingUser,
 		createErrorMessage,
 		createSuccessMessage,
 		loadUsers,
 		createUser,
+		updateUserRole,
 		deleteUser,
 	};
 }

@@ -30,6 +30,12 @@ export async function getAllUsers(): Promise<model.UserRecordList> {
 	return client.get("/v1/users").then((res) => res.data);
 }
 
+export async function updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+	return client.patch(`/v1/users/${userId}/role`, {
+		role: role,
+	});
+}
+
 export async function deleteUser(userId: number): Promise<void> {
 	return client.delete(`/v1/users/${userId}`);
 }
