@@ -5,14 +5,11 @@ import { useUserRepository } from "./useUserRepository";
 type ManageUsers = {
 	users: Ref<UserRecord[]>;
 	isLoadingUsers: Ref<boolean>;
-	loadErrorMessage: Ref<string>;
-	deleteErrorMessage: Ref<string>;
-	roleErrorMessage: Ref<string>;
+	errorMessage: Ref<string>;
 	deletingUserId: Ref<number | null>;
 	updatingRoleUserId: Ref<number | null>;
 	isCreatingUser: Ref<boolean>;
-	createErrorMessage: Ref<string>;
-	createSuccessMessage: Ref<string>;
+	successMessage: Ref<string>;
 	loadUsers(): Promise<void>;
 	createUser(username: string, password: string, role: UserRole): Promise<boolean>;
 	updateUserRole(user: UserRecord, role: UserRole): Promise<boolean>;
@@ -24,26 +21,21 @@ export function useManageUsers(): ManageUsers {
 
 	const users = ref<UserRecord[]>([]);
 	const isLoadingUsers = ref(false);
-	const loadErrorMessage = ref("");
-	const deleteErrorMessage = ref("");
-	const roleErrorMessage = ref("");
+	const errorMessage = ref("");
 	const deletingUserId = ref<number | null>(null);
 	const updatingRoleUserId = ref<number | null>(null);
 	const isCreatingUser = ref(false);
-	const createErrorMessage = ref("");
-	const createSuccessMessage = ref("");
+	const successMessage = ref("");
 
 	async function loadUsers(): Promise<void> {
 		isLoadingUsers.value = true;
-		loadErrorMessage.value = "";
-		deleteErrorMessage.value = "";
-		roleErrorMessage.value = "";
+		errorMessage.value = "";
 
 		try {
 			const response = await userRepository.getAllUsers();
 			users.value = response.users;
 		} catch {
-			loadErrorMessage.value = "Benutzer konnten nicht geladen werden.";
+			errorMessage.value = "Benutzer konnten nicht geladen werden.";
 		} finally {
 			isLoadingUsers.value = false;
 		}
@@ -54,16 +46,16 @@ export function useManageUsers(): ManageUsers {
 		password: string,
 		role: UserRole,
 	): Promise<boolean> {
-		createErrorMessage.value = "";
-		createSuccessMessage.value = "";
+		errorMessage.value = "";
+		successMessage.value = "";
 		isCreatingUser.value = true;
 
 		try {
 			await userRepository.createUser(username, password, role);
-			createSuccessMessage.value = "Benutzer wurde erstellt.";
+			successMessage.value = "Benutzer wurde erstellt.";
 			return true;
 		} catch {
-			createErrorMessage.value = "Benutzer konnte nicht erstellt werden.";
+			errorMessage.value = "Benutzer konnte nicht erstellt werden.";
 			return false;
 		} finally {
 			isCreatingUser.value = false;
@@ -71,7 +63,7 @@ export function useManageUsers(): ManageUsers {
 	}
 
 	async function updateUserRole(user: UserRecord, role: UserRole): Promise<boolean> {
-		roleErrorMessage.value = "";
+		errorMessage.value = "";
 
 		if (user.role === role) {
 			return true;
@@ -86,7 +78,7 @@ export function useManageUsers(): ManageUsers {
 			return true;
 		} catch {
 			user.role = previousRole;
-			roleErrorMessage.value = `Rolle von Benutzer "${user.username}" konnte nicht aktualisiert werden.`;
+			errorMessage.value = `Rolle von Benutzer "${user.username}" konnte nicht aktualisiert werden.`;
 			return false;
 		} finally {
 			updatingRoleUserId.value = null;
@@ -94,7 +86,7 @@ export function useManageUsers(): ManageUsers {
 	}
 
 	async function deleteUser(user: UserRecord): Promise<boolean> {
-		deleteErrorMessage.value = "";
+		errorMessage.value = "";
 		deletingUserId.value = user.id;
 
 		try {
@@ -102,7 +94,7 @@ export function useManageUsers(): ManageUsers {
 			users.value = users.value.filter((currentUser) => currentUser.id !== user.id);
 			return true;
 		} catch {
-			deleteErrorMessage.value = `Benutzer "${user.username}" konnte nicht gelöscht werden.`;
+			errorMessage.value = `Benutzer "${user.username}" konnte nicht gelöscht werden.`;
 			return false;
 		} finally {
 			deletingUserId.value = null;
@@ -112,14 +104,11 @@ export function useManageUsers(): ManageUsers {
 	return {
 		users,
 		isLoadingUsers,
-		loadErrorMessage,
-		deleteErrorMessage,
-		roleErrorMessage,
+		errorMessage,
 		deletingUserId,
 		updatingRoleUserId,
 		isCreatingUser,
-		createErrorMessage,
-		createSuccessMessage,
+		successMessage,
 		loadUsers,
 		createUser,
 		updateUserRole,

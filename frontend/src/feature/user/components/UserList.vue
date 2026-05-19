@@ -3,13 +3,11 @@ import { onMounted } from "vue";
 import { useManageUsers, type model } from "..";
 
 const {
-	deleteErrorMessage,
 	deletingUserId,
 	deleteUser,
+	errorMessage,
 	isLoadingUsers,
-	loadErrorMessage,
 	loadUsers,
-	roleErrorMessage,
 	updateUserRole,
 	updatingRoleUserId,
 	users,
@@ -29,12 +27,11 @@ async function changeUserRole(user: model.UserRecord, event: Event): Promise<voi
 
 <template>
 	<p v-if="isLoadingUsers">Benutzer werden geladen...</p>
-	<p v-else-if="loadErrorMessage" role="alert">{{ loadErrorMessage }}</p>
+	<p v-else-if="errorMessage && users.length === 0" role="alert">{{ errorMessage }}</p>
 	<p v-else-if="users.length === 0">Es sind noch keine Benutzer vorhanden.</p>
 
 	<template v-else>
-		<p v-if="deleteErrorMessage" role="alert">{{ deleteErrorMessage }}</p>
-		<p v-if="roleErrorMessage" role="alert">{{ roleErrorMessage }}</p>
+		<p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
 
 		<table class="user-list">
 			<thead>

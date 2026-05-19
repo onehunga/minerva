@@ -6,7 +6,7 @@ const emit = defineEmits<{
 	(event: "created"): void;
 }>();
 
-const { createErrorMessage, createSuccessMessage, createUser, isCreatingUser } = useManageUsers();
+const { createUser, errorMessage, isCreatingUser, successMessage } = useManageUsers();
 
 const username = ref("");
 const password = ref("");
@@ -57,10 +57,10 @@ async function submitUser(): Promise<void> {
 			</select>
 		</div>
 
-		<p v-if="createErrorMessage" class="form-message" role="alert">
-			{{ createErrorMessage }}
+		<p v-if="errorMessage" class="form-message" role="alert">
+			{{ errorMessage }}
 		</p>
-		<p v-if="createSuccessMessage" class="form-message">{{ createSuccessMessage }}</p>
+		<p v-if="successMessage" class="form-message">{{ successMessage }}</p>
 
 		<button type="submit" :disabled="isCreatingUser">
 			{{ isCreatingUser ? "Wird erstellt..." : "Benutzer erstellen" }}
