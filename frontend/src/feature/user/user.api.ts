@@ -36,6 +36,18 @@ export async function updateUserRole(userId: number, role: model.UserRole): Prom
 	});
 }
 
+export async function updateUsername(userId: number, username: string): Promise<void> {
+	return client.patch(`/v1/users/${userId}/username`, {
+		username: username,
+	});
+}
+
+export async function updateUserPassword(userId: number, password: string): Promise<void> {
+	return client.patch(`/v1/users/${userId}/password`, {
+		password: password,
+	});
+}
+
 export async function deleteUser(userId: number): Promise<void> {
 	return client.delete(`/v1/users/${userId}`);
 }

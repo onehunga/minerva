@@ -111,6 +111,102 @@ class ManageUsersServiceTests {
 	}
 
 	@Test
+	void updateUsernameSavesValidUsername() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+		when(userRepository.existsByUsername("new-jane")).thenReturn(false);
+
+		manageUsersService.updateUsername(42L, " new-jane ");
+
+		assertEquals("new-jane", user.getUsername());
+		verify(userRepository).save(user);
+		verify(userRepository).flush();
+	}
+
+	@Test
+	void updateUsernameRejectsInvalidUsername() {
+		assertThrows(ValidationException.class, () -> manageUsersService.updateUsername(42L, "ab"));
+
+		verify(userRepository, never()).findById(anyLong());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updateUsernameRejectsDuplicateUsername() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+		when(userRepository.existsByUsername("max")).thenReturn(true);
+
+		assertThrows(DuplicateResourceException.class,
+				() -> manageUsersService.updateUsername(42L, "max"));
+
+		assertEquals("jane", user.getUsername());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updateUsernameRejectsUnknownUser() {
+		when(userRepository.findById(42L)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> manageUsersService.updateUsername(42L, "new-jane"));
+
+		verify(userRepository, never()).existsByUsername(anyString());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updatePasswordSavesEncodedPassword() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+
+		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+		when(passwordEncoder.encode("password2")).thenReturn("encoded-password-2");
+
+		manageUsersService.updatePassword(42L, "password2");
+
+		assertEquals("encoded-password-2", user.getPassword());
+		verify(userRepository).save(user);
+		verify(userRepository).flush();
+	}
+
+	@Test
+	void updatePasswordRejectsMissingPassword() {
+		assertThrows(ValidationException.class, () -> manageUsersService.updatePassword(42L, null));
+		assertThrows(ValidationException.class, () -> manageUsersService.updatePassword(42L, "  "));
+
+		verify(userRepository, never()).findById(anyLong());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updatePasswordRejectsShortPassword() {
+		assertThrows(ValidationException.class,
+				() -> manageUsersService.updatePassword(42L, "short"));
+
+		verify(userRepository, never()).findById(anyLong());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void updatePasswordRejectsUnknownUser() {
+		when(userRepository.findById(42L)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> manageUsersService.updatePassword(42L, "password2"));
+
+		verify(passwordEncoder, never()).encode(anyString());
+		verify(userRepository, never()).save(any());
+		verify(userRepository, never()).flush();
+	}
+
+	@Test
 	void updateUserRolePromotesUserToAdmin() {
 		final var user = createUser("jane", WorkspaceRoleName.USER);
 		final var adminRole = createRole(WorkspaceRoleName.ADMIN);

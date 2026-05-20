@@ -34,20 +34,27 @@ public class JwtService {
 		Instant now = Instant.now();
 		Instant expiresAt = now.plusMillis(jwtExpirationMillis);
 
-		return Jwts.builder().subject(user.getUsername()).issuedAt(Date.from(now))
+		return Jwts.builder().subject(String.valueOf(user.getId())).issuedAt(Date.from(now))
 				.expiration(Date.from(expiresAt)).signWith(signingKey()).compact();
 	}
 
 	public Identity validateIdentity(String token) {
 		final Claims claims = parseClaims(token);
 
-		final String username = claims.getSubject();
+		final String userId = claims.getSubject();
 
-		if (username == null) {
-			throw new JwtException("Username is null");
+		if (userId == null) {
+			throw new JwtException("User id is null");
 		}
 
-		final UserModel model = this.userRepository.findByUsername(username)
+		final long parsedUserId;
+		try {
+			parsedUserId = Long.parseLong(userId);
+		} catch (NumberFormatException exception) {
+			throw new JwtException("User id is invalid", exception);
+		}
+
+		final UserModel model = this.userRepository.findById(parsedUserId)
 				.orElseThrow(() -> new JwtException("User not found"));
 
 		return new Identity(model.getId());

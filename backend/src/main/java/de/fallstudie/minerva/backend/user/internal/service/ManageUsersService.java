@@ -77,6 +77,36 @@ public class ManageUsersService {
 		userRepository.flush();
 	}
 
+	@Transactional
+	public void updateUsername(long userId, String username) {
+		final var validatedUsername = validateUsername(username);
+		final var user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		if (user.getUsername().equals(validatedUsername)) {
+			return;
+		}
+
+		if (userRepository.existsByUsername(validatedUsername)) {
+			throw new DuplicateResourceException("Username already exists");
+		}
+
+		user.setUsername(validatedUsername);
+		userRepository.save(user);
+		userRepository.flush();
+	}
+
+	@Transactional
+	public void updatePassword(long userId, String password) {
+		validatePassword(password);
+		final var user = userRepository.findById(userId)
+				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+		user.setPassword(passwordEncoder.encode(password));
+		userRepository.save(user);
+		userRepository.flush();
+	}
+
 	public UserRecordListResponse getAllUsers() {
 		final var users = userRepository.findAll().stream()
 				.map(user -> new UserRecordResponse(user.getId(), user.getUsername(),

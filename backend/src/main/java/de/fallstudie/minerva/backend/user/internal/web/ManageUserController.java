@@ -51,6 +51,29 @@ public class ManageUserController {
 		userService.updateUserRole(userId, updateUserRoleRequest.role());
 	}
 
+	@PatchMapping("/{userId}/username")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void updateUsername(@AuthenticationPrincipal Identity identity,
+			@PathVariable long userId, @RequestBody UpdateUsernameRequest updateUsernameRequest)
+			throws AuthorizationException {
+		log.trace("Updating username for user with id {}", userId);
+
+		workspaceAuthorizationService.isWorkspaceAdmin(identity.userId());
+		userService.updateUsername(userId, updateUsernameRequest.username());
+	}
+
+	@PatchMapping("/{userId}/password")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void updatePassword(@AuthenticationPrincipal Identity identity,
+			@PathVariable long userId,
+			@RequestBody UpdateUserPasswordRequest updateUserPasswordRequest)
+			throws AuthorizationException {
+		log.trace("Updating password for user with id {}", userId);
+
+		workspaceAuthorizationService.isWorkspaceAdmin(identity.userId());
+		userService.updatePassword(userId, updateUserPasswordRequest.password());
+	}
+
 	@DeleteMapping("/{userId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void delete(@AuthenticationPrincipal Identity identity, @PathVariable long userId)

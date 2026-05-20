@@ -1,27 +1,23 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useManageUsers, type model } from "..";
+import BaseModal from "@/components/BaseModal.vue";
+import { onMounted, ref } from "vue";
+import { useManageUsers } from "..";
+import type { UserRecord } from "../user.model";
+import UserEditForm from "./UserEditForm.vue";
 
-const {
-	deletingUserId,
-	deleteUser,
-	errorMessage,
-	isLoadingUsers,
-	loadUsers,
-	updateUserRole,
-	updatingRoleUserId,
-	users,
-} = useManageUsers();
+const { deletingUserId, deleteUser, errorMessage, isLoadingUsers, loadUsers, users } =
+	useManageUsers();
+
+const selectedUser = ref<UserRecord | null>(null);
 
 onMounted(loadUsers);
 
-async function changeUserRole(user: model.UserRecord, event: Event): Promise<void> {
-	const select = event.target as HTMLSelectElement;
-	const wasUpdated = await updateUserRole(user, select.value as model.UserRole);
+function openEditModal(user: UserRecord): void {
+	selectedUser.value = user;
+}
 
-	if (!wasUpdated) {
-		select.value = user.role;
-	}
+function closeEditModal(): void {
+	selectedUser.value = null;
 }
 </script>
 
@@ -44,18 +40,15 @@ async function changeUserRole(user: model.UserRecord, event: Event): Promise<voi
 			<tbody>
 				<tr v-for="user in users" :key="user.id">
 					<td>{{ user.username }}</td>
+					<td>{{ user.role }}</td>
 					<td>
-						<select
-							:aria-label="`Rolle von ${user.username}`"
-							:value="user.role"
-							:disabled="updatingRoleUserId === user.id"
-							@change="changeUserRole(user, $event)"
+						<button
+							type="button"
+							:aria-label="`Benutzer ${user.username} bearbeiten`"
+							@click="openEditModal(user)"
 						>
-							<option value="USER">USER</option>
-							<option value="ADMIN">ADMIN</option>
-						</select>
-					</td>
-					<td>
+							...
+						</button>
 						<button
 							type="button"
 							:disabled="deletingUserId !== null"
@@ -68,6 +61,17 @@ async function changeUserRole(user: model.UserRecord, event: Event): Promise<voi
 			</tbody>
 		</table>
 	</template>
+
+	<BaseModal :open="selectedUser !== null" @close="closeEditModal">
+		<template #title>Benutzer bearbeiten</template>
+
+		<UserEditForm
+			v-if="selectedUser !== null"
+			:user="selectedUser"
+			@saved="closeEditModal"
+			@cancel="closeEditModal"
+		/>
+	</BaseModal>
 </template>
 
 <style scoped>
@@ -81,5 +85,10 @@ async function changeUserRole(user: model.UserRecord, event: Event): Promise<voi
 	padding: 0.5rem;
 	text-align: left;
 	border-bottom: 1px solid currentColor;
+}
+
+.user-list td:last-child {
+	display: flex;
+	gap: 0.5rem;
 }
 </style>

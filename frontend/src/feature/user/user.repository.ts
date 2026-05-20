@@ -10,6 +10,8 @@ export interface IUserRepository {
 	createUser(username: string, password: string, role: UserRole): Promise<void>;
 	getAllUsers(): Promise<UserRecordList>;
 	updateUserRole(userId: number, role: UserRole): Promise<void>;
+	updateUsername(userId: number, username: string): Promise<void>;
+	updateUserPassword(userId: number, password: string): Promise<void>;
 	deleteUser(userId: number): Promise<void>;
 }
 
@@ -35,6 +37,14 @@ export class UserRepository implements IUserRepository {
 
 	async updateUserRole(userId: number, role: UserRole): Promise<void> {
 		return api.updateUserRole(userId, role);
+	}
+
+	async updateUsername(userId: number, username: string): Promise<void> {
+		return api.updateUsername(userId, username);
+	}
+
+	async updateUserPassword(userId: number, password: string): Promise<void> {
+		return api.updateUserPassword(userId, password);
 	}
 
 	async deleteUser(userId: number): Promise<void> {

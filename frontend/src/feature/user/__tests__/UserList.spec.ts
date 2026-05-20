@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { nextTick } from "vue";
@@ -26,6 +26,8 @@ const testUsers: model.UserRecord[] = [
 class MockUserRepository extends UserRepository {
 	deletedUserIds: number[] = [];
 	updatedUserRoles: { userId: number; role: model.UserRole }[] = [];
+	updatedUsernames: { userId: number; username: string }[] = [];
+	updatedUserPasswords: { userId: number; password: string }[] = [];
 
 	override async getAllUsers(): Promise<model.UserRecordList> {
 		return {
@@ -35,6 +37,14 @@ class MockUserRepository extends UserRepository {
 
 	override async updateUserRole(userId: number, role: model.UserRole): Promise<void> {
 		this.updatedUserRoles.push({ userId, role });
+	}
+
+	override async updateUsername(userId: number, username: string): Promise<void> {
+		this.updatedUsernames.push({ userId, username });
+	}
+
+	override async updateUserPassword(userId: number, password: string): Promise<void> {
+		this.updatedUserPasswords.push({ userId, password });
 	}
 
 	override async deleteUser(userId: number): Promise<void> {
@@ -68,15 +78,20 @@ class FailingDeleteUserRepository extends MockUserRepository {
 	}
 }
 
-class FailingUpdateUserRoleRepository extends MockUserRepository {
-	override async updateUserRole(): Promise<void> {
-		throw new Error("Failed to update user role");
+class FailingUpdateUsernameRepository extends MockUserRepository {
+	override async updateUsername(): Promise<void> {
+		throw new Error("Failed to update username");
 	}
 }
 
 describe("UserList", () => {
+	afterEach(() => {
+		document.body.innerHTML = "";
+	});
+
 	it("renders all loaded users", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: new MockUserRepository(),
@@ -96,8 +111,9 @@ describe("UserList", () => {
 		}
 	});
 
-	it("renders role selects with the current user roles", async () => {
+	it("renders edit action buttons instead of role selects", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: new MockUserRepository(),
@@ -107,17 +123,38 @@ describe("UserList", () => {
 
 		await flushPromises();
 
-		const selects = wrapper.findAll("select");
-
-		expect(selects).toHaveLength(testUsers.length);
-		expect((selects[0]?.element as HTMLSelectElement | undefined)?.value).toBe("ADMIN");
-		expect((selects[1]?.element as HTMLSelectElement | undefined)?.value).toBe("USER");
-		expect((selects[2]?.element as HTMLSelectElement | undefined)?.value).toBe("USER");
+		expect(wrapper.findAll("select")).toHaveLength(0);
+		expect(wrapper.findAll("[aria-label$='bearbeiten']")).toHaveLength(testUsers.length);
 	});
 
-	it("updates a user role and reflects it in the list", async () => {
+	it("opens the edit modal with the current user data", async () => {
+		const wrapper = mount(UserList, {
+			attachTo: document.body,
+			global: {
+				provide: {
+					[UserRepositoryKey]: new MockUserRepository(),
+				},
+			},
+		});
+
+		await flushPromises();
+
+		await wrapper.get('[aria-label="Benutzer jane bearbeiten"]').trigger("click");
+		await nextTick();
+
+		const dialog = document.body.querySelector("[role='dialog']");
+		const usernameInput = document.body.querySelector<HTMLInputElement>("#edit-username-2");
+		const roleSelect = document.body.querySelector<HTMLSelectElement>("#edit-role-2");
+
+		expect(dialog?.textContent).toContain("Benutzer bearbeiten");
+		expect(usernameInput?.value).toBe("jane");
+		expect(roleSelect?.value).toBe("USER");
+	});
+
+	it("updates changed username and role without changing an empty password", async () => {
 		const userRepository = new MockUserRepository();
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: userRepository,
@@ -127,44 +164,53 @@ describe("UserList", () => {
 
 		await flushPromises();
 
-		const janeRoleSelect = wrapper.findAll("select")[1];
-		if (janeRoleSelect === undefined) {
-			throw new Error("Expected jane role select to exist");
-		}
-		await janeRoleSelect.setValue("ADMIN");
+		await wrapper.get('[aria-label="Benutzer jane bearbeiten"]').trigger("click");
+		await nextTick();
+		setInputValue("#edit-username-2", "jane-new");
+		setSelectValue("#edit-role-2", "ADMIN");
+		await nextTick();
+		submitEditForm();
 		await flushPromises();
 
 		expect(userRepository.updatedUserRoles).toEqual([{ userId: 2, role: "ADMIN" }]);
-		expect((janeRoleSelect.element as HTMLSelectElement).value).toBe("ADMIN");
+		expect(userRepository.updatedUsernames).toEqual([{ userId: 2, username: "jane-new" }]);
+		expect(userRepository.updatedUserPasswords).toEqual([]);
+		expect(wrapper.text()).toContain("jane-new");
+		expect(wrapper.text()).toContain("ADMIN");
+		expect(document.body.querySelector("[role='dialog']")).toBeNull();
 	});
 
-	it("renders an alert and restores the previous role when updating a role fails", async () => {
+	it("keeps the modal open and leaves the row unchanged when updating fails", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
-					[UserRepositoryKey]: new FailingUpdateUserRoleRepository(),
+					[UserRepositoryKey]: new FailingUpdateUsernameRepository(),
 				},
 			},
 		});
 
 		await flushPromises();
 
-		const janeRoleSelect = wrapper.findAll("select")[1];
-		if (janeRoleSelect === undefined) {
-			throw new Error("Expected jane role select to exist");
-		}
-		await janeRoleSelect.setValue("ADMIN");
+		await wrapper.get('[aria-label="Benutzer jane bearbeiten"]').trigger("click");
+		await nextTick();
+		setInputValue("#edit-username-2", "jane-new");
+		await nextTick();
+		submitEditForm();
 		await flushPromises();
 
-		const alert = wrapper.get("[role='alert']");
+		const alert = document.body.querySelector("[role='alert']");
 
-		expect(alert.text()).toBe('Rolle von Benutzer "jane" konnte nicht aktualisiert werden.');
-		expect((janeRoleSelect.element as HTMLSelectElement).value).toBe("USER");
+		expect(alert?.textContent).toBe('Benutzer "jane" konnte nicht aktualisiert werden.');
+		expect(wrapper.text()).toContain("jane");
+		expect(wrapper.text()).not.toContain("jane-new");
+		expect(document.body.querySelector("[role='dialog']")).not.toBeNull();
 	});
 
 	it("deletes a user and removes it from the list", async () => {
 		const userRepository = new MockUserRepository();
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: userRepository,
@@ -178,7 +224,7 @@ describe("UserList", () => {
 		if (janeRow === undefined) {
 			throw new Error("Expected jane row to exist");
 		}
-		await janeRow.get("button").trigger("click");
+		await getDeleteButton(janeRow).trigger("click");
 		await flushPromises();
 
 		expect(userRepository.deletedUserIds).toEqual([2]);
@@ -188,6 +234,7 @@ describe("UserList", () => {
 
 	it("renders an alert when deleting a user fails", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: new FailingDeleteUserRepository(),
@@ -201,7 +248,7 @@ describe("UserList", () => {
 		if (janeRow === undefined) {
 			throw new Error("Expected jane row to exist");
 		}
-		await janeRow.get("button").trigger("click");
+		await getDeleteButton(janeRow).trigger("click");
 		await flushPromises();
 
 		const alert = wrapper.get("[role='alert']");
@@ -212,6 +259,7 @@ describe("UserList", () => {
 
 	it("renders the empty state when no users are loaded", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: new EmptyUserRepository(),
@@ -227,6 +275,7 @@ describe("UserList", () => {
 
 	it("renders an alert when loading users fails", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: new FailingUserRepository(),
@@ -244,6 +293,7 @@ describe("UserList", () => {
 
 	it("renders a loading state while users are loading", async () => {
 		const wrapper = mount(UserList, {
+			attachTo: document.body,
 			global: {
 				provide: {
 					[UserRepositoryKey]: new PendingUserRepository(),
@@ -257,3 +307,42 @@ describe("UserList", () => {
 		expect(wrapper.find("table").exists()).toBe(false);
 	});
 });
+
+function getDeleteButton(row: ReturnType<ReturnType<typeof mount>["findAll"]>[number]) {
+	const deleteButton = row.findAll("button").find((button) => button.text() === "Löschen");
+
+	if (deleteButton === undefined) {
+		throw new Error("Expected delete button to exist");
+	}
+
+	return deleteButton;
+}
+
+function setInputValue(selector: string, value: string): void {
+	const input = document.body.querySelector<HTMLInputElement>(selector);
+	if (input === null) {
+		throw new Error(`Expected input ${selector} to exist`);
+	}
+
+	input.value = value;
+	input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function setSelectValue(selector: string, value: string): void {
+	const select = document.body.querySelector<HTMLSelectElement>(selector);
+	if (select === null) {
+		throw new Error(`Expected select ${selector} to exist`);
+	}
+
+	select.value = value;
+	select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+function submitEditForm(): void {
+	const form = document.body.querySelector<HTMLFormElement>(".user-edit-form");
+	if (form === null) {
+		throw new Error("Expected edit form to exist");
+	}
+
+	form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+}
