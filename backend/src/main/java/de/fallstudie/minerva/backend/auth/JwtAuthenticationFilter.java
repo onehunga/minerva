@@ -1,5 +1,6 @@
 package de.fallstudie.minerva.backend.auth;
 
+import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

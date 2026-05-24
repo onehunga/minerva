@@ -1,5 +1,6 @@
 package de.fallstudie.minerva.backend.auth;
 
+import de.fallstudie.minerva.backend.user.Identity;
 import de.fallstudie.minerva.backend.user.UserModel;
 import de.fallstudie.minerva.backend.user.UserRepository;
 import io.jsonwebtoken.Claims;

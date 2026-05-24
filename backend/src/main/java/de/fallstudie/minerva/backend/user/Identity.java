@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.user;
 
 import java.security.Principal;
 

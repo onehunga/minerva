@@ -1,6 +1,5 @@
 package de.fallstudie.minerva.backend.user.internal.service;
 
-import de.fallstudie.minerva.backend.auth.RefreshTokenRepository;
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
 import de.fallstudie.minerva.backend.authorization.WorkspaceRoleService;
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
@@ -27,7 +26,6 @@ public class ManageUsersService {
 	private final PasswordEncoder passwordEncoder;
 	private final WorkspaceRoleService workspaceRoleService;
 	private final UserRepository userRepository;
-	private final RefreshTokenRepository refreshTokenRepository;
 
 	@Transactional
 	public void createUser(String username, String password, String workspaceRole) {
@@ -121,7 +119,6 @@ public class ManageUsersService {
 		final var user = userRepository.findById(userId)
 				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-		refreshTokenRepository.deleteByUserId(userId);
 		userRepository.delete(user);
 		userRepository.flush();
 	}

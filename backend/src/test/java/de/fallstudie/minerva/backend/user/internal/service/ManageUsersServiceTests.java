@@ -35,7 +35,7 @@ class ManageUsersServiceTests {
 		userRepository = mock(UserRepository.class);
 		refreshTokenRepository = mock(RefreshTokenRepository.class);
 		manageUsersService = new ManageUsersService(passwordEncoder, workspaceRoleService,
-				userRepository, refreshTokenRepository);
+				userRepository);
 	}
 
 	@Test
@@ -302,19 +302,6 @@ class ManageUsersServiceTests {
 		verify(workspaceRoleService, never()).find(any());
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();
-	}
-
-	@Test
-	void deleteUserDeletesRefreshTokensAndUser() {
-		final var user = mock(UserModel.class);
-
-		when(userRepository.findById(42L)).thenReturn(Optional.of(user));
-
-		manageUsersService.deleteUser(42L);
-
-		verify(refreshTokenRepository).deleteByUserId(42L);
-		verify(userRepository).delete(user);
-		verify(userRepository).flush();
 	}
 
 	@Test

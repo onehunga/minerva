@@ -93,6 +93,7 @@ databaseChangeLog:
             constraintName: FK_REFRESH_TOKENS_ON_USER
             referencedColumnNames: id
             referencedTableName: users
+            onDelete: CASCADE
 
   - changeSet:
       id: 1778757202712-1
