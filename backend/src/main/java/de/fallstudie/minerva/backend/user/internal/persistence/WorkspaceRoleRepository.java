@@ -1,7 +1,6 @@
-package de.fallstudie.minerva.backend.authorization.internal;
+package de.fallstudie.minerva.backend.user.internal.persistence;
 
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleModel;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

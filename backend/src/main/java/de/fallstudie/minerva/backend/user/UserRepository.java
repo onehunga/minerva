@@ -1,6 +1,5 @@
 package de.fallstudie.minerva.backend.user;
 
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

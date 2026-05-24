@@ -1,10 +1,10 @@
 package de.fallstudie.minerva.backend.internal.bootstrap;
 
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleModel;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleService;
 import de.fallstudie.minerva.backend.user.UserModel;
 import de.fallstudie.minerva.backend.user.UserRepository;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleService;
+import de.fallstudie.minerva.backend.user.internal.persistence.WorkspaceRoleModel;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;

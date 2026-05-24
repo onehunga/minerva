@@ -1,14 +1,14 @@
 package de.fallstudie.minerva.backend.user.internal.service;
 
 import de.fallstudie.minerva.backend.auth.RefreshTokenRepository;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleModel;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleName;
-import de.fallstudie.minerva.backend.authorization.WorkspaceRoleService;
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.user.UserModel;
 import de.fallstudie.minerva.backend.user.UserRepository;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleService;
+import de.fallstudie.minerva.backend.user.internal.persistence.WorkspaceRoleModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;

@@ -1,8 +1,8 @@
 package de.fallstudie.minerva.backend.user.internal.web;
 
-import de.fallstudie.minerva.backend.authorization.AuthorizationException;
-import de.fallstudie.minerva.backend.authorization.WorkspaceAuthorizationService;
+import de.fallstudie.minerva.backend.user.AuthorizationException;
 import de.fallstudie.minerva.backend.user.Identity;
+import de.fallstudie.minerva.backend.user.WorkspaceAuthorizationService;
 import de.fallstudie.minerva.backend.user.internal.service.ManageUsersService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

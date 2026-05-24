@@ -1,6 +1,7 @@
-package de.fallstudie.minerva.backend.authorization;
+package de.fallstudie.minerva.backend.user;
 
-import de.fallstudie.minerva.backend.authorization.internal.WorkspaceRoleRepository;
+import de.fallstudie.minerva.backend.user.internal.persistence.WorkspaceRoleModel;
+import de.fallstudie.minerva.backend.user.internal.persistence.WorkspaceRoleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,6 +1,6 @@
-package de.fallstudie.minerva.backend.authorization.internal.web;
+package de.fallstudie.minerva.backend.user.internal.web;
 
-import de.fallstudie.minerva.backend.authorization.internal.exception.InvalidUserException;
+import de.fallstudie.minerva.backend.user.internal.exception.InvalidUserException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
