@@ -1,6 +1,5 @@
 package de.fallstudie.minerva.backend.user;
 
-import de.fallstudie.minerva.backend.user.internal.persistence.WorkspaceRoleModel;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
