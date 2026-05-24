@@ -1,5 +1,8 @@
-package de.fallstudie.minerva.backend.user;
+package de.fallstudie.minerva.backend.user.internal.service;
 
+import de.fallstudie.minerva.backend.user.UserModel;
+import de.fallstudie.minerva.backend.user.UserRepository;
+import de.fallstudie.minerva.backend.user.internal.web.UserDetailsResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +14,7 @@ public class UserService {
 	public UserDetailsResponse getUserDetails(long userId) {
 		UserModel user = userRepository.findById(userId)
 				.orElseThrow(() -> new RuntimeException("User not found"));
-		return new UserDetailsResponse(user.getUsername());
+		return new UserDetailsResponse(userId, user.getUsername(),
+				user.getWorkspaceRole().getName());
 	}
 }

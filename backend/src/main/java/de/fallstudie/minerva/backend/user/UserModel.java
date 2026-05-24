@@ -1,5 +1,6 @@
 package de.fallstudie.minerva.backend.user;
 
+import de.fallstudie.minerva.backend.authorization.WorkspaceRoleModel;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,4 +22,9 @@ public class UserModel {
 	@Setter
 	@Column(nullable = false)
 	private String password;
+
+	@Setter
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "workspace_role_id")
+	private WorkspaceRoleModel workspaceRole;
 }

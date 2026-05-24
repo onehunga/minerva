@@ -1,4 +1,5 @@
 import { isAuthenticated } from "@/api";
+import { useUserStore } from "@/feature/user";
 import {
 	createRouter,
 	createWebHistory,
@@ -22,12 +23,29 @@ const router: Router = createRouter({
 			name: "login",
 			component: () => import("@/views/LoginView.vue"),
 		},
+		{
+			path: "/admin",
+			name: "admin",
+			component: () => import("@/views/AdminView.vue"),
+			meta: {
+				requiresAuth: true,
+				requiredRole: "ADMIN",
+			},
+		},
 	],
 });
 
 router.beforeEach((to: RouteLocationNormalizedGeneric) => {
 	if (to.meta.requiresAuth === true && isAuthenticated.value === false) {
 		return { name: "login" };
+	}
+
+	if (to.meta.requiredRole === "ADMIN") {
+		const userStore = useUserStore();
+
+		if (userStore.userDetails?.role !== "ADMIN") {
+			return { name: "landing" };
+		}
 	}
 });
 

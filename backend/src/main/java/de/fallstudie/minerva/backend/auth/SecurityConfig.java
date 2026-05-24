@@ -20,9 +20,9 @@ public class SecurityConfig {
 	SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity,
 			JwtAuthenticationFilter jwtAuthenticationFilter) {
 		return httpSecurity.csrf(CsrfConfigurer::disable)
-				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh")
-						.permitAll().anyRequest().authenticated())
+				.authorizeHttpRequests(
+						auth -> auth.requestMatchers("/v1/auth/login", "/v1/auth/refresh")
+								.permitAll().anyRequest().authenticated())
 				.sessionManagement(
 						session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.exceptionHandling(exceptionHandling -> exceptionHandling.authenticationEntryPoint(
