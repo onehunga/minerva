@@ -1,6 +1,6 @@
 package de.fallstudie.minerva.backend.user.internal.service;
 
-import de.fallstudie.minerva.backend.auth.RefreshTokenRepository;
+import de.fallstudie.minerva.backend.auth.internal.persistence.RefreshTokenRepository;
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;

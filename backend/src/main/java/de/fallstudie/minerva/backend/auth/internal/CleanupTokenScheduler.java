@@ -1,5 +1,6 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal;
 
+import de.fallstudie.minerva.backend.auth.internal.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;

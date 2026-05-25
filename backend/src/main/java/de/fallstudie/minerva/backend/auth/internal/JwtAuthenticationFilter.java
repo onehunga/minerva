@@ -1,5 +1,6 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal;
 
+import de.fallstudie.minerva.backend.auth.internal.service.JwtService;
 import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

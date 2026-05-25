@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal.persistence;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

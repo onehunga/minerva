@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

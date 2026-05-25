@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal.service;
 
 import de.fallstudie.minerva.backend.user.Identity;
 import de.fallstudie.minerva.backend.user.UserModel;

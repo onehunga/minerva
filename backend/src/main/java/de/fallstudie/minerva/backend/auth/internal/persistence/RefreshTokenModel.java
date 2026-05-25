@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal.persistence;
 
 import de.fallstudie.minerva.backend.user.UserModel;
 import jakarta.persistence.*;

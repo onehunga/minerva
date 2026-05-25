@@ -1,5 +1,6 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal.utils;
 
+import de.fallstudie.minerva.backend.auth.internal.AuthenticationFailedException;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass

@@ -1,5 +1,12 @@
-package de.fallstudie.minerva.backend.auth;
+package de.fallstudie.minerva.backend.auth.internal.service;
 
+import de.fallstudie.minerva.backend.auth.internal.AuthenticationFailedException;
+import de.fallstudie.minerva.backend.auth.internal.persistence.RefreshTokenModel;
+import de.fallstudie.minerva.backend.auth.internal.persistence.RefreshTokenRepository;
+import de.fallstudie.minerva.backend.auth.internal.utils.RequestUtils;
+import de.fallstudie.minerva.backend.auth.internal.web.LoginRequest;
+import de.fallstudie.minerva.backend.auth.internal.web.RefreshTokenRequest;
+import de.fallstudie.minerva.backend.auth.internal.web.TokenResponse;
 import de.fallstudie.minerva.backend.user.UserModel;
 import de.fallstudie.minerva.backend.user.UserRepository;
 import lombok.RequiredArgsConstructor;
