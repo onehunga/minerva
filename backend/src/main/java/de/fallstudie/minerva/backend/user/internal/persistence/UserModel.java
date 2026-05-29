@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.user;
+package de.fallstudie.minerva.backend.user.internal.persistence;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -7,11 +7,12 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "users")
-@Getter
 @NoArgsConstructor
+@Getter
 public class UserModel {
 	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	@SequenceGenerator(name = "users_id_seq", sequenceName = "users_id_seq", allocationSize = 1, initialValue = 1)
+	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_seq")
 	private Long id;
 
 	@Setter

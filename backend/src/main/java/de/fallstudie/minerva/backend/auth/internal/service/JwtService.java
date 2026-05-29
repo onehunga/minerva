@@ -1,8 +1,7 @@
 package de.fallstudie.minerva.backend.auth.internal.service;
 
 import de.fallstudie.minerva.backend.user.Identity;
-import de.fallstudie.minerva.backend.user.UserModel;
-import de.fallstudie.minerva.backend.user.UserRepository;
+import de.fallstudie.minerva.backend.user.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -23,7 +22,7 @@ import java.util.Date;
 public class JwtService {
 	private static final String HMAC_SHA256 = "HmacSHA256";
 
-	private final UserRepository userRepository;
+	private final UserService userService;
 
 	@Value("${spring.security.jwt.secret}")
 	private String jwtSecret;
@@ -31,11 +30,11 @@ public class JwtService {
 	@Value("${spring.security.jwt.expiration}")
 	private long jwtExpirationMillis;
 
-	public String generateToken(UserModel user) {
+	public String generateToken(long userId) {
 		Instant now = Instant.now();
 		Instant expiresAt = now.plusMillis(jwtExpirationMillis);
 
-		return Jwts.builder().subject(String.valueOf(user.getId())).issuedAt(Date.from(now))
+		return Jwts.builder().subject(String.valueOf(userId)).issuedAt(Date.from(now))
 				.expiration(Date.from(expiresAt)).signWith(signingKey()).compact();
 	}
 
@@ -55,10 +54,11 @@ public class JwtService {
 			throw new JwtException("User id is invalid", exception);
 		}
 
-		final UserModel model = this.userRepository.findById(parsedUserId)
-				.orElseThrow(() -> new JwtException("User not found"));
+		if (!this.userService.existsById(parsedUserId)) {
+			throw new JwtException("User not found");
+		}
 
-		return new Identity(model.getId());
+		return new Identity(parsedUserId);
 	}
 
 	private Claims parseClaims(String token) {

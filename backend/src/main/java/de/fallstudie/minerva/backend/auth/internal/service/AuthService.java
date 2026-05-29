@@ -7,8 +7,8 @@ import de.fallstudie.minerva.backend.auth.internal.utils.RequestUtils;
 import de.fallstudie.minerva.backend.auth.internal.web.LoginRequest;
 import de.fallstudie.minerva.backend.auth.internal.web.RefreshTokenRequest;
 import de.fallstudie.minerva.backend.auth.internal.web.TokenResponse;
-import de.fallstudie.minerva.backend.user.UserModel;
-import de.fallstudie.minerva.backend.user.UserRepository;
+import de.fallstudie.minerva.backend.user.UserDTO;
+import de.fallstudie.minerva.backend.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,7 +29,7 @@ public class AuthService {
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 	private static final int REFRESH_TOKEN_BYTES = 64;
 
-	private final UserRepository userRepository;
+	private final UserService userService;
 	private final RefreshTokenRepository refreshTokenRepository;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
@@ -42,10 +42,10 @@ public class AuthService {
 		String username = RequestUtils.requireValue(request.username(), "Username is required");
 		String password = RequestUtils.requireValue(request.password(), "Password is required");
 
-		UserModel user = userRepository.findByUsername(username).orElseThrow(
+		UserDTO user = userService.findByUsername(username).orElseThrow(
 				() -> new AuthenticationFailedException("Invalid username or password"));
 
-		if (!passwordEncoder.matches(password, user.getPassword())) {
+		if (!passwordEncoder.matches(password, user.passwordHash())) {
 			throw new AuthenticationFailedException("Invalid username or password");
 		}
 
@@ -67,7 +67,8 @@ public class AuthService {
 			throw new AuthenticationFailedException("Refresh token expired");
 		}
 
-		UserModel user = storedToken.getUser();
+		UserDTO user = userService.findById(storedToken.getUserId())
+				.orElseThrow(() -> new AuthenticationFailedException("Invalid refresh token"));
 		refreshTokenRepository.deleteByTokenHash(tokenHash);
 		refreshTokenRepository.flush();
 
@@ -79,12 +80,12 @@ public class AuthService {
 		refreshTokenRepository.deleteByExpiresAtBefore(Instant.now());
 	}
 
-	private TokenResponse createAuthResponse(UserModel user) {
-		String accessToken = jwtService.generateToken(user);
+	private TokenResponse createAuthResponse(UserDTO user) {
+		String accessToken = jwtService.generateToken(user.id());
 		String refreshToken = generateRefreshToken();
 
 		RefreshTokenModel refreshTokenModel = new RefreshTokenModel();
-		refreshTokenModel.setUser(user);
+		refreshTokenModel.setUserId(user.id());
 		refreshTokenModel.setTokenHash(hash(refreshToken));
 		refreshTokenModel
 				.setExpiresAt(Instant.now().plus(Duration.ofMillis(refreshExpirationMillis)));
