@@ -1,5 +1,32 @@
 databaseChangeLog:
   - changeSet:
+      id: sequence-users
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: users_id_seq
+            incrementBy: 1
+            startValue: 1
+  - changeSet:
+      id: sequence-refresh-tokens
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: refresh_tokens_id_seq
+            incrementBy: 1
+            startValue: 1
+  - changeSet:
+      id: sequence-workspace-roles
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: workspace_roles_id_seq
+            incrementBy: 1
+            startValue: 1
+  - changeSet:
       id: 1778689677087-1
       author: julian
       objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
@@ -10,7 +37,7 @@ databaseChangeLog:
               - column:
                   name: id
                   type: BIGINT
-                  autoIncrement: true
+                  defaultValueSequenceNext: refresh_tokens_id_seq
                   constraints:
                     nullable: false
                     primaryKey: true
@@ -46,7 +73,7 @@ databaseChangeLog:
               - column:
                   name: id
                   type: BIGINT
-                  autoIncrement: true
+                  defaultValueSequenceNext: users_id_seq
                   constraints:
                     nullable: false
                     primaryKey: true
@@ -93,18 +120,9 @@ databaseChangeLog:
             constraintName: FK_REFRESH_TOKENS_ON_USER
             referencedColumnNames: id
             referencedTableName: users
-
+            onDelete: CASCADE
   - changeSet:
-      id: 1778757202712-1
-      author: julian
-      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
-      changes:
-        - createSequence:
-            incrementBy: 50
-            sequenceName: workspace_roles_seq
-            startValue: 1
-  - changeSet:
-      id: 1778757202712-2
+      id: 1778757202712-4
       author: julian
       objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
       changes:
@@ -113,6 +131,7 @@ databaseChangeLog:
               - column:
                   name: id
                   type: BIGINT
+                  defaultValueSequenceNext: workspace_roles_id_seq
                   constraints:
                     nullable: false
                     primaryKey: true
@@ -124,7 +143,7 @@ databaseChangeLog:
                     nullable: false
             tableName: workspace_roles
   - changeSet:
-      id: 1778757202712-3
+      id: 1778757202712-5
       author: julian
       objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
       changes:
@@ -133,14 +152,14 @@ databaseChangeLog:
             columnNames: name
             constraintName: uc_workspace_roles_name
   - changeSet:
-      id: 1778757202712-4
+      id: 1778757202712-6
       author: julian
       objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
       changes:
         - sql:
             sql: ALTER TABLE workspace_roles ADD CONSTRAINT chk_workspace_roles_name CHECK (name IN ('ADMIN', 'USER'))
   - changeSet:
-      id: 1778757202712-5
+      id: 1778757202712-7
       author: julian
       objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
       changes:
@@ -149,7 +168,7 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  valueComputed: nextval('workspace_roles_seq')
+                  valueComputed: nextval('workspace_roles_id_seq')
               - column:
                   name: name
                   value: ADMIN
@@ -158,12 +177,12 @@ databaseChangeLog:
             columns:
               - column:
                   name: id
-                  valueComputed: nextval('workspace_roles_seq')
+                  valueComputed: nextval('workspace_roles_id_seq')
               - column:
                   name: name
                   value: USER
   - changeSet:
-      id: 1778757202712-6
+      id: 1778757202712-8
       author: julian
       objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
       changes:
