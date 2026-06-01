@@ -1,7 +1,11 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
+import de.fallstudie.minerva.backend.common.DuplicateResourceException;
+import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
@@ -20,10 +24,16 @@ public class ProjectService {
 	private final ProjectRepository projectRepository;
 	private final ProjectRoleRepository projectRoleRepository;
 
+	public List<ProjectModel> getAllProjects(Identity identity) {
+		return projectRepository.findAllByUserId(identity.userId());
+	}
+
 	/**
 	 * @return Die ID des neu erstellten Projekts
 	 */
 	public long createProject(Identity identity, CreateProjectRequest request) {
+		validateCreateProjectRequest(request);
+
 		final var project = new ProjectModel();
 		project.setName(request.name());
 		project.setDescription(request.description());
@@ -63,5 +73,23 @@ public class ProjectService {
 		member.setUserId(identity.userId());
 		member.setRoleId(role.getId());
 		projectMemberRepository.save(member);
+	}
+
+	private void validateCreateProjectRequest(CreateProjectRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Projekt muss einen Namen haben");
+		}
+
+		if (request.description() != null && request.description().length() > 500) {
+			throw new ValidationException("Projektbeschreibung darf maximal 500 Zeichen lang sein");
+		}
+
+		if (projectRepository.existsByName(request.name())) {
+			throw new DuplicateResourceException("Projektname ist bereits vergeben");
+		}
 	}
 }
