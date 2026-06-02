@@ -71,13 +71,21 @@ class ProjectServiceTests {
 		ReflectionTestUtils.setField(project, "id", 10L);
 		project.setName("Minerva");
 		project.setDescription("Ticket project");
+		final var member = new ProjectMemberModel();
+		member.setRoleId(20L);
+		final var projectRole = new ProjectRoleModel();
+		projectRole.setName(ProjectRoleName.OWNER);
 		when(projectRepository.findById(10L)).thenReturn(Optional.of(project));
+		when(projectMemberRepository.findByProjectIdAndUserId(10L, IDENTITY.userId()))
+				.thenReturn(Optional.of(member));
+		when(projectRoleRepository.findById(20L)).thenReturn(Optional.of(projectRole));
 
 		final var response = projectService.getProjectById(IDENTITY, 10L);
 
 		assertEquals(10L, response.id());
 		assertEquals("Minerva", response.name());
 		assertEquals("Ticket project", response.description());
+		assertEquals(ProjectRoleName.OWNER, response.projectRole());
 		verify(projectRepository).findById(10L);
 	}
 

@@ -39,14 +39,16 @@ public class AuthService {
 
 	@Transactional
 	public TokenResponse login(LoginRequest request) {
-		String username = RequestUtils.requireValue(request.username(), "Username is required");
-		String password = RequestUtils.requireValue(request.password(), "Password is required");
+		String username = RequestUtils.requireValue(request.username(),
+				"Benutzername ist erforderlich");
+		String password = RequestUtils.requireValue(request.password(),
+				"Passwort ist erforderlich");
 
 		UserDTO user = userService.findByUsername(username).orElseThrow(
-				() -> new AuthenticationFailedException("Invalid username or password"));
+				() -> new AuthenticationFailedException("Benutzername oder Passwort ist ungültig"));
 
 		if (!passwordEncoder.matches(password, user.passwordHash())) {
-			throw new AuthenticationFailedException("Invalid username or password");
+			throw new AuthenticationFailedException("Benutzername oder Passwort ist ungültig");
 		}
 
 		return createAuthResponse(user);
@@ -55,20 +57,20 @@ public class AuthService {
 	@Transactional(noRollbackFor = AuthenticationFailedException.class)
 	public TokenResponse refresh(RefreshTokenRequest request) {
 		String refreshToken = RequestUtils.requireValue(request.refreshToken(),
-				"Refresh token is required");
+				"Refresh-Token ist erforderlich");
 		String tokenHash = hash(refreshToken);
 
 		RefreshTokenModel storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
-				.orElseThrow(() -> new AuthenticationFailedException("Invalid refresh token"));
+				.orElseThrow(() -> new AuthenticationFailedException("Refresh-Token ist ungültig"));
 
 		if (storedToken.getExpiresAt().isBefore(Instant.now())) {
 			refreshTokenRepository.deleteByTokenHash(tokenHash);
 			refreshTokenRepository.flush();
-			throw new AuthenticationFailedException("Refresh token expired");
+			throw new AuthenticationFailedException("Refresh-Token ist abgelaufen");
 		}
 
 		UserDTO user = userService.findById(storedToken.getUserId())
-				.orElseThrow(() -> new AuthenticationFailedException("Invalid refresh token"));
+				.orElseThrow(() -> new AuthenticationFailedException("Refresh-Token ist ungültig"));
 		refreshTokenRepository.deleteByTokenHash(tokenHash);
 		refreshTokenRepository.flush();
 
