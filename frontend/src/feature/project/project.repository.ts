@@ -9,6 +9,7 @@ export interface IProjectRepository {
 	createProject(name: string, description: string): Promise<number>;
 	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
 	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
+	updateProjectUserRole(projectId: number, userId: number, role: ProjectRole): Promise<void>;
 }
 
 export class ProjectRepository implements IProjectRepository {
@@ -34,5 +35,13 @@ export class ProjectRepository implements IProjectRepository {
 
 	async addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void> {
 		return api.addProjectUser(projectId, userId, role);
+	}
+
+	async updateProjectUserRole(
+		projectId: number,
+		userId: number,
+		role: ProjectRole,
+	): Promise<void> {
+		return api.updateProjectUserRole(projectId, userId, role);
 	}
 }

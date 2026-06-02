@@ -9,6 +9,7 @@ export function useProjectUsers(projectId: number) {
 	const users = ref<ProjectUser[]>([]);
 	const isLoadingUsers = ref(false);
 	const isAddingUser = ref(false);
+	const updatingUserRoleId = ref<number | null>(null);
 	const errorMessage = ref("");
 	const successMessage = ref("");
 
@@ -43,13 +44,33 @@ export function useProjectUsers(projectId: number) {
 		}
 	}
 
+	async function updateProjectUserRole(userId: number, role: ProjectRole): Promise<boolean> {
+		errorMessage.value = "";
+		successMessage.value = "";
+		updatingUserRoleId.value = userId;
+
+		try {
+			await projectRepository.updateProjectUserRole(projectId, userId, role);
+			await loadUsers();
+			successMessage.value = "Projektrolle wurde aktualisiert.";
+			return true;
+		} catch {
+			errorMessage.value = "Projektrolle konnte nicht aktualisiert werden.";
+			return false;
+		} finally {
+			updatingUserRoleId.value = null;
+		}
+	}
+
 	return {
 		users,
 		isLoadingUsers,
 		isAddingUser,
+		updatingUserRoleId,
 		errorMessage,
 		successMessage,
 		loadUsers,
 		addProjectUser,
+		updateProjectUserRole,
 	};
 }

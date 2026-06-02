@@ -37,3 +37,13 @@ export async function addProjectUser(
 		role,
 	});
 }
+
+export async function updateProjectUserRole(
+	projectId: number,
+	userId: number,
+	role: ProjectRole,
+): Promise<void> {
+	return client.patch(`/v1/projects/${projectId}/users/${userId}/role`, {
+		role,
+	});
+}

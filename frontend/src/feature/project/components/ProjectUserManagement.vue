@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { type model, useProjectUsers } from "..";
+import { useUserStore } from "@/feature/user";
 
 const props = defineProps<{
 	projectId: number;
 }>();
 
+const userStore = useUserStore();
 const {
 	addProjectUser,
 	errorMessage,
@@ -13,15 +15,33 @@ const {
 	isLoadingUsers,
 	loadUsers,
 	successMessage,
+	updateProjectUserRole,
+	updatingUserRoleId,
 	users,
 } = useProjectUsers(props.projectId);
 
 const selectedUserId = ref<number | null>(null);
 const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
+const roleChanges = ref<Record<number, model.ProjectRole>>({});
 
 const availableUsers = computed(() => users.value.filter((user) => !user.member));
 
-onMounted(loadUsers);
+onMounted(loadProjectUsers);
+
+async function loadProjectUsers(): Promise<void> {
+	await loadUsers();
+	syncRoleChanges();
+}
+
+function syncRoleChanges(): void {
+	roleChanges.value = users.value.reduce<Record<number, model.ProjectRole>>((roles, user) => {
+		if (user.projectRole !== null) {
+			roles[user.id] = user.projectRole;
+		}
+
+		return roles;
+	}, {});
+}
 
 function formatProjectRole(role: model.ProjectRole | null): string {
 	if (role === null) {
@@ -41,6 +61,29 @@ async function submitProjectUser(): Promise<void> {
 	if (wasAdded) {
 		selectedUserId.value = null;
 		selectedRole.value = "CONTRIBUTOR";
+		syncRoleChanges();
+	}
+}
+
+function canUpdateProjectRole(user: model.ProjectUser): boolean {
+	return user.member && user.id !== userStore.userDetails?.id && user.projectRole !== null;
+}
+
+function hasRoleChanged(user: model.ProjectUser): boolean {
+	return user.projectRole !== null && roleChanges.value[user.id] !== user.projectRole;
+}
+
+async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
+	const role = roleChanges.value[user.id];
+
+	if (role === undefined) {
+		return;
+	}
+
+	const wasUpdated = await updateProjectUserRole(user.id, role);
+
+	if (wasUpdated) {
+		syncRoleChanges();
 	}
 }
 </script>
@@ -64,12 +107,39 @@ async function submitProjectUser(): Promise<void> {
 					<tr>
 						<th scope="col">Benutzername</th>
 						<th scope="col">Projektrolle</th>
+						<th scope="col">Aktionen</th>
 					</tr>
 				</thead>
 				<tbody>
 					<tr v-for="user in users" :key="user.id">
 						<td>{{ user.username }}</td>
-						<td>{{ formatProjectRole(user.projectRole) }}</td>
+						<td>
+							<select
+								v-if="canUpdateProjectRole(user)"
+								v-model="roleChanges[user.id]"
+								:aria-label="`Projektrolle für ${user.username}`"
+								:disabled="updatingUserRoleId !== null"
+							>
+								<option value="OWNER">OWNER</option>
+								<option value="CONTRIBUTOR">CONTRIBUTOR</option>
+								<option value="VIEWER">VIEWER</option>
+							</select>
+							<span v-else>{{ formatProjectRole(user.projectRole) }}</span>
+						</td>
+						<td>
+							<button
+								v-if="canUpdateProjectRole(user)"
+								type="button"
+								:disabled="!hasRoleChanged(user) || updatingUserRoleId !== null"
+								@click="submitProjectUserRole(user)"
+							>
+								{{
+									updatingUserRoleId === user.id
+										? "Wird gespeichert..."
+										: "Speichern"
+								}}
+							</button>
+						</td>
 					</tr>
 				</tbody>
 			</table>
