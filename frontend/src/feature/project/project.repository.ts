@@ -1,5 +1,5 @@
 import { api } from ".";
-import type { ProjectDetails, ProjectRecord } from "./project.model";
+import type { ProjectDetails, ProjectRecord, ProjectRole, ProjectUser } from "./project.model";
 
 export const ProjectRepositoryKey = Symbol("ProjectRepository");
 
@@ -7,6 +7,8 @@ export interface IProjectRepository {
 	getAllProjects(): Promise<Array<ProjectRecord>>;
 	getProjectDetails(id: number): Promise<ProjectDetails>;
 	createProject(name: string, description: string): Promise<number>;
+	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
+	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
 }
 
 export class ProjectRepository implements IProjectRepository {
@@ -22,5 +24,15 @@ export class ProjectRepository implements IProjectRepository {
 
 	async createProject(name: string, description: string): Promise<number> {
 		return api.createProject(name, description);
+	}
+
+	async getProjectUsers(id: number): Promise<Array<ProjectUser>> {
+		const response = await api.getProjectUsers(id);
+
+		return response.users;
+	}
+
+	async addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void> {
+		return api.addProjectUser(projectId, userId, role);
 	}
 }

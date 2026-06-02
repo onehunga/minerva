@@ -1,5 +1,9 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+import de.fallstudie.minerva.backend.user.UserService;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
@@ -16,7 +20,11 @@ import de.fallstudie.minerva.backend.project.internal.web.CreateProjectRequest;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectDetailsResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
+import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
+import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
+import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
 import de.fallstudie.minerva.backend.user.Identity;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -25,6 +33,7 @@ public class ProjectService {
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectRepository projectRepository;
 	private final ProjectRoleRepository projectRoleRepository;
+	private final UserService userService;
 
 	public ProjectRecordListResponse getAllProjects(Identity identity) {
 		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
@@ -43,9 +52,28 @@ public class ProjectService {
 				project.getDescription());
 	}
 
+	public ProjectUserListResponse getProjectUsers(Identity identity, long projectId) {
+		validateProjectExists(projectId);
+
+		final var projectMembers = projectMemberRepository.findAllByProjectId(projectId).stream()
+				.collect(Collectors.toMap(ProjectMemberModel::getUserId, Function.identity()));
+		final var projectRoles = projectRoleRepository.findAllByProjectId(projectId).stream()
+				.collect(Collectors.toMap(ProjectRoleModel::getId, ProjectRoleModel::getName));
+
+		final var users = userService.findAll().stream().map(user -> {
+			final var member = projectMembers.get(user.id());
+			final var projectRole = member == null ? null : projectRoles.get(member.getRoleId());
+
+			return new ProjectUserResponse(user.id(), user.username(), projectRole, member != null);
+		}).toList();
+
+		return new ProjectUserListResponse(users);
+	}
+
 	/**
 	 * @return Die ID des neu erstellten Projekts
 	 */
+	@Transactional
 	public long createProject(Identity identity, CreateProjectRequest request) {
 		validateCreateProjectRequest(request);
 
@@ -61,6 +89,30 @@ public class ProjectService {
 		addProjectMember(project, ownerRole, identity);
 
 		return project.getId();
+	}
+
+	@Transactional
+	public void addProjectUser(Identity identity, long projectId, AddProjectUserRequest request) {
+		validateProjectExists(projectId);
+		validateAddProjectUserRequest(request);
+
+		if (!userService.existsById(request.userId())) {
+			throw new ResourceNotFoundException("User not found");
+		}
+
+		if (projectMemberRepository.existsByProjectIdAndUserId(projectId, request.userId())) {
+			throw new DuplicateResourceException("User is already part of this project");
+		}
+
+		final var projectRoleName = validateProjectRole(request.role());
+		final var role = projectRoleRepository.findByProjectIdAndName(projectId, projectRoleName)
+				.orElseThrow(() -> new ValidationException("Project role does not exist"));
+
+		final var member = new ProjectMemberModel();
+		member.setProjectId(projectId);
+		member.setUserId(request.userId());
+		member.setRoleId(role.getId());
+		projectMemberRepository.save(member);
 	}
 
 	private ProjectRoleModel[] createProjectRoles(ProjectModel project) {
@@ -105,6 +157,36 @@ public class ProjectService {
 
 		if (projectRepository.existsByName(request.name())) {
 			throw new DuplicateResourceException("Projektname ist bereits vergeben");
+		}
+	}
+
+	private void validateProjectExists(long projectId) {
+		if (!projectRepository.existsById(projectId)) {
+			throw new ResourceNotFoundException("Projekt mit ID " + projectId + " nicht gefunden");
+		}
+	}
+
+	private void validateAddProjectUserRequest(AddProjectUserRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.userId() <= 0) {
+			throw new ValidationException("User is required");
+		}
+
+		validateProjectRole(request.role());
+	}
+
+	private ProjectRoleName validateProjectRole(String role) {
+		if (role == null || role.isBlank()) {
+			throw new ValidationException("Role is required");
+		}
+
+		try {
+			return ProjectRoleName.valueOf(role.trim());
+		} catch (IllegalArgumentException exception) {
+			throw new ValidationException("Role must be OWNER, CONTRIBUTOR or VIEWER");
 		}
 	}
 }

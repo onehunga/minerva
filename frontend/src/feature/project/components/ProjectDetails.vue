@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { type model, useProjectRepository } from "..";
+import ProjectUserManagement from "./ProjectUserManagement.vue";
 
 const repository = useProjectRepository();
 
@@ -16,9 +17,39 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div v-if="project != null">
-		<h1>{{ project.name }}</h1>
-		<p>{{ project.description }}</p>
+	<div v-if="project != null" class="project-details">
+		<section class="project-section">
+			<h1>{{ project.name }}</h1>
+			<p>{{ project.description }}</p>
+		</section>
+
+		<section class="project-section">
+			<ProjectUserManagement :project-id="project.id" />
+		</section>
 	</div>
 	<p v-else>Loading...</p>
 </template>
+
+<style scoped>
+.project-details {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+	max-width: 72rem;
+	margin: 0 auto;
+	padding: 2rem;
+}
+
+.project-section {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1rem;
+	border: 1px solid currentColor;
+}
+
+.project-section h1,
+.project-section p {
+	margin: 0;
+}
+</style>

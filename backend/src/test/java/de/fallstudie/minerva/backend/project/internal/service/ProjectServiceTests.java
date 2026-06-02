@@ -11,9 +11,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
+import de.fallstudie.minerva.backend.user.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
@@ -31,6 +33,7 @@ import de.fallstudie.minerva.backend.user.Identity;
 class ProjectServiceTests {
 	private static final Identity IDENTITY = new Identity(42L);
 
+	private UserService userService;
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
@@ -38,11 +41,12 @@ class ProjectServiceTests {
 
 	@BeforeEach
 	void setUp() {
+		userService = Mockito.mock(UserService.class);
 		projectMemberRepository = org.mockito.Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = org.mockito.Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = org.mockito.Mockito.mock(ProjectRoleRepository.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository);
+				projectRoleRepository, userService);
 	}
 
 	@Test
