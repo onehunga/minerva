@@ -4,6 +4,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -66,5 +67,17 @@ public class ProjectController {
 				request.userId(), id);
 
 		projectService.addProjectUser(identity, id, request);
+	}
+
+	@PatchMapping("/{id}/users/{userId}/role")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void updateProjectUserRole(@AuthenticationPrincipal Identity identity,
+			@PathVariable long id, @PathVariable long userId,
+			@RequestBody UpdateProjectUserRoleRequest request) {
+		log.info("User with ID {} is updating project role for user {} in project with ID {}",
+				identity.userId(), userId, id);
+
+		projectService.updateProjectUserRole(identity, id, userId, request);
 	}
 }

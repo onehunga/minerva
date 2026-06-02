@@ -23,6 +23,7 @@ import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
 import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
+import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
 import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -52,7 +53,7 @@ public class ProjectService {
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
 		final var projectRole = projectRoleRepository.findById(member.getRoleId())
-				.orElseThrow(() -> new ResourceNotFoundException("Project role not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Projektrolle nicht gefunden"));
 
 		return new ProjectDetailsResponse(project.getId(), project.getName(),
 				project.getDescription(), projectRole.getName());
@@ -103,20 +104,44 @@ public class ProjectService {
 		validateAddProjectUserRequest(request);
 
 		if (!userService.existsById(request.userId())) {
-			throw new ResourceNotFoundException("User not found");
+			throw new ResourceNotFoundException("Benutzer nicht gefunden");
 		}
 
 		if (projectMemberRepository.existsByProjectIdAndUserId(projectId, request.userId())) {
-			throw new DuplicateResourceException("User is already part of this project");
+			throw new DuplicateResourceException("Benutzer ist bereits Teil dieses Projekts");
 		}
 
 		final var projectRoleName = validateProjectRole(request.role());
 		final var role = projectRoleRepository.findByProjectIdAndName(projectId, projectRoleName)
-				.orElseThrow(() -> new ValidationException("Project role does not exist"));
+				.orElseThrow(() -> new ValidationException("Projektrolle existiert nicht"));
 
 		final var member = new ProjectMemberModel();
 		member.setProjectId(projectId);
 		member.setUserId(request.userId());
+		member.setRoleId(role.getId());
+		projectMemberRepository.save(member);
+	}
+
+	@Transactional
+	public void updateProjectUserRole(Identity identity, long projectId, long userId,
+			UpdateProjectUserRoleRequest request) {
+		validateProjectExists(projectId);
+		validateUpdateProjectUserRoleRequest(request);
+
+		if (identity.userId() == userId) {
+			throw new ValidationException("Ein Owner kann seine eigene Rolle nicht aktualisieren");
+		}
+
+		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
+				.orElseThrow(() -> new ResourceNotFoundException("Projektmitglied nicht gefunden"));
+		final var projectRoleName = validateProjectRole(request.role());
+		final var role = projectRoleRepository.findByProjectIdAndName(projectId, projectRoleName)
+				.orElseThrow(() -> new ValidationException("Projektrolle existiert nicht"));
+
+		if (member.getRoleId() == role.getId()) {
+			return;
+		}
+
 		member.setRoleId(role.getId());
 		projectMemberRepository.save(member);
 	}
@@ -178,7 +203,15 @@ public class ProjectService {
 		}
 
 		if (request.userId() <= 0) {
-			throw new ValidationException("User is required");
+			throw new ValidationException("Benutzer ist erforderlich");
+		}
+
+		validateProjectRole(request.role());
+	}
+
+	private void validateUpdateProjectUserRoleRequest(UpdateProjectUserRoleRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
 		}
 
 		validateProjectRole(request.role());
@@ -186,13 +219,13 @@ public class ProjectService {
 
 	private ProjectRoleName validateProjectRole(String role) {
 		if (role == null || role.isBlank()) {
-			throw new ValidationException("Role is required");
+			throw new ValidationException("Rolle ist erforderlich");
 		}
 
 		try {
 			return ProjectRoleName.valueOf(role.trim());
 		} catch (IllegalArgumentException exception) {
-			throw new ValidationException("Role must be OWNER, CONTRIBUTOR or VIEWER");
+			throw new ValidationException("Rolle muss OWNER, CONTRIBUTOR oder VIEWER sein");
 		}
 	}
 }
