@@ -1,4 +1,7 @@
 package de.fallstudie.minerva.backend.project.internal.web;
 
-public record ProjectDetailsResponse(long id, String name, String description) {
+import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
+
+public record ProjectDetailsResponse(long id, String name, String description,
+		ProjectRoleName projectRole) {
 }

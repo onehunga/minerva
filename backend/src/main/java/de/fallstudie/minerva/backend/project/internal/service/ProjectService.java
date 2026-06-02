@@ -47,9 +47,15 @@ public class ProjectService {
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
+		final var member = projectMemberRepository
+				.findByProjectIdAndUserId(projectId, identity.userId())
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+		final var projectRole = projectRoleRepository.findById(member.getRoleId())
+				.orElseThrow(() -> new ResourceNotFoundException("Project role not found"));
 
 		return new ProjectDetailsResponse(project.getId(), project.getName(),
-				project.getDescription());
+				project.getDescription(), projectRole.getName());
 	}
 
 	public ProjectUserListResponse getProjectUsers(Identity identity, long projectId) {

@@ -23,7 +23,7 @@ onMounted(async () => {
 			<p>{{ project.description }}</p>
 		</section>
 
-		<section class="project-section">
+		<section v-if="project.projectRole === 'OWNER'" class="project-section">
 			<ProjectUserManagement :project-id="project.id" />
 		</section>
 	</div>
