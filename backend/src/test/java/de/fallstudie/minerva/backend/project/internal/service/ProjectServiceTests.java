@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -47,12 +48,33 @@ class ProjectServiceTests {
 	@Test
 	void getAllProjectsFiltersByIdentityUserId() {
 		final var project = new ProjectModel();
+		ReflectionTestUtils.setField(project, "id", 10L);
+		project.setName("Minerva");
+		project.setDescription("Ticket project");
 		when(projectRepository.findAllByUserId(IDENTITY.userId())).thenReturn(List.of(project));
 
-		final var projects = projectService.getAllProjects(IDENTITY);
+		final var response = projectService.getAllProjects(IDENTITY);
 
-		assertEquals(List.of(project), projects);
+		assertEquals(1, response.projects().size());
+		assertEquals(10L, response.projects().getFirst().id());
+		assertEquals("Minerva", response.projects().getFirst().name());
 		verify(projectRepository).findAllByUserId(IDENTITY.userId());
+	}
+
+	@Test
+	void getProjectByIdReturnsProjectDetailsResponse() {
+		final var project = new ProjectModel();
+		ReflectionTestUtils.setField(project, "id", 10L);
+		project.setName("Minerva");
+		project.setDescription("Ticket project");
+		when(projectRepository.findById(10L)).thenReturn(Optional.of(project));
+
+		final var response = projectService.getProjectById(IDENTITY, 10L);
+
+		assertEquals(10L, response.id());
+		assertEquals("Minerva", response.name());
+		assertEquals("Ticket project", response.description());
+		verify(projectRepository).findById(10L);
 	}
 
 	@Test

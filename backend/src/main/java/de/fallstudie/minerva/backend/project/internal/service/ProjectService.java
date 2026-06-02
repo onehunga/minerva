@@ -1,10 +1,9 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
-import java.util.List;
-
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
+import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
@@ -14,6 +13,9 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleMod
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
 import de.fallstudie.minerva.backend.project.internal.web.CreateProjectRequest;
+import de.fallstudie.minerva.backend.project.internal.web.ProjectDetailsResponse;
+import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordListResponse;
+import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
 import de.fallstudie.minerva.backend.user.Identity;
 import lombok.RequiredArgsConstructor;
 
@@ -24,8 +26,21 @@ public class ProjectService {
 	private final ProjectRepository projectRepository;
 	private final ProjectRoleRepository projectRoleRepository;
 
-	public List<ProjectModel> getAllProjects(Identity identity) {
-		return projectRepository.findAllByUserId(identity.userId());
+	public ProjectRecordListResponse getAllProjects(Identity identity) {
+		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
+				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
+				.toList();
+
+		return new ProjectRecordListResponse(projects);
+	}
+
+	public ProjectDetailsResponse getProjectById(Identity identity, long projectId) {
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+
+		return new ProjectDetailsResponse(project.getId(), project.getName(),
+				project.getDescription());
 	}
 
 	/**
