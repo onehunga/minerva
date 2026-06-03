@@ -67,7 +67,8 @@ onBeforeUnmount((): void => {
 }
 
 .base-modal {
-	width: min(100%, 32rem);
+	/* min-width: min(100%, 32rem); */
+	width: fit-content;
 	max-height: calc(100vh - 2rem);
 	overflow: auto;
 	background: Canvas;

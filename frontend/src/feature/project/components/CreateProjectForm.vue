@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useProjectRepository } from "..";
+import { CreateTicketForm } from "@/feature/ticket";
 
 const repository = useProjectRepository();
 
@@ -25,7 +26,8 @@ async function createProject() {
 			<label for="description">Description:</label>
 			<textarea id="description" v-model="description"></textarea>
 		</div>
-		<button type="submit">Create Project</button>
+		<CreateTicketForm />
+		<button :disabled="true" type="submit">Create Project</button>
 	</form>
 </template>
 
