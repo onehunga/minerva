@@ -1,31 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import {
+import type {
 	useConfigureTickets,
-	type TicketStatusCategory,
-	type CreateTicketType,
-	type TicketDetails,
+	TicketStatusCategory,
+	CreateTicketType,
+	TicketDetails,
 } from "..";
 import BaseModal from "@/components/BaseModal.vue";
 import EditTicketTypeDetails from "./EditTicketTypeDetails.vue";
-
-const DEFAULT_TICKETS: CreateTicketType[] = [
-	{
-		name: "Standard Ticket",
-		description: "Ein Standard-Ticket mit den üblichen Zuständen und Übergängen.",
-		states: new Map([
-			["Offen", { name: "Offen", statusCategory: "OPEN" }],
-			["In Bearbeitung", { name: "In Bearbeitung", statusCategory: "IN_PROGRESS" }],
-			["Abgeschlossen", { name: "Abgeschlossen", statusCategory: "CLOSED" }],
-		]),
-		transitions: [
-			{ name: "Start Bearbeitung", fromState: "Offen", toState: "In Bearbeitung" },
-			{ name: "Abschließen", fromState: "In Bearbeitung", toState: "Abgeschlossen" },
-			{ name: "Wieder öffnen", fromState: "Abgeschlossen", toState: "Offen" },
-		],
-		children: new Set(),
-	},
-];
 
 enum DetailsConfiguration {
 	// Standard Details um z.B. Name und Beschreibung zu bearbeiten
@@ -38,10 +20,12 @@ enum DetailsConfiguration {
 const STATUS_LABELS: Record<TicketStatusCategory, string> = {
 	OPEN: "Offen",
 	IN_PROGRESS: "In Bearbeitung",
-	CLOSED: "Abgeschlossen",
+	COMPLETED: "Abgeschlossen",
 };
 
-const configureTickets = useConfigureTickets(DEFAULT_TICKETS);
+const { configureTickets } = defineProps<{
+	configureTickets: ReturnType<typeof useConfigureTickets>;
+}>();
 
 const showCreateTicketTypeForm = ref(false);
 
@@ -301,7 +285,9 @@ function addNewTicketChildType() {
 							{{ state.name }} - {{ STATUS_LABELS[state.statusCategory] }}
 						</li>
 					</ul>
-					<button @click="showCreateTicketStateForm = true">Neuen Status anlegen</button>
+					<button type="button" @click="showCreateTicketStateForm = true">
+						Neuen Status anlegen
+					</button>
 				</div>
 				<div
 					v-else-if="activeDetailsConfiguration == DetailsConfiguration.Transitions"
@@ -318,7 +304,7 @@ function addNewTicketChildType() {
 						</div>
 					</div>
 
-					<button @click="showCreateTicketTransitionForm = true">
+					<button type="button" @click="showCreateTicketTransitionForm = true">
 						Neuen Übergang anlegen
 					</button>
 				</div>
@@ -332,7 +318,7 @@ function addNewTicketChildType() {
 						</li>
 					</ul>
 
-					<button @click="showCreateTicketChildTypeForm = true">
+					<button type="button" @click="showCreateTicketChildTypeForm = true">
 						Neue Unterticketart anlegen
 					</button>
 				</div>

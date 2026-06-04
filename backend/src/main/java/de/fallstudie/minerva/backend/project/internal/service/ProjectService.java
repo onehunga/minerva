@@ -4,6 +4,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import de.fallstudie.minerva.backend.user.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
@@ -24,16 +25,19 @@ import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
 import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
+import de.fallstudie.minerva.backend.ticket.TicketConfigurationService;
 import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProjectService {
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectRepository projectRepository;
 	private final ProjectRoleRepository projectRoleRepository;
+	private final TicketConfigurationService ticketConfigurationService;
 	private final UserService userService;
 
 	public ProjectRecordListResponse getAllProjects(Identity identity) {
@@ -94,6 +98,8 @@ public class ProjectService {
 		final var ownerRole = roles[0];
 
 		addProjectMember(project, ownerRole, identity);
+		ticketConfigurationService.createTicketConfiguration(project.getId(),
+				request.workflowConfiguration());
 
 		return project.getId();
 	}

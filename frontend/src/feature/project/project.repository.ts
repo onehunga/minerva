@@ -1,4 +1,5 @@
 import { api } from ".";
+import type { WorkflowConfiguration } from "../ticket";
 import type { ProjectDetails, ProjectRecord, ProjectRole, ProjectUser } from "./project.model";
 
 export const ProjectRepositoryKey = Symbol("ProjectRepository");
@@ -6,7 +7,11 @@ export const ProjectRepositoryKey = Symbol("ProjectRepository");
 export interface IProjectRepository {
 	getAllProjects(): Promise<Array<ProjectRecord>>;
 	getProjectDetails(id: number): Promise<ProjectDetails>;
-	createProject(name: string, description: string): Promise<number>;
+	createProject(
+		name: string,
+		description: string,
+		workflowConfiguration: WorkflowConfiguration,
+	): Promise<number>;
 	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
 	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
 	updateProjectUserRole(projectId: number, userId: number, role: ProjectRole): Promise<void>;
@@ -23,8 +28,12 @@ export class ProjectRepository implements IProjectRepository {
 		return api.getProjectById(id);
 	}
 
-	async createProject(name: string, description: string): Promise<number> {
-		return api.createProject(name, description);
+	async createProject(
+		name: string,
+		description: string,
+		workflowConfiguration: WorkflowConfiguration,
+	): Promise<number> {
+		return api.createProject(name, description, workflowConfiguration);
 	}
 
 	async getProjectUsers(id: number): Promise<Array<ProjectUser>> {
