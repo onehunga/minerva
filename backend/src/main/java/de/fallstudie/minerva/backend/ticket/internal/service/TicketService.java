@@ -14,9 +14,11 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusM
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
 import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketRequest;
+import de.fallstudie.minerva.backend.ticket.internal.web.TicketListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeResponse;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowStateResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowTransitionResponse;
 import de.fallstudie.minerva.backend.user.Identity;
@@ -31,6 +33,13 @@ public class TicketService {
 	private final WorkflowStatusRepository workflowStatusRepository;
 	private final WorkflowTransitionRepository workflowTransitionRepository;
 	private final TicketRepository ticketRepository;
+
+	public TicketListResponse getTickets(long projectId) {
+		final var tickets = ticketRepository.findAllByProjectIdOrderByNameAsc(projectId).stream()
+				.map(this::toTicketResponse).toList();
+
+		return new TicketListResponse(tickets);
+	}
 
 	public TicketTypeListResponse getTicketTypes(long projectId) {
 		final var ticketTypes = ticketTypeRepository.findAllByProjectIdOrderByNameAsc(projectId)
@@ -93,11 +102,40 @@ public class TicketService {
 
 		final var savedTicket = ticketRepository.save(ticket);
 
-		return new TicketResponse(savedTicket.getId(), savedTicket.getProjectId(),
-				savedTicket.getTicketTypeId(), savedTicket.getStatusId(), savedTicket.getName(),
-				savedTicket.getDescription(), savedTicket.getCreatedBy(),
-				savedTicket.getAssignedTo(), savedTicket.getCreatedAt(),
-				savedTicket.getUpdatedAt());
+		return toTicketResponse(savedTicket);
+	}
+
+	@Transactional
+	public void updateTicketStatus(long projectId, long ticketId,
+			UpdateTicketStatusRequest request) {
+		validateUpdateTicketStatusRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var workflow = workflowRepository
+				.findByProjectIdAndTicketTypeId(projectId, ticket.getTicketTypeId())
+				.orElseThrow(() -> new ValidationException("Ticketart hat keinen Workflow"));
+		final var transition = workflowTransitionRepository.findById(request.transitionId())
+				.orElseThrow(() -> new ValidationException("Statusuebergang nicht gefunden"));
+
+		workflowStatusRepository.findByIdAndWorkflowId(transition.getToState(), workflow.getId())
+				.orElseThrow(
+						() -> new ValidationException("Zielstatus gehoert nicht zur Ticketart"));
+
+		if (transition.getFromState() != ticket.getStatusId()) {
+			throw new ValidationException(
+					"Statusuebergang ist fuer den aktuellen Status nicht erlaubt");
+		}
+
+		ticket.setStatusId(transition.getToState());
+		ticketRepository.save(ticket);
+	}
+
+	private TicketResponse toTicketResponse(TicketModel ticket) {
+		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
+				ticket.getStatusId(), ticket.getName(), ticket.getDescription(),
+				ticket.getCreatedBy(), ticket.getAssignedTo(), ticket.getCreatedAt(),
+				ticket.getUpdatedAt());
 	}
 
 	private void validateCreateTicketRequest(CreateTicketRequest request) {
@@ -123,6 +161,16 @@ public class TicketService {
 
 		if (request.statusId() <= 0) {
 			throw new ValidationException("Status ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketStatusRequest(UpdateTicketStatusRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.transitionId() <= 0) {
+			throw new ValidationException("Statusuebergang ist erforderlich");
 		}
 	}
 }

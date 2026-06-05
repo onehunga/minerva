@@ -1,39 +1,29 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { type model, useProjectRepository } from "..";
-import { CreateTicketForm } from "@/feature/ticket";
+import { useProject } from "..";
+import { CreateTicketForm, TicketList } from "@/feature/ticket";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
-const repository = useProjectRepository();
-
-const props = defineProps<{
-	id: number;
-}>();
-
-const project = ref<model.ProjectDetails | null>(null);
-
-onMounted(async () => {
-	project.value = await repository.getProjectDetails(props.id);
-});
+const { details } = useProject();
 </script>
 
 <template>
-	<div v-if="project != null" class="project-details">
+	<div v-if="details != null" class="project-details">
 		<section class="project-section">
-			<h1>{{ project.name }}</h1>
-			<p>{{ project.description }}</p>
+			<h1>{{ details.name }}</h1>
+			<p>{{ details.description }}</p>
 		</section>
 
 		<section class="project-section">
 			<h2>Tickets</h2>
-			<p v-if="project.projectRole === 'VIEWER'">
+			<TicketList />
+			<p v-if="details.projectRole === 'VIEWER'">
 				Als Viewer kannst du keine Tickets erstellen.
 			</p>
-			<CreateTicketForm v-else :project-id="project.id" />
+			<CreateTicketForm v-else />
 		</section>
 
-		<section v-if="project.projectRole === 'OWNER'" class="project-section">
-			<ProjectUserManagement :project-id="project.id" />
+		<section v-if="details.projectRole === 'OWNER'" class="project-section">
+			<ProjectUserManagement />
 		</section>
 	</div>
 	<p v-else>Loading...</p>

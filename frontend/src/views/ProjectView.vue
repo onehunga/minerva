@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { ProjectDetails } from "@/feature/project";
-import { onBeforeMount } from "vue";
+import { useProject } from "@/feature/project/composables/useProject";
 
 const props = defineProps<{
 	id: string;
 }>();
 
-onBeforeMount(() => {
-	if (isNaN(Number(props.id))) {
-		throw new Error("Invalid project ID");
-	}
-});
+useProject(props.id);
 </script>
 
 <template>

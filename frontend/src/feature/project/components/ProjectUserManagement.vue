@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { type model, useProjectUsers } from "..";
+import { type model, useProject, useProjectUsers } from "..";
 import { useUserStore } from "@/feature/user";
 
-const props = defineProps<{
-	projectId: number;
-}>();
+const { details: projectDetails } = useProject();
 
 const userStore = useUserStore();
 const {
@@ -18,7 +16,7 @@ const {
 	updateProjectUserRole,
 	updatingUserRoleId,
 	users,
-} = useProjectUsers(props.projectId);
+} = useProjectUsers(projectDetails.value!.id);
 
 const selectedUserId = ref<number | null>(null);
 const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");

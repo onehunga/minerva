@@ -1,20 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { useTicketRepository } from "../composables/useTicketRepository";
-import type { TicketType } from "../ticket.model";
+import { useProject } from "@/feature/project";
 
-const props = defineProps<{
-	projectId: number;
-}>();
+const { details: projectDetails, ticketTypes, createTicket } = useProject();
 
-const repository = useTicketRepository();
-
-const ticketTypes = ref<TicketType[]>([]);
 const name = ref("");
 const description = ref("");
 const selectedTicketTypeId = ref<number | null>(null);
 const selectedStatusId = ref<number | null>(null);
-const isLoading = ref(false);
 const isCreating = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
@@ -34,25 +27,6 @@ function selectDefaultStatus(): void {
 	selectedStatusId.value = openState?.id ?? availableStates.value[0]?.id ?? null;
 }
 
-async function loadTicketTypes(): Promise<void> {
-	isLoading.value = true;
-	errorMessage.value = "";
-	successMessage.value = "";
-
-	try {
-		ticketTypes.value = await repository.getTicketTypes(props.projectId);
-		selectDefaultTicketType();
-		selectDefaultStatus();
-	} catch {
-		ticketTypes.value = [];
-		selectedTicketTypeId.value = null;
-		selectedStatusId.value = null;
-		errorMessage.value = "Ticketarten konnten nicht geladen werden.";
-	} finally {
-		isLoading.value = false;
-	}
-}
-
 function resetTicketFields(): void {
 	name.value = "";
 	description.value = "";
@@ -60,8 +34,13 @@ function resetTicketFields(): void {
 	selectDefaultStatus();
 }
 
-async function createTicket(): Promise<void> {
-	if (selectedTicketTypeId.value == null || selectedStatusId.value == null || isCreating.value) {
+async function create(): Promise<void> {
+	if (
+		projectDetails.value == null ||
+		selectedTicketTypeId.value == null ||
+		selectedStatusId.value == null ||
+		isCreating.value
+	) {
 		return;
 	}
 
@@ -70,7 +49,7 @@ async function createTicket(): Promise<void> {
 	successMessage.value = "";
 
 	try {
-		const ticket = await repository.createTicket(props.projectId, {
+		const ticket = await createTicket({
 			name: name.value,
 			description: description.value,
 			ticketTypeId: selectedTicketTypeId.value,
@@ -86,7 +65,14 @@ async function createTicket(): Promise<void> {
 	}
 }
 
-watch(() => props.projectId, loadTicketTypes, { immediate: true });
+watch(
+	ticketTypes,
+	() => {
+		selectDefaultTicketType();
+		selectDefaultStatus();
+	},
+	{ immediate: true },
+);
 
 watch(selectedTicketTypeId, () => {
 	selectDefaultStatus();
@@ -94,8 +80,8 @@ watch(selectedTicketTypeId, () => {
 </script>
 
 <template>
-	<form class="create-ticket-form" @submit.prevent="createTicket">
-		<p v-if="isLoading">Ticketarten werden geladen...</p>
+	<form class="create-ticket-form" @submit.prevent="create">
+		<p v-if="projectDetails == null">Ticketarten werden geladen...</p>
 		<p v-else-if="ticketTypes.length === 0">
 			Für dieses Projekt sind keine Ticketarten angelegt.
 		</p>

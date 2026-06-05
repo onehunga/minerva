@@ -77,6 +77,10 @@ export type CreateTicketRequest = {
 	statusId: number;
 };
 
+export type UpdateTicketStatusRequest = {
+	transitionId: number;
+};
+
 export type Ticket = {
 	id: number;
 	projectId: number;
@@ -88,4 +92,8 @@ export type Ticket = {
 	assignedTo: number | null;
 	createdAt: string | null;
 	updatedAt: string | null;
+};
+
+export type TicketListResponse = {
+	tickets: Ticket[];
 };
