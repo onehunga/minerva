@@ -44,3 +44,48 @@ export type CreateWorkflowTransitionRequest = {
 	from: string;
 	to: string;
 };
+
+export type WorkflowState = {
+	id: number;
+	name: string;
+	category: TicketStatusCategory;
+};
+
+export type WorkflowTransition = {
+	id: number;
+	name: string;
+	fromStateId: number;
+	toStateId: number;
+};
+
+export type TicketType = {
+	id: number;
+	name: string;
+	description: string;
+	states: WorkflowState[];
+	transitions: WorkflowTransition[];
+};
+
+export type TicketTypeListResponse = {
+	ticketTypes: TicketType[];
+};
+
+export type CreateTicketRequest = {
+	name: string;
+	description: string;
+	ticketTypeId: number;
+	statusId: number;
+};
+
+export type Ticket = {
+	id: number;
+	projectId: number;
+	ticketTypeId: number;
+	statusId: number;
+	name: string;
+	description: string;
+	createdBy: number;
+	assignedTo: number | null;
+	createdAt: string | null;
+	updatedAt: string | null;
+};

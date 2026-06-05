@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { useProjectRepository } from "..";
 import {
-	CreateTicketForm,
+	CreateTicketTypesForm,
 	useConfigureTickets,
 	type CreateTicketType,
 	type WorkflowConfiguration,
@@ -83,7 +83,7 @@ async function createProject() {
 			</div>
 		</form>
 
-		<CreateTicketForm :configure-tickets="configureTickets" />
+		<CreateTicketTypesForm :configure-tickets="configureTickets" />
 
 		<button type="submit" :form="projectFormId">Create Project</button>
 	</div>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
 import { type model, useProjectRepository } from "..";
+import { CreateTicketForm } from "@/feature/ticket";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
 const repository = useProjectRepository();
@@ -21,6 +22,14 @@ onMounted(async () => {
 		<section class="project-section">
 			<h1>{{ project.name }}</h1>
 			<p>{{ project.description }}</p>
+		</section>
+
+		<section class="project-section">
+			<h2>Tickets</h2>
+			<p v-if="project.projectRole === 'VIEWER'">
+				Als Viewer kannst du keine Tickets erstellen.
+			</p>
+			<CreateTicketForm v-else :project-id="project.id" />
 		</section>
 
 		<section v-if="project.projectRole === 'OWNER'" class="project-section">
