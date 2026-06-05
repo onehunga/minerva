@@ -28,6 +28,7 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleMod
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
 import de.fallstudie.minerva.backend.project.internal.web.CreateProjectRequest;
+import de.fallstudie.minerva.backend.ticket.TicketConfigurationService;
 import de.fallstudie.minerva.backend.user.Identity;
 
 class ProjectServiceTests {
@@ -37,6 +38,7 @@ class ProjectServiceTests {
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
+	private TicketConfigurationService ticketConfigurationService;
 	private ProjectService projectService;
 
 	@BeforeEach
@@ -45,8 +47,9 @@ class ProjectServiceTests {
 		projectMemberRepository = org.mockito.Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = org.mockito.Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = org.mockito.Mockito.mock(ProjectRoleRepository.class);
+		ticketConfigurationService = org.mockito.Mockito.mock(TicketConfigurationService.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, userService);
+				projectRoleRepository, ticketConfigurationService, userService);
 	}
 
 	@Test
@@ -105,7 +108,7 @@ class ProjectServiceTests {
 		});
 
 		final long projectId = projectService.createProject(IDENTITY,
-				new CreateProjectRequest("Minerva", "Ticket project"));
+				createProjectRequest("Minerva", "Ticket project"));
 
 		assertEquals(10L, projectId);
 
@@ -150,7 +153,7 @@ class ProjectServiceTests {
 		when(projectRepository.existsByName("Minerva")).thenReturn(true);
 
 		assertThrows(DuplicateResourceException.class, () -> projectService.createProject(IDENTITY,
-				new CreateProjectRequest("Minerva", "description")));
+				createProjectRequest("Minerva", "description")));
 
 		verify(projectRepository, never()).save(any());
 		verify(projectRoleRepository, never()).save(any());
@@ -159,10 +162,14 @@ class ProjectServiceTests {
 
 	private void assertInvalidProject(String name, String description) {
 		assertThrows(ValidationException.class, () -> projectService.createProject(IDENTITY,
-				new CreateProjectRequest(name, description)));
+				createProjectRequest(name, description)));
 
 		verify(projectRepository, never()).save(any());
 		verify(projectRoleRepository, never()).save(any());
 		verify(projectMemberRepository, never()).save(any());
+	}
+
+	private CreateProjectRequest createProjectRequest(String name, String description) {
+		return new CreateProjectRequest(name, description, null);
 	}
 }
