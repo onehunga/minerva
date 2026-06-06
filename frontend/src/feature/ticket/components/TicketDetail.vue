@@ -2,6 +2,7 @@
 import { computed, ref, watch } from "vue";
 import type { Ticket, TicketType, WorkflowState, WorkflowTransition } from "../ticket.model";
 import { useProject } from "@/feature/project";
+import CustomSelect from "@/components/CustomSelect.vue";
 
 const { updateTicketStatus } = useProject();
 
@@ -10,9 +11,8 @@ const props = defineProps<{
 	ticketType?: TicketType;
 }>();
 
-const selectedTransitionId = ref<number | null>(null);
+const selectedTransition = ref<WorkflowTransition | null>(null);
 const isUpdatingStatus = ref(false);
-const statusUpdateError = ref<string | null>(null);
 
 const currentStatus = computed<WorkflowState | undefined>(() =>
 	props.ticketType?.states.find((state) => state.id === props.ticket.statusId),
@@ -36,40 +36,35 @@ function getStateName(statusId: number): string {
 	);
 }
 
+watch(selectedTransition, () => {
+	submitStatusUpdate();
+});
+
 async function submitStatusUpdate(): Promise<void> {
-	if (selectedTransitionId.value == null) {
+	if (selectedTransition.value == null) {
 		return;
 	}
 
 	const transition = availableTransitions.value.find(
-		(currentTransition) => currentTransition.id === selectedTransitionId.value,
+		(currentTransition) => currentTransition.id === selectedTransition.value?.id,
 	);
 
 	if (transition === undefined) {
-		statusUpdateError.value = "Der gewählte Übergang ist nicht mehr verfügbar.";
+		alert("Der gewählte Übergang ist nicht mehr verfügbar.");
 		return;
 	}
 
 	isUpdatingStatus.value = true;
-	statusUpdateError.value = null;
 
 	try {
 		await updateTicketStatus(props.ticket.id, transition.id, transition.toStateId);
-		selectedTransitionId.value = null;
+		selectedTransition.value = null;
 	} catch {
-		statusUpdateError.value = "Der Status konnte nicht aktualisiert werden.";
+		alert("Der Status konnte nicht aktualisiert werden.");
 	} finally {
 		isUpdatingStatus.value = false;
 	}
 }
-
-watch(
-	() => props.ticket.statusId,
-	() => {
-		selectedTransitionId.value = null;
-		statusUpdateError.value = null;
-	},
-);
 
 function formatDate(value: string | null): string {
 	if (value == null) {
@@ -94,34 +89,27 @@ function formatDate(value: string | null): string {
 			{{ ticket.description || "Keine Beschreibung hinterlegt." }}
 		</p>
 
-		<form class="ticket-detail__field" @submit.prevent="submitStatusUpdate">
-			<label for="ticket-status">Status</label>
-			<select
-				id="ticket-status"
-				v-model.number="selectedTransitionId"
-				aria-label="Statusübergang"
-				:disabled="isUpdatingStatus || availableTransitions.length === 0"
-			>
-				<option :value="null">
-					{{ currentStatus?.name ?? `Status #${ticket.statusId}` }}
-				</option>
-				<option
-					v-for="transition in availableTransitions"
-					:key="transition.id"
-					:value="transition.id"
-				>
-					{{ transition.name }} → {{ getStateName(transition.toStateId) }}
-				</option>
-			</select>
-			<button type="submit" :disabled="selectedTransitionId == null || isUpdatingStatus">
-				{{ isUpdatingStatus ? "Aktualisiere..." : "Status aktualisieren" }}
-			</button>
-			<p v-if="availableTransitions.length === 0" class="ticket-detail__hint">
-				Keine Übergänge verfügbar.
-			</p>
-			<p v-if="statusUpdateError" class="ticket-detail__error">{{ statusUpdateError }}</p>
-		</form>
-
+		<label for="ticket-status">Status</label>
+		<CustomSelect :options="availableTransitions" v-model="selectedTransition">
+			<template #trigger>
+				{{ currentStatus?.name }}
+			</template>
+			<template #option="{ value: transition }">
+				{{ transition.name }} → {{ getStateName(transition.toStateId) }}
+			</template>
+		</CustomSelect>
+		<!-- <select
+			id="ticket-status"
+			v-model="selectedTransitionId"
+			:disabled="isUpdatingStatus || availableTransitions.length === 0"
+		>
+			<option
+				v-for="transition in availableTransitions"
+				:key="transition.id"
+				:value="transition.id"
+			></option>
+		</select>
+ -->
 		<dl class="ticket-detail__meta">
 			<div>
 				<dt>Ticketart</dt>
@@ -183,29 +171,6 @@ function formatDate(value: string | null): string {
 
 .ticket-detail__eyebrow {
 	font-size: 0.85rem;
-}
-
-.ticket-detail__field {
-	display: flex;
-	flex-direction: column;
-	gap: 0.35rem;
-	max-width: 18rem;
-}
-
-.ticket-detail__field select,
-.ticket-detail__field button {
-	padding: 0.45rem 0.55rem;
-	border: 1px solid currentColor;
-	background: Canvas;
-	color: CanvasText;
-}
-
-.ticket-detail__field button {
-	cursor: pointer;
-}
-
-.ticket-detail__field button:disabled {
-	cursor: not-allowed;
 }
 
 .ticket-detail__hint,
