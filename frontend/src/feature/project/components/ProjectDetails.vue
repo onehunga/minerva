@@ -19,7 +19,7 @@ const { details } = useProject();
 			<p v-if="details.projectRole === 'VIEWER'">
 				Als Viewer kannst du keine Tickets erstellen.
 			</p>
-			<CreateTicketForm v-else />
+			<CreateTicketForm v-else :parent-ticket-id="null" />
 		</section>
 
 		<section v-if="details.projectRole === 'OWNER'" class="project-section">

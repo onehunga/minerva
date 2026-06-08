@@ -134,6 +134,12 @@ databaseChangeLog:
                     foreignKeyName: fk_tickets_status_id
                     references: workflow_states(id)
               - column:
+                  name: parent_ticket_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_tickets_parent_ticket_id
+                    references: tickets(id)
+              - column:
                   name: name
                   type: VARCHAR(255)
                   constraints:
@@ -221,13 +227,13 @@ databaseChangeLog:
                   constraints:
                     nullable: false
                     foreignKeyName: fk_ticket_child_rules_parent_ticket_id
-                    references: tickets(id)
+                    references: ticket_types(id)
               - column:
                   name: child_ticket_id
                   type: BIGINT
                   constraints:
                     nullable: false
                     foreignKeyName: fk_ticket_child_rules_child_ticket_id
-                    references: tickets(id)
+                    references: ticket_types(id)
         - sql:
             sql: ALTER TABLE workflow_states ADD CONSTRAINT chk_workflow_states_workflow_status_category CHECK (workflow_status_category IN ('OPEN', 'IN_PROGRESS', 'COMPLETED'));

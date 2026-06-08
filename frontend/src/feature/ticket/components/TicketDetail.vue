@@ -3,12 +3,18 @@ import { computed, ref, watch } from "vue";
 import type { Ticket, TicketType, WorkflowState, WorkflowTransition } from "../ticket.model";
 import { useProject } from "@/feature/project";
 import CustomSelect from "@/components/CustomSelect.vue";
+import CreateTicketForm from "./CreateTicketForm.vue";
 
-const { updateTicketStatus } = useProject();
+const { details: projectDetails, updateTicketStatus } = useProject();
 
 const props = defineProps<{
 	ticket: Ticket;
 	ticketType?: TicketType;
+	childTickets: Ticket[];
+}>();
+
+const emit = defineEmits<{
+	(event: "selectTicket", ticketId: number): void;
 }>();
 
 const selectedTransition = ref<WorkflowTransition | null>(null);
@@ -34,6 +40,10 @@ function getStateName(statusId: number): string {
 		props.ticketType?.states.find((state) => state.id === statusId)?.name ??
 		`Status #${statusId}`
 	);
+}
+
+function selectChildTicket(ticketId: number): void {
+	emit("selectTicket", ticketId);
 }
 
 watch(selectedTransition, () => {
@@ -138,6 +148,37 @@ function formatDate(value: string | null): string {
 				<dd>{{ formatDate(ticket.updatedAt) }}</dd>
 			</div>
 		</dl>
+
+		<section class="ticket-detail__children" aria-labelledby="ticket-children-heading">
+			<h4 id="ticket-children-heading">Kindtickets</h4>
+			<p v-if="childTickets.length === 0" class="ticket-detail__hint">
+				Keine Kindtickets vorhanden.
+			</p>
+			<ul v-else class="ticket-detail__children-list">
+				<li v-for="childTicket in childTickets" :key="childTicket.id">
+					<button
+						type="button"
+						class="ticket-detail__child"
+						@click="selectChildTicket(childTicket.id)"
+					>
+						<span>{{ childTicket.name }}</span>
+						<small>#{{ childTicket.id }}</small>
+					</button>
+				</li>
+			</ul>
+		</section>
+
+		<section
+			v-if="projectDetails?.projectRole !== 'VIEWER'"
+			class="ticket-detail__create-child"
+			aria-labelledby="create-child-ticket-heading"
+		>
+			<h4 id="create-child-ticket-heading">Kindticket erstellen</h4>
+			<CreateTicketForm
+				:parent-ticket-id="ticket.id"
+				:parent-ticket-type-id="ticket.ticketTypeId"
+			/>
+		</section>
 	</article>
 </template>
 
@@ -154,7 +195,9 @@ function formatDate(value: string | null): string {
 
 .ticket-detail__header,
 .ticket-detail__description,
-.ticket-detail__meta {
+.ticket-detail__meta,
+.ticket-detail__children h4,
+.ticket-detail__create-child h4 {
 	margin: 0;
 }
 
@@ -201,5 +244,34 @@ function formatDate(value: string | null): string {
 
 .ticket-detail__meta dd {
 	margin: 0;
+}
+
+.ticket-detail__children,
+.ticket-detail__create-child {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.ticket-detail__children-list {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ticket-detail__child {
+	display: flex;
+	width: 100%;
+	justify-content: space-between;
+	gap: 0.75rem;
+	text-align: left;
+	padding: 0.6rem 0.8rem;
+	border: 1px solid currentColor;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
 }
 </style>

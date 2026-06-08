@@ -64,6 +64,7 @@ export type TicketType = {
 	description: string;
 	states: WorkflowState[];
 	transitions: WorkflowTransition[];
+	children: number[];
 };
 
 export type TicketTypeListResponse = {
@@ -75,6 +76,7 @@ export type CreateTicketRequest = {
 	description: string;
 	ticketTypeId: number;
 	statusId: number;
+	parentTicketId: number | null;
 };
 
 export type UpdateTicketStatusRequest = {
@@ -86,6 +88,7 @@ export type Ticket = {
 	projectId: number;
 	ticketTypeId: number;
 	statusId: number;
+	parentTicketId: number | null;
 	name: string;
 	description: string;
 	createdBy: number;

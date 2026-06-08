@@ -2,7 +2,12 @@
 import { computed, ref, watch } from "vue";
 import { useProject } from "@/feature/project";
 
-const { details: projectDetails, ticketTypes, createTicket } = useProject();
+const { details: projectDetails, ticketTypes, tickets, createTicket } = useProject();
+
+const props = defineProps<{
+	parentTicketId: number | null;
+	parentTicketTypeId?: number | null;
+}>();
 
 const name = ref("");
 const description = ref("");
@@ -12,14 +17,51 @@ const isCreating = ref(false);
 const errorMessage = ref("");
 const successMessage = ref("");
 
+const parentTicketTypeId = computed(() => {
+	if (props.parentTicketId == null) {
+		return null;
+	}
+
+	if (props.parentTicketTypeId != null) {
+		return props.parentTicketTypeId;
+	}
+
+	return tickets.value.find((ticket) => ticket.id === props.parentTicketId)?.ticketTypeId ?? null;
+});
+
+const availableTicketTypes = computed(() => {
+	if (props.parentTicketId == null) {
+		return ticketTypes.value;
+	}
+
+	const parentType = ticketTypes.value.find(
+		(ticketType) => ticketType.id === parentTicketTypeId.value,
+	);
+
+	if (parentType == null) {
+		return [];
+	}
+
+	return ticketTypes.value.filter((ticketType) => parentType.children.includes(ticketType.id));
+});
+
 const selectedTicketType = computed(() =>
-	ticketTypes.value.find((ticketType) => ticketType.id === selectedTicketTypeId.value),
+	availableTicketTypes.value.find((ticketType) => ticketType.id === selectedTicketTypeId.value),
 );
 
 const availableStates = computed(() => selectedTicketType.value?.states ?? []);
 
 function selectDefaultTicketType(): void {
-	selectedTicketTypeId.value = ticketTypes.value[0]?.id ?? null;
+	if (
+		selectedTicketTypeId.value != null &&
+		availableTicketTypes.value.some(
+			(ticketType) => ticketType.id === selectedTicketTypeId.value,
+		)
+	) {
+		return;
+	}
+
+	selectedTicketTypeId.value = availableTicketTypes.value[0]?.id ?? null;
 }
 
 function selectDefaultStatus(): void {
@@ -54,6 +96,7 @@ async function create(): Promise<void> {
 			description: description.value,
 			ticketTypeId: selectedTicketTypeId.value,
 			statusId: selectedStatusId.value,
+			parentTicketId: props.parentTicketId,
 		});
 
 		successMessage.value = `Ticket "${ticket.name}" wurde erstellt.`;
@@ -66,7 +109,7 @@ async function create(): Promise<void> {
 }
 
 watch(
-	ticketTypes,
+	availableTicketTypes,
 	() => {
 		selectDefaultTicketType();
 		selectDefaultStatus();
@@ -82,7 +125,10 @@ watch(selectedTicketTypeId, () => {
 <template>
 	<form class="create-ticket-form" @submit.prevent="create">
 		<p v-if="projectDetails == null">Ticketarten werden geladen...</p>
-		<p v-else-if="ticketTypes.length === 0">
+		<p v-else-if="availableTicketTypes.length === 0 && parentTicketId != null">
+			Für dieses Kindticket sind keine Ticketarten freigegeben.
+		</p>
+		<p v-else-if="availableTicketTypes.length === 0">
 			Für dieses Projekt sind keine Ticketarten angelegt.
 		</p>
 
@@ -108,7 +154,7 @@ watch(selectedTicketTypeId, () => {
 				:disabled="isCreating"
 			>
 				<option
-					v-for="ticketType in ticketTypes"
+					v-for="ticketType in availableTicketTypes"
 					:key="ticketType.id"
 					:value="ticketType.id"
 				>

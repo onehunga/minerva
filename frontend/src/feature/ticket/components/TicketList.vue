@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { Ticket } from "../ticket.model";
 import TicketDetail from "./TicketDetail.vue";
 import { useProject } from "@/feature/project";
 
@@ -16,8 +15,12 @@ const selectedTicketType = computed(() =>
 	ticketTypes.value.find((ticketType) => ticketType.id === selectedTicket.value?.ticketTypeId),
 );
 
-function selectTicket(ticket: Ticket): void {
-	selectedTicketId.value = ticket.id;
+const selectedTicketChildren = computed(() =>
+	tickets.value.filter((ticket) => ticket.parentTicketId === selectedTicket.value?.id),
+);
+
+function selectTicket(ticketId: number): void {
+	selectedTicketId.value = ticketId;
 }
 
 watch(
@@ -47,7 +50,7 @@ watch(
 							:class="{
 								'ticket-list__item--selected': selectedTicketId === ticket.id,
 							}"
-							@click="selectTicket(ticket)"
+							@click="selectTicket(ticket.id)"
 						>
 							<span>{{ ticket.name }}</span>
 							<small>#{{ ticket.id }}</small>
@@ -60,6 +63,8 @@ watch(
 				v-if="selectedTicket"
 				:ticket="selectedTicket"
 				:ticket-type="selectedTicketType"
+				:child-tickets="selectedTicketChildren"
+				@select-ticket="selectTicket"
 			/>
 		</div>
 	</div>

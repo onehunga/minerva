@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
@@ -29,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class TicketService {
 	private final TicketTypeRepository ticketTypeRepository;
+	private final TicketChildRuleRepository ticketChildRuleRepository;
 	private final WorkflowRepository workflowRepository;
 	private final WorkflowStatusRepository workflowStatusRepository;
 	private final WorkflowTransitionRepository workflowTransitionRepository;
@@ -44,13 +47,16 @@ public class TicketService {
 	public TicketTypeListResponse getTicketTypes(long projectId) {
 		final var ticketTypes = ticketTypeRepository.findAllByProjectIdOrderByNameAsc(projectId)
 				.stream().map(ticketType -> {
+					final var children = ticketChildRuleRepository
+							.findAllByParentTicketIdOrderByIdAsc(ticketType.getId()).stream()
+							.map(TicketChildRuleModel::getChildTicketId).toList();
 					final var workflow = workflowRepository
 							.findByProjectIdAndTicketTypeId(projectId, ticketType.getId())
 							.orElse(null);
 
 					if (workflow == null) {
 						return new TicketTypeResponse(ticketType.getId(), ticketType.getName(),
-								ticketType.getDescription(), List.of(), List.of());
+								ticketType.getDescription(), List.of(), List.of(), children);
 					}
 
 					final var states = workflowStatusRepository
@@ -70,7 +76,8 @@ public class TicketService {
 									.toList();
 
 					return new TicketTypeResponse(ticketType.getId(), ticketType.getName(),
-							ticketType.getDescription(), stateResponses, transitionResponses);
+							ticketType.getDescription(), stateResponses, transitionResponses,
+							children);
 				}).toList();
 
 		return new TicketTypeListResponse(ticketTypes);
@@ -90,12 +97,26 @@ public class TicketService {
 
 		workflowStatusRepository.findByIdAndWorkflowId(request.statusId(), workflow.getId())
 				.orElseThrow(() -> new ValidationException(
-						"Status gehoert nicht zur ausgewaehlten Ticketart"));
+						"Status gehört nicht zur ausgewaehlten Ticketart"));
+
+		if (request.parentTicketId() != null) {
+			final var parentTicket = ticketRepository
+					.findByIdAndProjectId(request.parentTicketId(), projectId)
+					.orElseThrow(() -> new ValidationException(
+							"Parent-Ticket gehoert nicht zum Projekt"));
+
+			ticketChildRuleRepository
+					.findByParentTicketIdAndChildTicketId(parentTicket.getTicketTypeId(),
+							ticketType.getId())
+					.orElseThrow(() -> new ValidationException(
+							"Ticketart ist als Kindticket nicht erlaubt"));
+		}
 
 		final var ticket = new TicketModel();
 		ticket.setProjectId(projectId);
 		ticket.setTicketTypeId(ticketType.getId());
 		ticket.setStatusId(request.statusId());
+		ticket.setParentTicketId(request.parentTicketId());
 		ticket.setName(request.name().trim());
 		ticket.setDescription(request.description() == null ? "" : request.description().trim());
 		ticket.setCreatedBy(identity.userId());
@@ -133,9 +154,9 @@ public class TicketService {
 
 	private TicketResponse toTicketResponse(TicketModel ticket) {
 		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
-				ticket.getStatusId(), ticket.getName(), ticket.getDescription(),
-				ticket.getCreatedBy(), ticket.getAssignedTo(), ticket.getCreatedAt(),
-				ticket.getUpdatedAt());
+				ticket.getStatusId(), ticket.getParentTicketId(), ticket.getName(),
+				ticket.getDescription(), ticket.getCreatedBy(), ticket.getAssignedTo(),
+				ticket.getCreatedAt(), ticket.getUpdatedAt());
 	}
 
 	private void validateCreateTicketRequest(CreateTicketRequest request) {
@@ -161,6 +182,10 @@ public class TicketService {
 
 		if (request.statusId() <= 0) {
 			throw new ValidationException("Status ist erforderlich");
+		}
+
+		if (request.parentTicketId() != null && request.parentTicketId() <= 0) {
+			throw new ValidationException("Parent-Ticket ist ungueltig");
 		}
 	}
 

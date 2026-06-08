@@ -29,6 +29,8 @@ public class TicketModel {
 	@Column(nullable = false)
 	private long statusId;
 
+	private Long parentTicketId = null;
+
 	@Column(nullable = false)
 	private String name;
 
