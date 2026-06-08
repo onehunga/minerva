@@ -32,6 +32,15 @@ const router: Router = createRouter({
 				requiredRole: "ADMIN",
 			},
 		},
+		{
+			path: "/project/:id",
+			name: "project",
+			component: () => import("@/views/ProjectView.vue"),
+			meta: {
+				requiresAuth: true,
+			},
+			props: true,
+		},
 	],
 });
 

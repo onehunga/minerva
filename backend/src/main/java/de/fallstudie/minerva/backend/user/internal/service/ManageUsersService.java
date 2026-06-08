@@ -34,11 +34,11 @@ public class ManageUsersService {
 		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
 
 		if (userRepository.existsByUsername(validatedUsername)) {
-			throw new DuplicateResourceException("Username already exists");
+			throw new DuplicateResourceException("Benutzername ist bereits vergeben");
 		}
 
 		final var role = workspaceRoleService.find(workspaceRoleName)
-				.orElseThrow(() -> new ValidationException("Workspace role does not exist"));
+				.orElseThrow(() -> new ValidationException("Arbeitsbereichsrolle existiert nicht"));
 
 		final var user = new UserModel();
 		user.setUsername(validatedUsername);
@@ -54,7 +54,7 @@ public class ManageUsersService {
 	public void updateUserRole(long userId, String workspaceRole) {
 		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
 		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 
 		final var currentRoleName = user.getWorkspaceRole().getName();
 
@@ -68,7 +68,7 @@ public class ManageUsersService {
 		}
 
 		final var role = workspaceRoleService.find(workspaceRoleName)
-				.orElseThrow(() -> new ValidationException("Workspace role does not exist"));
+				.orElseThrow(() -> new ValidationException("Arbeitsbereichsrolle existiert nicht"));
 
 		user.setWorkspaceRole(role);
 		userRepository.save(user);
@@ -79,14 +79,14 @@ public class ManageUsersService {
 	public void updateUsername(long userId, String username) {
 		final var validatedUsername = validateUsername(username);
 		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 
 		if (user.getUsername().equals(validatedUsername)) {
 			return;
 		}
 
 		if (userRepository.existsByUsername(validatedUsername)) {
-			throw new DuplicateResourceException("Username already exists");
+			throw new DuplicateResourceException("Benutzername ist bereits vergeben");
 		}
 
 		user.setUsername(validatedUsername);
@@ -98,7 +98,7 @@ public class ManageUsersService {
 	public void updatePassword(long userId, String password) {
 		validatePassword(password);
 		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 
 		user.setPassword(passwordEncoder.encode(password));
 		userRepository.save(user);
@@ -117,7 +117,7 @@ public class ManageUsersService {
 	@Transactional
 	public void deleteUser(long userId) {
 		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("User not found"));
+				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 
 		userRepository.delete(user);
 		userRepository.flush();
@@ -125,29 +125,30 @@ public class ManageUsersService {
 
 	private void validateAdminCanBeDemoted(UserModel user) {
 		if (ADMIN_USERNAME.equals(user.getUsername())) {
-			throw new ValidationException("Initial admin user cannot be demoted");
+			throw new ValidationException(
+					"Der initiale Admin-Benutzer darf nicht herabgestuft werden");
 		}
 
 		if (userRepository.countByWorkspaceRole_Name(WorkspaceRoleName.ADMIN) <= 1) {
-			throw new ValidationException("At least one admin user must remain");
+			throw new ValidationException("Mindestens ein Admin-Benutzer muss erhalten bleiben");
 		}
 	}
 
 	private String validateUsername(String username) {
 		if (username == null || username.isBlank()) {
-			throw new ValidationException("Username is required");
+			throw new ValidationException("Benutzername ist erforderlich");
 		}
 
 		final var trimmedUsername = username.trim();
 
 		if (trimmedUsername.length() < MIN_USERNAME_LENGTH
 				|| trimmedUsername.length() > MAX_USERNAME_LENGTH) {
-			throw new ValidationException("Username must be between 3 and 50 characters");
+			throw new ValidationException("Benutzername muss zwischen 3 und 50 Zeichen lang sein");
 		}
 
 		if (!trimmedUsername.matches(USERNAME_PATTERN)) {
 			throw new ValidationException(
-					"Username may only contain letters, numbers, '.', '_' or '-'");
+					"Benutzername darf nur Buchstaben, Zahlen, '.', '_' oder '-' enthalten");
 		}
 
 		return trimmedUsername;
@@ -155,23 +156,23 @@ public class ManageUsersService {
 
 	private void validatePassword(String password) {
 		if (password == null || password.isBlank()) {
-			throw new ValidationException("Password is required");
+			throw new ValidationException("Passwort ist erforderlich");
 		}
 
 		if (password.length() < MIN_PASSWORD_LENGTH) {
-			throw new ValidationException("Password must be at least 8 characters");
+			throw new ValidationException("Passwort muss mindestens 8 Zeichen lang sein");
 		}
 	}
 
 	private WorkspaceRoleName validateWorkspaceRole(String workspaceRole) {
 		if (workspaceRole == null || workspaceRole.isBlank()) {
-			throw new ValidationException("Role is required");
+			throw new ValidationException("Rolle ist erforderlich");
 		}
 
 		try {
 			return WorkspaceRoleName.valueOf(workspaceRole.trim());
 		} catch (IllegalArgumentException exception) {
-			throw new ValidationException("Role must be ADMIN or USER");
+			throw new ValidationException("Rolle muss ADMIN oder USER sein");
 		}
 	}
 }

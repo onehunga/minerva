@@ -1,0 +1,120 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0002-project-setup
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: projects_id_seq
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: projects
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: projects_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_projects
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_projects_name
+              - column:
+                  name: description
+                  type: TEXT
+              - column:
+                  name: created_by
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_projects_created_by
+                    references: users(id)
+              - column:
+                  name: created_at
+                  type: DATETIME
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: DATETIME
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createSequence:
+            sequenceName: project_roles_id_seq
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: project_roles
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: project_roles_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_project_roles
+              - column:
+                  name: project_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_project_roles_project_id
+                    references: projects(id)
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+        - createSequence:
+            sequenceName: project_members_id_seq
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: project_members
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: project_members_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_project_members
+              - column:
+                  name: project_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_project_members_project_id
+                    references: projects(id)
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_project_members_user_id
+                    references: users(id)
+              - column:
+                  name: role_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_project_members_role_id
+                    references: project_roles(id)
+  - changeSet:
+      id: 0002-restrict-role-names
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - sql:
+            sql: ALTER TABLE project_roles ADD CONSTRAINT chk_project_roles_name CHECK (name IN ('OWNER', 'CONTRIBUTOR', 'VIEWER'));

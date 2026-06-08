@@ -5,6 +5,7 @@ import de.fallstudie.minerva.backend.user.internal.persistence.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -18,6 +19,10 @@ public class UserService {
 
 	public Optional<UserDTO> findByUsername(String username) {
 		return userRepository.findByUsername(username).map(this::toSnapshot);
+	}
+
+	public List<UserDTO> findAll() {
+		return userRepository.findAll().stream().map(this::toSnapshot).toList();
 	}
 
 	public boolean existsById(long id) {
