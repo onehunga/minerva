@@ -29,7 +29,9 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusC
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionModel;
 import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketRequest;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 import de.fallstudie.minerva.backend.user.Identity;
 
 class TicketServiceTests {
@@ -119,6 +121,96 @@ class TicketServiceTests {
 	}
 
 	@Test
+	void updateTicketStatusAcceptsWildcardTransitionFromAnyState() {
+		final var ticketType = ticketType(1L, "Bug");
+		final var workflow = workflow(5L, PROJECT_ID, ticketType.getId());
+		final var openStatus = workflowStatus(20L, workflow.getId());
+		final var doneStatus = workflowStatus(30L, workflow.getId());
+		doneStatus.setName("Done");
+		doneStatus.setWorkflowStatusCategory(WorkflowStatusCategory.COMPLETED);
+		final var ticket = ticket(11L, PROJECT_ID, ticketType.getId());
+		ticket.setStatusId(openStatus.getId());
+		final var wildcardTransition = workflowTransition(40L, null, doneStatus.getId());
+
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+		when(workflowRepository.findByProjectIdAndTicketTypeId(PROJECT_ID, ticketType.getId()))
+				.thenReturn(Optional.of(workflow));
+		when(workflowTransitionRepository.findById(wildcardTransition.getId()))
+				.thenReturn(Optional.of(wildcardTransition));
+		when(workflowStatusRepository.findByIdAndWorkflowId(doneStatus.getId(), workflow.getId()))
+				.thenReturn(Optional.of(doneStatus));
+		when(ticketRepository.save(any(TicketModel.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		ticketService.updateTicketStatus(PROJECT_ID, ticket.getId(),
+				new UpdateTicketStatusRequest(wildcardTransition.getId()));
+
+		final ArgumentCaptor<TicketModel> ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
+		verify(ticketRepository).save(ticketCaptor.capture());
+		assertEquals(doneStatus.getId(), ticketCaptor.getValue().getStatusId());
+	}
+
+	@Test
+	void updateTicketStatusRejectsSpecificTransitionWhenFromDoesNotMatch() {
+		final var ticketType = ticketType(1L, "Bug");
+		final var workflow = workflow(5L, PROJECT_ID, ticketType.getId());
+		final var openStatus = workflowStatus(20L, workflow.getId());
+		final var inProgressStatus = workflowStatus(30L, workflow.getId());
+		inProgressStatus.setName("In Progress");
+		inProgressStatus.setWorkflowStatusCategory(WorkflowStatusCategory.IN_PROGRESS);
+		final var ticket = ticket(11L, PROJECT_ID, ticketType.getId());
+		ticket.setStatusId(openStatus.getId());
+		final var specificTransition = workflowTransition(40L, inProgressStatus.getId(),
+				openStatus.getId());
+
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+		when(workflowRepository.findByProjectIdAndTicketTypeId(PROJECT_ID, ticketType.getId()))
+				.thenReturn(Optional.of(workflow));
+		when(workflowTransitionRepository.findById(specificTransition.getId()))
+				.thenReturn(Optional.of(specificTransition));
+		when(workflowStatusRepository.findByIdAndWorkflowId(openStatus.getId(), workflow.getId()))
+				.thenReturn(Optional.of(openStatus));
+
+		assertThrows(ValidationException.class, () -> ticketService.updateTicketStatus(PROJECT_ID,
+				ticket.getId(), new UpdateTicketStatusRequest(specificTransition.getId())));
+
+		verify(ticketRepository, never()).save(any());
+	}
+
+	@Test
+	void getTicketTypesIncludesWildcardTransitionsScopedByToState() {
+		final var ticketType = ticketType(1L, "Bug");
+		final var workflow = workflow(5L, PROJECT_ID, ticketType.getId());
+		final var openStatus = workflowStatus(20L, workflow.getId());
+		final var doneStatus = workflowStatus(30L, workflow.getId());
+		doneStatus.setName("Done");
+		doneStatus.setWorkflowStatusCategory(WorkflowStatusCategory.COMPLETED);
+		final var wildcardTransition = workflowTransition(40L, null, doneStatus.getId());
+
+		when(ticketTypeRepository.findAllByProjectIdOrderByNameAsc(PROJECT_ID))
+				.thenReturn(List.of(ticketType));
+		when(ticketChildRuleRepository.findAllByParentTicketIdOrderByIdAsc(ticketType.getId()))
+				.thenReturn(List.of());
+		when(workflowRepository.findByProjectIdAndTicketTypeId(PROJECT_ID, ticketType.getId()))
+				.thenReturn(Optional.of(workflow));
+		when(workflowStatusRepository.findAllByWorkflowIdOrderByIdAsc(workflow.getId()))
+				.thenReturn(List.of(openStatus, doneStatus));
+		when(workflowTransitionRepository
+				.findAllForWorkflowStates(List.of(openStatus.getId(), doneStatus.getId())))
+				.thenReturn(List.of(wildcardTransition));
+
+		final var response = ticketService.getTicketTypes(PROJECT_ID);
+		final var ticketTypeResponse = response.ticketTypes().getFirst();
+
+		assertEquals(1, ticketTypeResponse.transitions().size());
+		assertEquals(wildcardTransition.getId(), ticketTypeResponse.transitions().getFirst().id());
+		assertEquals(null, ticketTypeResponse.transitions().getFirst().fromStateId());
+		assertEquals(doneStatus.getId(), ticketTypeResponse.transitions().getFirst().toStateId());
+	}
+
+	@Test
 	void getTicketTypesIncludesAllowedChildTicketIds() {
 		final var parentTicketType = ticketType(1L, "Parent");
 		final var childTicketType = ticketType(2L, "Child");
@@ -197,5 +289,15 @@ class TicketServiceTests {
 		childRule.setParentTicketId(parentTicketId);
 		childRule.setChildTicketId(childTicketId);
 		return childRule;
+	}
+
+	private static WorkflowTransitionModel workflowTransition(long id, Long fromStateId,
+			long toStateId) {
+		final var transition = new WorkflowTransitionModel();
+		ReflectionTestUtils.setField(transition, "id", id);
+		transition.setName("Transition");
+		transition.setFromState(fromStateId);
+		transition.setToState(toStateId);
+		return transition;
 	}
 }

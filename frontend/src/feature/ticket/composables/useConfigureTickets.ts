@@ -45,7 +45,7 @@ export function useConfigureTickets(initialTickets: CreateTicketType[] = []) {
 	function addNewTicketTransition(
 		ticketTypeName: string,
 		transitionName: string,
-		fromState: string,
+		fromState: string | null,
 		toState: string,
 	): boolean {
 		const ticketType = ticketTypes.value.get(ticketTypeName);
@@ -53,8 +53,15 @@ export function useConfigureTickets(initialTickets: CreateTicketType[] = []) {
 			return false; // Ticket type does not exist
 		}
 
-		if (!ticketType.states.has(fromState) || !ticketType.states.has(toState)) {
+		if (
+			(fromState != null && !ticketType.states.has(fromState)) ||
+			!ticketType.states.has(toState)
+		) {
 			return false; // One of the states does not exist
+		}
+
+		if (fromState === toState) {
+			return false;
 		}
 
 		if (
@@ -87,11 +94,118 @@ export function useConfigureTickets(initialTickets: CreateTicketType[] = []) {
 		return true;
 	}
 
+	function updateTicketStateCategory(
+		ticketTypeName: string,
+		stateName: string,
+		category: TicketStatusCategory,
+	): boolean {
+		const ticketType = ticketTypes.value.get(ticketTypeName);
+		if (!ticketType) {
+			return false;
+		}
+
+		const state = ticketType.states.get(stateName);
+		if (!state) {
+			return false;
+		}
+
+		state.statusCategory = category;
+		return true;
+	}
+
+	function removeTicketState(ticketTypeName: string, stateName: string): boolean {
+		const ticketType = ticketTypes.value.get(ticketTypeName);
+		if (!ticketType) {
+			return false;
+		}
+
+		const isReferenced = ticketType.transitions.some(
+			(transition) =>
+				transition.toState === stateName ||
+				(transition.fromState != null && transition.fromState === stateName),
+		);
+		if (isReferenced) {
+			return false;
+		}
+
+		return ticketType.states.delete(stateName);
+	}
+
+	function updateTicketTransition(
+		ticketTypeName: string,
+		transitionName: string,
+		updates: { fromState?: string | null; toState?: string },
+	): boolean {
+		const ticketType = ticketTypes.value.get(ticketTypeName);
+		if (!ticketType) {
+			return false;
+		}
+
+		const transition = ticketType.transitions.find((t) => t.name === transitionName);
+		if (!transition) {
+			return false;
+		}
+
+		const fromState = updates.fromState ?? transition.fromState;
+		const toState = updates.toState ?? transition.toState;
+
+		if (
+			(fromState != null && !ticketType.states.has(fromState)) ||
+			!ticketType.states.has(toState)
+		) {
+			return false;
+		}
+
+		if (fromState === toState) {
+			return false;
+		}
+
+		const hasDuplicate = ticketType.transitions.some(
+			(t) => t.name !== transitionName && t.fromState === fromState && t.toState === toState,
+		);
+		if (hasDuplicate) {
+			return false;
+		}
+
+		transition.fromState = fromState;
+		transition.toState = toState;
+		return true;
+	}
+
+	function removeTicketTransition(ticketTypeName: string, transitionName: string): boolean {
+		const ticketType = ticketTypes.value.get(ticketTypeName);
+		if (!ticketType) {
+			return false;
+		}
+
+		const index = ticketType.transitions.findIndex((t) => t.name === transitionName);
+		if (index === -1) {
+			return false;
+		}
+
+		ticketType.transitions.splice(index, 1);
+		return true;
+	}
+
+	function removeTicketChild(ticketTypeName: string, childName: string): boolean {
+		const ticketType = ticketTypes.value.get(ticketTypeName);
+		if (!ticketType) {
+			return false;
+		}
+
+		return ticketType.children.delete(childName);
+	}
+
 	return {
 		ticketTypes,
 		createTicketType,
 		addNewTicketState,
 		addNewTicketTransition,
 		addNewTicketChild,
+		updateTicketStateCategory,
+		removeTicketState,
+		updateTicketTransition,
+		removeTicketTransition,
+		removeTicketChild,
 	};
 }

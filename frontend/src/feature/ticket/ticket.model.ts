@@ -18,7 +18,7 @@ export type CreateWorkflowState = {
 
 export type CreateTicketTransition = {
 	name: string;
-	fromState: string;
+	fromState: string | null;
 	toState: string;
 };
 
@@ -41,7 +41,7 @@ export type CreateWorkflowStateRequest = {
 
 export type CreateWorkflowTransitionRequest = {
 	name: string;
-	from: string;
+	from: string | null;
 	to: string;
 };
 
@@ -54,7 +54,7 @@ export type WorkflowState = {
 export type WorkflowTransition = {
 	id: number;
 	name: string;
-	fromStateId: number;
+	fromStateId: number | null;
 	toStateId: number;
 };
 

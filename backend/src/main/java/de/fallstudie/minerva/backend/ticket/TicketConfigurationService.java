@@ -81,7 +81,8 @@ public class TicketConfigurationService {
 		for (final var ticketTransition : ticket.transitions()) {
 			final var ticketTransitionModel = new WorkflowTransitionModel();
 			ticketTransitionModel.setName(ticketTransition.name());
-			ticketTransitionModel.setFromState(map.get(ticketTransition.from()));
+			ticketTransitionModel.setFromState(
+					ticketTransition.from() == null ? null : map.get(ticketTransition.from()));
 			ticketTransitionModel.setToState(map.get(ticketTransition.to()));
 
 			this.workflowTransitionRepository.save(ticketTransitionModel);

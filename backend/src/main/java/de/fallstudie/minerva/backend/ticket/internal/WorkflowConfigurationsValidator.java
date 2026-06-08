@@ -10,7 +10,9 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -67,18 +69,29 @@ public class WorkflowConfigurationsValidator {
 	// TODO: brauchen wir mindestens einen Übergang?
 	private void validateTicketTransitions(Set<String> stateNames,
 			List<TicketStateTransitionConfigurationRequest> transitions) {
+		final var seenTransitions = new HashSet<String>();
+
 		for (final var transition : transitions) {
 			assert transition.name() != null : "Transitions must not be null";
-			assert transition.from() != null : "Transition from state must not be null";
 			assert transition.to() != null : "Transition to state must not be null";
 
-			if (!stateNames.contains(transition.from())) {
+			if (transition.from() != null && !stateNames.contains(transition.from())) {
 				throw new ValidationException(
 						"Übergangszustand " + transition.from() + " ist kein gültiger Zustand");
 			}
 			if (!stateNames.contains(transition.to())) {
 				throw new ValidationException(
 						"Übergangszustand " + transition.to() + " ist kein gültiger Zustand");
+			}
+			if (Objects.equals(transition.from(), transition.to())) {
+				throw new ValidationException(
+						"Übergang von und zu demselben Zustand ist nicht erlaubt");
+			}
+
+			final var transitionKey = transition.from() + "->" + transition.to();
+			if (!seenTransitions.add(transitionKey)) {
+				throw new DuplicateResourceException(
+						"Übergang " + transitionKey + " ist bereits definiert");
 			}
 		}
 	}

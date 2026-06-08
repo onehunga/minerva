@@ -68,8 +68,8 @@ public class TicketService {
 					final var stateIds = states.stream().map(WorkflowStatusModel::getId).toList();
 					final var transitionResponses = stateIds.isEmpty()
 							? List.<WorkflowTransitionResponse>of()
-							: workflowTransitionRepository
-									.findAllByFromStateInOrderByIdAsc(stateIds).stream()
+							: workflowTransitionRepository.findAllForWorkflowStates(stateIds)
+									.stream()
 									.map(transition -> new WorkflowTransitionResponse(
 											transition.getId(), transition.getName(),
 											transition.getFromState(), transition.getToState()))
@@ -97,13 +97,13 @@ public class TicketService {
 
 		workflowStatusRepository.findByIdAndWorkflowId(request.statusId(), workflow.getId())
 				.orElseThrow(() -> new ValidationException(
-						"Status gehört nicht zur ausgewaehlten Ticketart"));
+						"Status gehört nicht zur ausgewählten Ticketart"));
 
 		if (request.parentTicketId() != null) {
 			final var parentTicket = ticketRepository
 					.findByIdAndProjectId(request.parentTicketId(), projectId)
 					.orElseThrow(() -> new ValidationException(
-							"Parent-Ticket gehoert nicht zum Projekt"));
+							"Parent-Ticket gehört nicht zum Projekt"));
 
 			ticketChildRuleRepository
 					.findByParentTicketIdAndChildTicketId(parentTicket.getTicketTypeId(),
@@ -137,15 +137,16 @@ public class TicketService {
 				.findByProjectIdAndTicketTypeId(projectId, ticket.getTicketTypeId())
 				.orElseThrow(() -> new ValidationException("Ticketart hat keinen Workflow"));
 		final var transition = workflowTransitionRepository.findById(request.transitionId())
-				.orElseThrow(() -> new ValidationException("Statusuebergang nicht gefunden"));
+				.orElseThrow(() -> new ValidationException("Statusübergang nicht gefunden"));
 
 		workflowStatusRepository.findByIdAndWorkflowId(transition.getToState(), workflow.getId())
 				.orElseThrow(
-						() -> new ValidationException("Zielstatus gehoert nicht zur Ticketart"));
+						() -> new ValidationException("Zielstatus gehört nicht zur Ticketart"));
 
-		if (transition.getFromState() != ticket.getStatusId()) {
+		if (transition.getFromState() != null
+				&& transition.getFromState() != ticket.getStatusId()) {
 			throw new ValidationException(
-					"Statusuebergang ist fuer den aktuellen Status nicht erlaubt");
+					"Statusübergang ist für den aktuellen Status nicht erlaubt");
 		}
 
 		ticket.setStatusId(transition.getToState());
@@ -185,7 +186,7 @@ public class TicketService {
 		}
 
 		if (request.parentTicketId() != null && request.parentTicketId() <= 0) {
-			throw new ValidationException("Parent-Ticket ist ungueltig");
+			throw new ValidationException("Parent-Ticket ist ungültig");
 		}
 	}
 
@@ -195,7 +196,7 @@ public class TicketService {
 		}
 
 		if (request.transitionId() <= 0) {
-			throw new ValidationException("Statusuebergang ist erforderlich");
+			throw new ValidationException("Statusübergang ist erforderlich");
 		}
 	}
 }

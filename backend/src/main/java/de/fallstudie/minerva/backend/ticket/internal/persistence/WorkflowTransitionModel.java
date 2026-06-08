@@ -19,7 +19,8 @@ public class WorkflowTransitionModel {
 	private String name;
 
 	@Setter
-	private long fromState;
+	@Column(nullable = true)
+	private Long fromState;
 
 	@Setter
 	@Column(nullable = false)

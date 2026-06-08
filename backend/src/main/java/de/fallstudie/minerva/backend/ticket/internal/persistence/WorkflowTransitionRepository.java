@@ -4,7 +4,16 @@ import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface WorkflowTransitionRepository extends JpaRepository<WorkflowTransitionModel, Long> {
-	List<WorkflowTransitionModel> findAllByFromStateInOrderByIdAsc(Collection<Long> fromStates);
+	@Query("""
+			SELECT t FROM WorkflowTransitionModel t
+			WHERE t.fromState IN :stateIds
+			   OR (t.fromState IS NULL AND t.toState IN :stateIds)
+			ORDER BY t.id ASC
+			""")
+	List<WorkflowTransitionModel> findAllForWorkflowStates(
+			@Param("stateIds") Collection<Long> stateIds);
 }

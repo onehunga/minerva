@@ -4,9 +4,11 @@ import type {
 	useConfigureTickets,
 	TicketStatusCategory,
 	CreateTicketType,
+	CreateWorkflowState,
 	TicketDetails,
 } from "../index.ts";
 import BaseModal from "@/components/BaseModal.vue";
+import CustomSelect from "@/components/CustomSelect.vue";
 import EditTicketTypeDetails from "./EditTicketTypeDetails.vue";
 
 enum DetailsConfiguration {
@@ -23,6 +25,8 @@ const STATUS_LABELS: Record<TicketStatusCategory, string> = {
 	COMPLETED: "Abgeschlossen",
 };
 
+const STATUS_CATEGORY_OPTIONS = Object.keys(STATUS_LABELS) as TicketStatusCategory[];
+
 const { configureTickets } = defineProps<{
 	configureTickets: ReturnType<typeof useConfigureTickets>;
 }>();
@@ -33,13 +37,18 @@ const showCreateTicketStateForm = ref(false);
 const newStateName = ref("");
 const newStateCategory = ref<TicketStatusCategory>("OPEN");
 
+const WILDCARD_FROM_STATE = null;
+const FROM_STATE_UNSELECTED = "__from_state_unselected__";
+
 const showCreateTicketTransitionForm = ref(false);
 const newTransitionName = ref("");
-const transitionFromState = ref("");
-const transitionToState = ref("");
+const transitionFromState = ref<string | null | typeof FROM_STATE_UNSELECTED>(
+	FROM_STATE_UNSELECTED,
+);
+const transitionToState = ref<string | null>(null);
 
 const showCreateTicketChildTypeForm = ref(false);
-const newChildTypeName = ref("");
+const newChildTypeName = ref<string | null>(null);
 
 const activeTicketTypeDetails = ref<CreateTicketType | null>(null);
 const activeDetailsConfiguration = ref<DetailsConfiguration>(DetailsConfiguration.States);
@@ -54,20 +63,24 @@ const availableTicketStates = computed(() => {
 	return states;
 });
 
+const stateNameOptions = computed(() => availableTicketStates.value.map((state) => state.name));
+
+const fromStateOptions = computed(() => [WILDCARD_FROM_STATE, ...stateNameOptions.value]);
+
+function formatFromState(fromState: string | null): string {
+	return fromState ?? "Alle";
+}
+
 const possibleTransitionStates = computed(() => {
-	if (!activeTicketTypeDetails.value) {
+	if (!activeTicketTypeDetails.value || transitionFromState.value === FROM_STATE_UNSELECTED) {
 		return [];
 	}
 
-	const allStates = Array.from(activeTicketTypeDetails.value.states.values());
-	const takenToStates = new Set(
-		activeTicketTypeDetails.value.transitions
-			.filter((transition) => transition.fromState == transitionFromState.value)
-			.map((transition) => transition.toState),
+	return possibleToStatesForTransition(
+		transitionFromState.value,
+		transitionToState.value ?? "",
+		"",
 	);
-	takenToStates.add(transitionFromState.value);
-
-	return allStates.filter((state) => !takenToStates.has(state.name));
 });
 
 const availableTicketChildren = computed(() => {
@@ -94,6 +107,51 @@ const possibleTicketChildTypes = computed(() => {
 
 	return possibleChildren;
 });
+
+const possibleTicketChildTypeNames = computed(() =>
+	possibleTicketChildTypes.value.map((ticketType) => ticketType.name),
+);
+
+function possibleToStatesForTransition(
+	fromState: string | null,
+	currentToState: string,
+	currentTransitionName: string,
+): CreateWorkflowState[] {
+	if (!activeTicketTypeDetails.value) {
+		return [];
+	}
+
+	const allStates = Array.from(activeTicketTypeDetails.value.states.values());
+
+	if (fromState == null) {
+		const takenToStates = new Set(
+			activeTicketTypeDetails.value.transitions
+				.filter(
+					(transition) =>
+						transition.fromState == null && transition.name !== currentTransitionName,
+				)
+				.map((transition) => transition.toState),
+		);
+
+		return allStates.filter(
+			(state) => !takenToStates.has(state.name) || state.name === currentToState,
+		);
+	}
+
+	const takenToStates = new Set(
+		activeTicketTypeDetails.value.transitions
+			.filter(
+				(transition) =>
+					transition.fromState === fromState && transition.name !== currentTransitionName,
+			)
+			.map((transition) => transition.toState),
+	);
+	takenToStates.add(fromState);
+
+	return allStates.filter(
+		(state) => !takenToStates.has(state.name) || state.name === currentToState,
+	);
+}
 
 function selectTicket(ticket: CreateTicketType) {
 	activeTicketTypeDetails.value = ticket;
@@ -148,8 +206,8 @@ function addNewTicketState() {
 function addNewTicketTransition() {
 	if (
 		!newTransitionName.value ||
-		!transitionFromState.value ||
-		!transitionToState.value ||
+		transitionFromState.value === FROM_STATE_UNSELECTED ||
+		transitionToState.value == null ||
 		!activeTicketTypeDetails.value
 	) {
 		return;
@@ -175,13 +233,13 @@ function addNewTicketTransition() {
 	}
 
 	newTransitionName.value = "";
-	transitionFromState.value = "";
-	transitionToState.value = "";
+	transitionFromState.value = FROM_STATE_UNSELECTED;
+	transitionToState.value = null;
 	showCreateTicketTransitionForm.value = false;
 }
 
 function addNewTicketChildType() {
-	if (!newChildTypeName.value) {
+	if (newChildTypeName.value == null) {
 		return;
 	}
 
@@ -200,8 +258,101 @@ function addNewTicketChildType() {
 		return;
 	}
 
-	newChildTypeName.value = "";
+	newChildTypeName.value = null;
 	showCreateTicketChildTypeForm.value = false;
+}
+
+function onStateCategoryChange(stateName: string, category: TicketStatusCategory | null) {
+	if (category == null || activeTicketTypeDetails.value == null) {
+		return;
+	}
+
+	configureTickets.updateTicketStateCategory(
+		activeTicketTypeDetails.value.name,
+		stateName,
+		category,
+	);
+}
+
+function removeState(stateName: string) {
+	if (activeTicketTypeDetails.value == null) {
+		return;
+	}
+
+	const success = configureTickets.removeTicketState(
+		activeTicketTypeDetails.value.name,
+		stateName,
+	);
+
+	if (!success) {
+		alert("Dieser Status wird noch in Übergängen verwendet und kann nicht gelöscht werden.");
+	}
+}
+
+function onTransitionFromChange(transitionName: string, fromState: string | null) {
+	if (activeTicketTypeDetails.value == null) {
+		return;
+	}
+
+	const transition = activeTicketTypeDetails.value.transitions.find(
+		(currentTransition) => currentTransition.name === transitionName,
+	);
+	if (transition == null) {
+		return;
+	}
+
+	const success = configureTickets.updateTicketTransition(
+		activeTicketTypeDetails.value.name,
+		transitionName,
+		{ fromState, toState: transition.toState },
+	);
+
+	if (!success) {
+		alert(
+			"Diese Übergangskonfiguration existiert bereits oder die angegebenen Zustände sind ungültig.",
+		);
+	}
+}
+
+function onTransitionToChange(transitionName: string, toState: string | null) {
+	if (toState == null || activeTicketTypeDetails.value == null) {
+		return;
+	}
+
+	const transition = activeTicketTypeDetails.value.transitions.find(
+		(currentTransition) => currentTransition.name === transitionName,
+	);
+	if (transition == null) {
+		return;
+	}
+
+	const success = configureTickets.updateTicketTransition(
+		activeTicketTypeDetails.value.name,
+		transitionName,
+		{ fromState: transition.fromState, toState },
+	);
+
+	if (!success) {
+		alert(
+			"Diese Übergangskonfiguration existiert bereits oder die angegebenen Zustände sind ungültig.",
+		);
+	}
+}
+
+function removeTransition(transitionName: string) {
+	if (activeTicketTypeDetails.value == null) {
+		return;
+	}
+
+	configureTickets.removeTicketTransition(activeTicketTypeDetails.value.name, transitionName);
+}
+
+function removeChild(childName: string) {
+	if (activeTicketTypeDetails.value == null) {
+		return;
+	}
+
+	configureTickets.removeTicketChild(activeTicketTypeDetails.value.name, childName);
 }
 </script>
 
@@ -277,12 +428,32 @@ function addNewTicketChildType() {
 					v-else-if="activeDetailsConfiguration == DetailsConfiguration.States"
 					class="edit-ticket-states"
 				>
-					<ul>
+					<ul class="configuration-entry-list">
 						<li
-							v-for="state in activeTicketTypeDetails.states.values()"
+							v-for="state in availableTicketStates"
 							:key="state.name"
+							class="configuration-entry"
 						>
-							{{ state.name }} - {{ STATUS_LABELS[state.statusCategory] }}
+							<span class="configuration-entry__label">{{ state.name }}</span>
+							<div class="configuration-entry__actions">
+								<CustomSelect
+									:options="STATUS_CATEGORY_OPTIONS"
+									:model-value="state.statusCategory"
+									@update:model-value="
+										(category) => onStateCategoryChange(state.name, category)
+									"
+								>
+									<template #trigger>
+										{{ STATUS_LABELS[state.statusCategory] }}
+									</template>
+									<template #option="{ value: category }">
+										{{ STATUS_LABELS[category] }}
+									</template>
+								</CustomSelect>
+								<button type="button" @click="removeState(state.name)">
+									Löschen
+								</button>
+							</div>
 						</li>
 					</ul>
 					<button type="button" @click="showCreateTicketStateForm = true">
@@ -293,16 +464,54 @@ function addNewTicketChildType() {
 					v-else-if="activeDetailsConfiguration == DetailsConfiguration.Transitions"
 					class="edit-ticket-transitions"
 				>
-					<div class="current-transitions">
-						<div
-							class="transition"
+					<ul class="configuration-entry-list">
+						<li
 							v-for="transition in activeTicketTypeDetails.transitions"
 							:key="transition.name"
+							class="configuration-entry"
 						>
-							{{ transition.name }}: {{ transition.fromState }} →
-							{{ transition.toState }}
-						</div>
-					</div>
+							<span class="configuration-entry__label">{{ transition.name }}</span>
+							<div class="configuration-entry__actions">
+								<CustomSelect
+									:options="fromStateOptions"
+									:model-value="transition.fromState"
+									@update:model-value="
+										(fromState) =>
+											onTransitionFromChange(transition.name, fromState)
+									"
+								>
+									<template #trigger>
+										{{ formatFromState(transition.fromState) }}
+									</template>
+									<template #option="{ value: stateName }">
+										{{ formatFromState(stateName) }}
+									</template>
+								</CustomSelect>
+								<span>→</span>
+								<CustomSelect
+									:options="
+										possibleToStatesForTransition(
+											transition.fromState,
+											transition.toState,
+											transition.name,
+										).map((state) => state.name)
+									"
+									:model-value="transition.toState"
+									@update:model-value="
+										(toState) => onTransitionToChange(transition.name, toState)
+									"
+								>
+									<template #trigger>{{ transition.toState }}</template>
+									<template #option="{ value: stateName }">
+										{{ stateName }}
+									</template>
+								</CustomSelect>
+								<button type="button" @click="removeTransition(transition.name)">
+									Löschen
+								</button>
+							</div>
+						</li>
+					</ul>
 
 					<button type="button" @click="showCreateTicketTransitionForm = true">
 						Neuen Übergang anlegen
@@ -312,9 +521,16 @@ function addNewTicketChildType() {
 					v-else-if="activeDetailsConfiguration == DetailsConfiguration.Children"
 					class="ticket-type-children"
 				>
-					<ul>
-						<li v-for="child in availableTicketChildren" :key="child">
-							{{ child }}
+					<ul class="configuration-entry-list">
+						<li
+							v-for="child in availableTicketChildren"
+							:key="child"
+							class="configuration-entry"
+						>
+							<span class="configuration-entry__label">{{ child }}</span>
+							<div class="configuration-entry__actions">
+								<button type="button" @click="removeChild(child)">Löschen</button>
+							</div>
 						</li>
 					</ul>
 
@@ -344,60 +560,80 @@ function addNewTicketChildType() {
 	</BaseModal>
 
 	<BaseModal
-		:v-if="showCreateTicketStateForm"
+		v-if="showCreateTicketStateForm"
 		:open="showCreateTicketStateForm"
 		@close="showCreateTicketStateForm = false"
 	>
 		<div class="create-ticket-state">
 			<form @submit.prevent="addNewTicketState">
 				<input v-model="newStateName" placeholder="Statusname" />
-				<select v-model="newStateCategory">
-					<option
-						v-for="status in Object.keys(STATUS_LABELS)"
-						:key="status"
-						:value="status"
-					>
-						{{ STATUS_LABELS[status as TicketStatusCategory] }}
-					</option>
-				</select>
+				<CustomSelect
+					:options="STATUS_CATEGORY_OPTIONS"
+					:model-value="newStateCategory"
+					@update:model-value="
+						(category) => {
+							if (category != null) {
+								newStateCategory = category;
+							}
+						}
+					"
+				>
+					<template #trigger>{{ STATUS_LABELS[newStateCategory] }}</template>
+					<template #option="{ value: category }">
+						{{ STATUS_LABELS[category] }}
+					</template>
+				</CustomSelect>
 				<button type="submit" :disabled="!newStateName">Neuen Status erstellen</button>
 			</form>
 		</div>
 	</BaseModal>
 
 	<BaseModal
-		:v-if="showCreateTicketTransitionForm"
+		v-if="showCreateTicketTransitionForm"
 		:open="showCreateTicketTransitionForm"
 		@close="showCreateTicketTransitionForm = false"
 	>
 		<div class="create-ticket-transition">
 			<form @submit.prevent="addNewTicketTransition">
 				<input v-model="newTransitionName" placeholder="Übergangsname" />
-				<select v-model="transitionFromState">
-					<option
-						v-for="state in availableTicketStates"
-						:key="state.name"
-						:value="state.name"
-					>
-						{{ state.name }}
-					</option>
-					<option v-if="availableTicketStates.length === 0" disabled>
-						Keine verfügbaren Zustände
-					</option>
-				</select>
-				<select v-model="transitionToState">
-					<option
-						v-for="state in possibleTransitionStates"
-						:key="state.name"
-						:value="state.name"
-					>
-						{{ state.name }}
-					</option>
-					<option v-if="possibleTransitionStates.length === 0" disabled>
-						Keine verfügbaren Zustände
-					</option>
-				</select>
-				<button type="submit" :disabled="!newTransitionName">
+				<CustomSelect
+					:options="fromStateOptions"
+					:model-value="
+						transitionFromState === FROM_STATE_UNSELECTED ? null : transitionFromState
+					"
+					@update:model-value="transitionFromState = $event"
+				>
+					<template #trigger>
+						{{
+							transitionFromState === FROM_STATE_UNSELECTED
+								? "Von Zustand wählen"
+								: formatFromState(transitionFromState)
+						}}
+					</template>
+					<template #option="{ value: stateName }">
+						{{ formatFromState(stateName) }}
+					</template>
+				</CustomSelect>
+				<CustomSelect
+					:options="possibleTransitionStates.map((state) => state.name)"
+					:model-value="transitionToState"
+					@update:model-value="transitionToState = $event"
+				>
+					<template #trigger>
+						{{ transitionToState ?? "Zu Zustand wählen" }}
+					</template>
+					<template #option="{ value: stateName }">
+						{{ stateName }}
+					</template>
+				</CustomSelect>
+				<button
+					type="submit"
+					:disabled="
+						!newTransitionName ||
+						transitionFromState === FROM_STATE_UNSELECTED ||
+						transitionToState == null
+					"
+				>
 					Neuen Übergang erstellen
 				</button>
 			</form>
@@ -405,25 +641,25 @@ function addNewTicketChildType() {
 	</BaseModal>
 
 	<BaseModal
-		:v-if="showCreateTicketChildTypeForm"
+		v-if="showCreateTicketChildTypeForm"
 		:open="showCreateTicketChildTypeForm"
 		@close="showCreateTicketChildTypeForm = false"
 	>
 		<div class="create-ticket-child-type">
 			<form @submit.prevent="addNewTicketChildType">
-				<select v-model="newChildTypeName">
-					<option
-						v-for="ticketType in possibleTicketChildTypes"
-						:key="ticketType.name"
-						:value="ticketType.name"
-					>
-						{{ ticketType.name }}
-					</option>
-					<option v-if="possibleTicketChildTypes.length === 0" disabled>
-						Keine verfügbaren Ticketarten
-					</option>
-				</select>
-				<button type="submit" :disabled="!newChildTypeName">
+				<CustomSelect
+					:options="possibleTicketChildTypeNames"
+					:model-value="newChildTypeName"
+					@update:model-value="newChildTypeName = $event"
+				>
+					<template #trigger>
+						{{ newChildTypeName ?? "Ticketart wählen" }}
+					</template>
+					<template #option="{ value: childName }">
+						{{ childName }}
+					</template>
+				</CustomSelect>
+				<button type="submit" :disabled="newChildTypeName == null">
 					Neue Unterticketart erstellen
 				</button>
 			</form>
@@ -522,6 +758,36 @@ function addNewTicketChildType() {
 .ticket-type-empty-state h2,
 .ticket-type-empty-state p {
 	margin: 0;
+}
+
+.configuration-entry-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.configuration-entry {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	padding: 0.6rem 0.8rem;
+	border: 1px solid currentColor;
+}
+
+.configuration-entry__label {
+	flex: 1;
+	min-width: 0;
+}
+
+.configuration-entry__actions {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-shrink: 0;
 }
 
 @media (max-width: 70rem) {

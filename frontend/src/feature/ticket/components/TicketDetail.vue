@@ -27,7 +27,10 @@ const currentStatus = computed<WorkflowState | undefined>(() =>
 const availableTransitions = computed<WorkflowTransition[]>(
 	() =>
 		props.ticketType?.transitions.filter(
-			(transition) => transition.fromStateId === props.ticket.statusId,
+			(transition) =>
+				transition.toStateId !== props.ticket.statusId &&
+				(transition.fromStateId == null ||
+					transition.fromStateId === props.ticket.statusId),
 		) ?? [],
 );
 
