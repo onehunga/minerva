@@ -65,11 +65,7 @@ export function useConfigureTickets(initialTickets: CreateTicketType[] = []) {
 		}
 
 		if (
-			ticketType.transitions.some(
-				(t) =>
-					t.name === transitionName ||
-					(t.fromState === fromState && t.toState === toState),
-			)
+			ticketType.transitions.some((t) => t.fromState === fromState && t.toState === toState)
 		) {
 			return false; // Transition already exists
 		}
