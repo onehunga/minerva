@@ -58,16 +58,16 @@ class ProjectPoliciesTests {
 
 	@ParameterizedTest
 	@CsvSource({"OWNER,true", "CONTRIBUTOR,true", "VIEWER,false"})
-	void canCreateTicketsAllowsExpectedRoles(ProjectRoleName roleName, boolean expected) {
-		assertEquals(expected, canCreateTicketsWithRole(roleName));
+	void canModifyTicketsAllowsExpectedRoles(ProjectRoleName roleName, boolean expected) {
+		assertEquals(expected, canModifyTicketsWithRole(roleName));
 	}
 
 	@Test
-	void canCreateTicketsRejectsNonMembers() {
+	void canModifyTicketsRejectsNonMembers() {
 		when(projectMemberRepository.existsByProjectIdAndUserId(TestProjects.PROJECT_ID,
 				TestProjects.OWNER_USER_ID)).thenReturn(false);
 
-		assertFalse(projectPolicies.canCreateTickets(TestProjects.OWNER, TestProjects.PROJECT_ID));
+		assertFalse(projectPolicies.canModifyTickets(TestProjects.OWNER, TestProjects.PROJECT_ID));
 	}
 
 	private boolean canManageUsersWithRole(ProjectRoleName roleName) {
@@ -75,9 +75,9 @@ class ProjectPoliciesTests {
 		return projectPolicies.canManageProjectUsers(TestProjects.OWNER, TestProjects.PROJECT_ID);
 	}
 
-	private boolean canCreateTicketsWithRole(ProjectRoleName roleName) {
+	private boolean canModifyTicketsWithRole(ProjectRoleName roleName) {
 		stubMembershipRole(roleName);
-		return projectPolicies.canCreateTickets(TestProjects.OWNER, TestProjects.PROJECT_ID);
+		return projectPolicies.canModifyTickets(TestProjects.OWNER, TestProjects.PROJECT_ID);
 	}
 
 	private void stubMembershipRole(ProjectRoleName roleName) {

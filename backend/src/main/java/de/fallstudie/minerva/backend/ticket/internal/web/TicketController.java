@@ -44,7 +44,7 @@ public class TicketController {
 
 	@PostMapping("/tickets")
 	@ResponseStatus(HttpStatus.CREATED)
-	@PreAuthorize("@projectPolicy.canCreateTickets(principal, #projectId)")
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
 	public TicketResponse createTicket(@AuthenticationPrincipal Identity identity,
 			@PathVariable long projectId, @RequestBody CreateTicketRequest request) {
 		log.info("User with ID {} is creating a ticket in project with ID {}", identity.userId(),
@@ -65,7 +65,7 @@ public class TicketController {
 
 	@PostMapping("/tickets/{ticketId}/comments")
 	@ResponseStatus(HttpStatus.CREATED)
-	@PreAuthorize("@projectPolicy.canCreateTickets(principal, #projectId)")
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
 	public TicketCommentResponse createTicketComment(@AuthenticationPrincipal Identity identity,
 			@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody CreateTicketCommentRequest request) {
@@ -78,7 +78,7 @@ public class TicketController {
 
 	@PatchMapping("/tickets/{ticketId}/status")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@projectPolicy.canCreateTickets(principal, #projectId)")
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
 	public void updateTicketStatus(@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody UpdateTicketStatusRequest request) {
 		log.info("Updating status of ticket with ID {} in project with ID {}", ticketId, projectId);
