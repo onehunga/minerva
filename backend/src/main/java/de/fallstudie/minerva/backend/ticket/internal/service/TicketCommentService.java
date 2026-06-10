@@ -11,6 +11,7 @@ import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketCommentRequ
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketCommentListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketCommentResponse;
 import de.fallstudie.minerva.backend.user.Identity;
+import de.fallstudie.minerva.backend.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
@@ -21,6 +22,7 @@ public class TicketCommentService {
 
 	private final TicketRepository ticketRepository;
 	private final TicketCommentRepository ticketCommentRepository;
+	private final UserService userService;
 
 	public TicketCommentListResponse getTicketComments(long projectId, long ticketId) {
 		ensureTicketExists(projectId, ticketId);
@@ -52,9 +54,12 @@ public class TicketCommentService {
 	}
 
 	private TicketCommentResponse toTicketCommentResponse(TicketCommentModel comment) {
+		final var author = userService.findById(comment.getAuthorId())
+				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
+
 		return new TicketCommentResponse(comment.getId(), comment.getTicketId(),
-				comment.getAuthorId(), comment.getContent(), comment.getCreatedAt(),
-				comment.getUpdatedAt());
+				comment.getAuthorId(), author.username(), comment.getContent(),
+				comment.getCreatedAt(), comment.getUpdatedAt());
 	}
 
 	private String validateCreateTicketCommentRequest(CreateTicketCommentRequest request) {

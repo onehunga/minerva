@@ -105,6 +105,7 @@ export type TicketComment = {
 	id: number;
 	ticketId: number;
 	authorId: number;
+	authorUsername: string;
 	content: string;
 	createdAt: string | null;
 	updatedAt: string | null;

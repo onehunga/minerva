@@ -28,17 +28,21 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentMo
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketCommentRequest;
+import de.fallstudie.minerva.backend.user.UserService;
 
 class TicketCommentTests {
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private UserService userService;
 	private TicketCommentService ticketCommentService;
 
 	@BeforeEach
 	void setUp() {
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
-		ticketCommentService = new TicketCommentService(ticketRepository, ticketCommentRepository);
+		userService = Mockito.mock(UserService.class);
+		ticketCommentService = new TicketCommentService(ticketRepository, ticketCommentRepository,
+				userService);
 	}
 
 	@Test
@@ -52,6 +56,8 @@ class TicketCommentTests {
 				.thenReturn(Optional.of(ticket));
 		when(ticketCommentRepository.findAllByTicketIdOrderByCreatedAtAscIdAsc(ticket.getId()))
 				.thenReturn(List.of(comment));
+		when(userService.findById(TestProjects.OWNER_USER_ID))
+				.thenReturn(Optional.of(TestProjects.user(TestProjects.OWNER_USER_ID, "owner")));
 
 		final var response = ticketCommentService.getTicketComments(TestProjects.PROJECT_ID,
 				ticket.getId());
@@ -60,6 +66,7 @@ class TicketCommentTests {
 		assertEquals(comment.getId(), response.comments().getFirst().id());
 		assertEquals(ticket.getId(), response.comments().getFirst().ticketId());
 		assertEquals(TestProjects.OWNER_USER_ID, response.comments().getFirst().authorId());
+		assertEquals("owner", response.comments().getFirst().authorUsername());
 		assertEquals("Erster Kommentar", response.comments().getFirst().content());
 	}
 
@@ -84,6 +91,8 @@ class TicketCommentTests {
 				.thenReturn(Optional.of(ticket));
 		when(ticketCommentRepository.save(any(TicketCommentModel.class)))
 				.thenAnswer(invocation -> invocation.getArgument(0));
+		when(userService.findById(TestProjects.OWNER_USER_ID))
+				.thenReturn(Optional.of(TestProjects.user(TestProjects.OWNER_USER_ID, "owner")));
 
 		final var response = ticketCommentService.createTicketComment(TestProjects.OWNER,
 				TestProjects.PROJECT_ID, ticket.getId(),
@@ -91,6 +100,7 @@ class TicketCommentTests {
 
 		assertEquals(ticket.getId(), response.ticketId());
 		assertEquals(TestProjects.OWNER_USER_ID, response.authorId());
+		assertEquals("owner", response.authorUsername());
 		assertEquals("Sieht gut aus.", response.content());
 		final var commentCaptor = ArgumentCaptor.forClass(TicketCommentModel.class);
 		verify(ticketCommentRepository).save(commentCaptor.capture());
