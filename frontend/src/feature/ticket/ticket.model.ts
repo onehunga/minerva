@@ -100,3 +100,20 @@ export type Ticket = {
 export type TicketListResponse = {
 	tickets: Ticket[];
 };
+
+export type TicketComment = {
+	id: number;
+	ticketId: number;
+	authorId: number;
+	content: string;
+	createdAt: string | null;
+	updatedAt: string | null;
+};
+
+export type TicketCommentListResponse = {
+	comments: TicketComment[];
+};
+
+export type CreateTicketCommentRequest = {
+	content: string;
+};
