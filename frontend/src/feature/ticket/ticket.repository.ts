@@ -1,5 +1,11 @@
 import { api } from ".";
-import type { CreateTicketRequest, Ticket, TicketType } from "./ticket.model";
+import type {
+	CreateTicketCommentRequest,
+	CreateTicketRequest,
+	Ticket,
+	TicketComment,
+	TicketType,
+} from "./ticket.model";
 
 export const TicketRepositoryKey = Symbol("TicketRepository");
 
@@ -8,6 +14,12 @@ export interface ITicketRepository {
 	getTicketTypes(projectId: number): Promise<TicketType[]>;
 	createTicket(projectId: number, request: CreateTicketRequest): Promise<Ticket>;
 	updateTicketStatus(projectId: number, ticketId: number, transitionId: number): Promise<void>;
+	getTicketComments(projectId: number, ticketId: number): Promise<TicketComment[]>;
+	createTicketComment(
+		projectId: number,
+		ticketId: number,
+		request: CreateTicketCommentRequest,
+	): Promise<TicketComment>;
 }
 
 export class TicketRepository implements ITicketRepository {
@@ -33,5 +45,19 @@ export class TicketRepository implements ITicketRepository {
 		transitionId: number,
 	): Promise<void> {
 		return api.updateTicketStatus(projectId, ticketId, transitionId);
+	}
+
+	async getTicketComments(projectId: number, ticketId: number): Promise<TicketComment[]> {
+		const response = await api.getTicketComments(projectId, ticketId);
+
+		return response.comments;
+	}
+
+	async createTicketComment(
+		projectId: number,
+		ticketId: number,
+		request: CreateTicketCommentRequest,
+	): Promise<TicketComment> {
+		return api.createTicketComment(projectId, ticketId, request);
 	}
 }

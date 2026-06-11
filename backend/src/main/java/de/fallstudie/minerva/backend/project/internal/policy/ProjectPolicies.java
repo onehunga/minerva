@@ -41,8 +41,8 @@ public class ProjectPolicies {
 		return projectRole.getName() == ProjectRoleName.OWNER;
 	}
 
-	public boolean canCreateTickets(Identity identity, long projectId) {
-		log.trace("Checking if user {} can create tickets for project {}", identity, projectId);
+	public boolean canModifyTickets(Identity identity, long projectId) {
+		log.trace("Checking if user {} can modify tickets for project {}", identity, projectId);
 
 		if (!projectMemberRepository.existsByProjectIdAndUserId(projectId, identity.userId())) {
 			return false;

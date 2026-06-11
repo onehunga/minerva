@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import de.fallstudie.minerva.backend.ticket.internal.service.TicketCommentService;
 import de.fallstudie.minerva.backend.ticket.internal.service.TicketService;
 import de.fallstudie.minerva.backend.user.Identity;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class TicketController {
 	private final TicketService ticketService;
+	private final TicketCommentService ticketCommentService;
 
 	@GetMapping("/tickets")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
@@ -42,7 +44,7 @@ public class TicketController {
 
 	@PostMapping("/tickets")
 	@ResponseStatus(HttpStatus.CREATED)
-	@PreAuthorize("@projectPolicy.canCreateTickets(principal, #projectId)")
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
 	public TicketResponse createTicket(@AuthenticationPrincipal Identity identity,
 			@PathVariable long projectId, @RequestBody CreateTicketRequest request) {
 		log.info("User with ID {} is creating a ticket in project with ID {}", identity.userId(),
@@ -51,9 +53,32 @@ public class TicketController {
 		return ticketService.createTicket(identity, projectId, request);
 	}
 
+	@GetMapping("/tickets/{ticketId}/comments")
+	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
+	public TicketCommentListResponse getTicketComments(@PathVariable long projectId,
+			@PathVariable long ticketId) {
+		log.info("Requesting comments for ticket with ID {} in project with ID {}", ticketId,
+				projectId);
+
+		return ticketCommentService.getTicketComments(projectId, ticketId);
+	}
+
+	@PostMapping("/tickets/{ticketId}/comments")
+	@ResponseStatus(HttpStatus.CREATED)
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
+	public TicketCommentResponse createTicketComment(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId,
+			@RequestBody CreateTicketCommentRequest request) {
+		log.info(
+				"User with ID {} is creating a comment for ticket with ID {} in project with ID {}",
+				identity.userId(), ticketId, projectId);
+
+		return ticketCommentService.createTicketComment(identity, projectId, ticketId, request);
+	}
+
 	@PatchMapping("/tickets/{ticketId}/status")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@projectPolicy.canCreateTickets(principal, #projectId)")
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
 	public void updateTicketStatus(@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody UpdateTicketStatusRequest request) {
 		log.info("Updating status of ticket with ID {} in project with ID {}", ticketId, projectId);
