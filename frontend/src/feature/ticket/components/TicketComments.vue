@@ -49,7 +49,13 @@ async function createComment(): Promise<void> {
 			},
 		);
 
-		comments.value = [...comments.value, comment];
+		comments.value = [
+			...comments.value,
+			{
+				...comment,
+				createdAt: comment.createdAt ?? new Date().toISOString(),
+			},
+		];
 		content.value = "";
 	} catch {
 		createErrorMessage.value = "Kommentar konnte nicht gespeichert werden.";
