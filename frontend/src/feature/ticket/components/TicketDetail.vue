@@ -1,12 +1,27 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import type { Ticket, TicketType, WorkflowState, WorkflowTransition } from "../ticket.model";
+import type {
+	Ticket,
+	TicketPriorityName,
+	TicketType,
+	WorkflowState,
+	WorkflowTransition,
+} from "../ticket.model";
 import { useProject } from "@/feature/project";
 import CustomSelect from "@/components/CustomSelect.vue";
 import TicketComments from "./TicketComments.vue";
 import CreateTicketForm from "./CreateTicketForm.vue";
 
-const { details: projectDetails, updateTicketStatus } = useProject();
+const { details: projectDetails, updateTicketStatus, updateTicketPriority } = useProject();
+
+const TICKET_PRIORITIES: TicketPriorityName[] = ["LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST"];
+const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
+	LOWEST: "Niedrigste",
+	LOW: "Niedrig",
+	NORMAL: "Normal",
+	HIGH: "Hoch",
+	HIGHEST: "Höchste",
+};
 
 const props = defineProps<{
 	ticket: Ticket;
@@ -19,7 +34,13 @@ const emit = defineEmits<{
 }>();
 
 const selectedTransition = ref<WorkflowTransition | null>(null);
+const selectedPriority = ref<TicketPriorityName | null>(null);
 const isUpdatingStatus = ref(false);
+const isUpdatingPriority = ref(false);
+
+const canModifyTickets = computed(
+	() => projectDetails.value != null && projectDetails.value.projectRole !== "VIEWER",
+);
 
 const currentStatus = computed<WorkflowState | undefined>(() =>
 	props.ticketType?.states.find((state) => state.id === props.ticket.statusId),
@@ -54,6 +75,10 @@ watch(selectedTransition, () => {
 	submitStatusUpdate();
 });
 
+watch(selectedPriority, () => {
+	submitPriorityUpdate();
+});
+
 async function submitStatusUpdate(): Promise<void> {
 	if (selectedTransition.value == null) {
 		return;
@@ -78,6 +103,38 @@ async function submitStatusUpdate(): Promise<void> {
 	} finally {
 		isUpdatingStatus.value = false;
 	}
+}
+
+async function submitPriorityUpdate(): Promise<void> {
+	if (selectedPriority.value == null) {
+		return;
+	}
+
+	if (isUpdatingPriority.value || !canModifyTickets.value) {
+		selectedPriority.value = null;
+		return;
+	}
+
+	const priority = selectedPriority.value;
+	selectedPriority.value = null;
+
+	if (priority === props.ticket.priority) {
+		return;
+	}
+
+	isUpdatingPriority.value = true;
+
+	try {
+		await updateTicketPriority(props.ticket.id, priority);
+	} catch {
+		alert("Die Priorität konnte nicht aktualisiert werden.");
+	} finally {
+		isUpdatingPriority.value = false;
+	}
+}
+
+function formatPriority(priority: TicketPriorityName): string {
+	return TICKET_PRIORITY_LABELS[priority];
 }
 
 function formatDate(value: string | null): string {
@@ -124,6 +181,23 @@ function formatDate(value: string | null): string {
 			></option>
 		</select>
  -->
+		<label for="ticket-priority">Priorität</label>
+		<CustomSelect
+			v-if="canModifyTickets"
+			:options="TICKET_PRIORITIES"
+			v-model="selectedPriority"
+		>
+			<template #trigger>
+				{{ formatPriority(ticket.priority) }}
+			</template>
+			<template #option="{ value: priority }">
+				{{ formatPriority(priority) }}
+			</template>
+		</CustomSelect>
+		<p v-else id="ticket-priority" class="ticket-detail__readonly-value">
+			{{ formatPriority(ticket.priority) }}
+		</p>
+
 		<dl class="ticket-detail__meta">
 			<div>
 				<dt>Ticketart</dt>
@@ -227,6 +301,7 @@ function formatDate(value: string | null): string {
 }
 
 .ticket-detail__hint,
+.ticket-detail__readonly-value,
 .ticket-detail__error {
 	margin: 0;
 	font-size: 0.9rem;

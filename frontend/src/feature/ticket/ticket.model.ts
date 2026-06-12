@@ -1,5 +1,7 @@
 export type TicketStatusCategory = "OPEN" | "IN_PROGRESS" | "COMPLETED";
 
+export type TicketPriorityName = "LOWEST" | "LOW" | "NORMAL" | "HIGH" | "HIGHEST";
+
 export type TicketDetails = {
 	name: string;
 	description: string;
@@ -83,11 +85,16 @@ export type UpdateTicketStatusRequest = {
 	transitionId: number;
 };
 
+export type UpdateTicketPriorityRequest = {
+	priority: TicketPriorityName;
+};
+
 export type Ticket = {
 	id: number;
 	projectId: number;
 	ticketTypeId: number;
 	statusId: number;
+	priority: TicketPriorityName;
 	parentTicketId: number | null;
 	name: string;
 	description: string;

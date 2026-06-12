@@ -1,7 +1,7 @@
 import { storeToRefs } from "pinia";
 import { useTicketRepository } from "@/feature/ticket";
 import { useActiveProjectStore, useProjectRepository } from "..";
-import type { CreateTicketRequest, Ticket } from "@/feature/ticket";
+import type { CreateTicketRequest, Ticket, TicketPriorityName } from "@/feature/ticket";
 
 /**
  * Management für das aktive Projekt.
@@ -68,7 +68,27 @@ export function useProject(projectId?: string) {
 		store.updateTicketStatus(ticketId, statusId);
 	}
 
+	async function updateTicketPriority(
+		ticketId: number,
+		priority: TicketPriorityName,
+	): Promise<void> {
+		await ticketRepository.updateTicketPriority(
+			Number(store.activeProject),
+			ticketId,
+			priority,
+		);
+
+		store.updateTicketPriority(ticketId, priority);
+	}
+
 	const { details, ticketTypes, tickets } = storeToRefs(store);
 
-	return { details, ticketTypes, tickets, createTicket, updateTicketStatus };
+	return {
+		details,
+		ticketTypes,
+		tickets,
+		createTicket,
+		updateTicketStatus,
+		updateTicketPriority,
+	};
 }

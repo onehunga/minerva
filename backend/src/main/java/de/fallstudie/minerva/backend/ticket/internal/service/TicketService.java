@@ -20,6 +20,7 @@ import de.fallstudie.minerva.backend.ticket.internal.web.TicketListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeResponse;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketPriorityRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowStateResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowTransitionResponse;
@@ -153,11 +154,23 @@ public class TicketService {
 		ticketRepository.save(ticket);
 	}
 
+	@Transactional
+	public void updateTicketPriority(long projectId, long ticketId,
+			UpdateTicketPriorityRequest request) {
+		validateUpdateTicketPriorityRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setPriority(request.priority());
+		ticketRepository.save(ticket);
+	}
+
 	private TicketResponse toTicketResponse(TicketModel ticket) {
 		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
-				ticket.getStatusId(), ticket.getParentTicketId(), ticket.getName(),
-				ticket.getDescription(), ticket.getCreatedBy(), ticket.getAssignedTo(),
-				ticket.getCreatedAt(), ticket.getUpdatedAt());
+				ticket.getStatusId(), ticket.getPriority(), ticket.getParentTicketId(),
+				ticket.getName(), ticket.getDescription(), ticket.getCreatedBy(),
+				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt());
 	}
 
 	private void validateCreateTicketRequest(CreateTicketRequest request) {
@@ -197,6 +210,16 @@ public class TicketService {
 
 		if (request.transitionId() <= 0) {
 			throw new ValidationException("Statusübergang ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketPriorityRequest(UpdateTicketPriorityRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.priority() == null) {
+			throw new ValidationException("Priorität ist erforderlich");
 		}
 	}
 }

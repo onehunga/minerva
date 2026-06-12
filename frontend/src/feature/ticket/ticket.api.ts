@@ -6,6 +6,7 @@ import type {
 	TicketComment,
 	TicketCommentListResponse,
 	TicketListResponse,
+	TicketPriorityName,
 	TicketTypeListResponse,
 } from "./ticket.model";
 
@@ -30,6 +31,14 @@ export async function updateTicketStatus(
 	transitionId: number,
 ): Promise<void> {
 	return client.patch(`/v1/projects/${projectId}/tickets/${ticketId}/status`, { transitionId });
+}
+
+export async function updateTicketPriority(
+	projectId: number,
+	ticketId: number,
+	priority: TicketPriorityName,
+): Promise<void> {
+	return client.patch(`/v1/projects/${projectId}/tickets/${ticketId}/priority`, { priority });
 }
 
 export async function getTicketComments(

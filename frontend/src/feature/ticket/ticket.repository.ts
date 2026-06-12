@@ -4,6 +4,7 @@ import type {
 	CreateTicketRequest,
 	Ticket,
 	TicketComment,
+	TicketPriorityName,
 	TicketType,
 } from "./ticket.model";
 
@@ -14,6 +15,11 @@ export interface ITicketRepository {
 	getTicketTypes(projectId: number): Promise<TicketType[]>;
 	createTicket(projectId: number, request: CreateTicketRequest): Promise<Ticket>;
 	updateTicketStatus(projectId: number, ticketId: number, transitionId: number): Promise<void>;
+	updateTicketPriority(
+		projectId: number,
+		ticketId: number,
+		priority: TicketPriorityName,
+	): Promise<void>;
 	getTicketComments(projectId: number, ticketId: number): Promise<TicketComment[]>;
 	createTicketComment(
 		projectId: number,
@@ -45,6 +51,14 @@ export class TicketRepository implements ITicketRepository {
 		transitionId: number,
 	): Promise<void> {
 		return api.updateTicketStatus(projectId, ticketId, transitionId);
+	}
+
+	async updateTicketPriority(
+		projectId: number,
+		ticketId: number,
+		priority: TicketPriorityName,
+	): Promise<void> {
+		return api.updateTicketPriority(projectId, ticketId, priority);
 	}
 
 	async getTicketComments(projectId: number, ticketId: number): Promise<TicketComment[]> {

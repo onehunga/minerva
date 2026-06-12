@@ -20,6 +20,7 @@ import org.mockito.Mockito;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -73,12 +74,14 @@ class TicketCreationTests {
 		assertEquals(TestProjects.PROJECT_ID, response.projectId());
 		assertEquals(ticketType.getId(), response.ticketTypeId());
 		assertEquals(status.getId(), response.statusId());
+		assertEquals(TicketPriorityName.NORMAL, response.priority());
 		assertEquals(null, response.parentTicketId());
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
 		final var savedTicket = ticketCaptor.getValue();
 		assertEquals("Root ticket", savedTicket.getName());
 		assertEquals("Beschreibung", savedTicket.getDescription());
+		assertEquals(TicketPriorityName.NORMAL, savedTicket.getPriority());
 		assertEquals(TestProjects.OWNER_USER_ID, savedTicket.getCreatedBy());
 		assertEquals(null, savedTicket.getParentTicketId());
 	}

@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { model } from ".";
-import type { Ticket, TicketType } from "../ticket/ticket.model";
+import type { Ticket, TicketPriorityName, TicketType } from "../ticket/ticket.model";
 
 export const useActiveProjectStore = defineStore("activeUsers", () => {
 	const activeProject = ref<null | string>(null);
@@ -38,6 +38,15 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		}
 	}
 
+	function updateTicketPriority(ticketId: number, priority: TicketPriorityName): void {
+		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
+
+		if (ticket !== undefined) {
+			ticket.priority = priority;
+			ticket.updatedAt = new Date().toISOString();
+		}
+	}
+
 	return {
 		activeProject,
 		details,
@@ -49,5 +58,6 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		setTickets,
 		addTicket,
 		updateTicketStatus,
+		updateTicketPriority,
 	};
 });
