@@ -7,12 +7,17 @@ import type {
 	WorkflowState,
 	WorkflowTransition,
 } from "../ticket.model";
-import { useProject } from "@/feature/project";
 import CustomSelect from "@/components/CustomSelect.vue";
+import { useProject } from "@/feature/project";
 import TicketComments from "./TicketComments.vue";
 import CreateTicketForm from "./CreateTicketForm.vue";
 
-const { details: projectDetails, updateTicketStatus, updateTicketPriority } = useProject();
+const {
+	details: projectDetails,
+	deleteTicket,
+	updateTicketStatus,
+	updateTicketPriority,
+} = useProject();
 
 const TICKET_PRIORITIES: TicketPriorityName[] = ["LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST"];
 const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
@@ -35,6 +40,7 @@ const emit = defineEmits<{
 
 const selectedTransition = ref<WorkflowTransition | null>(null);
 const selectedPriority = ref<TicketPriorityName | null>(null);
+const isDeletingTicket = ref(false);
 const isUpdatingStatus = ref(false);
 const isUpdatingPriority = ref(false);
 
@@ -105,6 +111,26 @@ async function submitStatusUpdate(): Promise<void> {
 	}
 }
 
+async function submitDeleteTicket(): Promise<void> {
+	if (isDeletingTicket.value || !canModifyTickets.value) {
+		return;
+	}
+
+	if (!confirm("Ticket wirklich löschen?")) {
+		return;
+	}
+
+	isDeletingTicket.value = true;
+
+	try {
+		await deleteTicket(props.ticket.id);
+	} catch {
+		alert("Das Ticket konnte nicht gelöscht werden.");
+	} finally {
+		isDeletingTicket.value = false;
+	}
+}
+
 async function submitPriorityUpdate(): Promise<void> {
 	if (selectedPriority.value == null) {
 		return;
@@ -154,6 +180,15 @@ function formatDate(value: string | null): string {
 		<header class="ticket-detail__header">
 			<p class="ticket-detail__eyebrow">Ticket #{{ ticket.id }}</p>
 			<h3>{{ ticket.name }}</h3>
+			<button
+				v-if="canModifyTickets"
+				type="button"
+				class="ticket-detail__delete"
+				:disabled="isDeletingTicket"
+				@click="submitDeleteTicket"
+			>
+				Ticket löschen
+			</button>
 		</header>
 
 		<p class="ticket-detail__description">
@@ -286,9 +321,10 @@ function formatDate(value: string | null): string {
 }
 
 .ticket-detail__header {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
 	gap: 0.25rem;
+	align-items: start;
 }
 
 .ticket-detail__header h3,
@@ -297,7 +333,16 @@ function formatDate(value: string | null): string {
 }
 
 .ticket-detail__eyebrow {
+	grid-column: 1 / -1;
 	font-size: 0.85rem;
+}
+
+.ticket-detail__delete {
+	padding: 0.45rem 0.7rem;
+	border: 1px solid currentColor;
+	background: transparent;
+	color: inherit;
+	cursor: pointer;
 }
 
 .ticket-detail__hint,

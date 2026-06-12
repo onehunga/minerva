@@ -54,6 +54,11 @@ export function useProject(projectId?: string) {
 		return newTicket;
 	}
 
+	async function deleteTicket(ticketId: number): Promise<void> {
+		await ticketRepository.deleteTicket(Number(store.activeProject), ticketId);
+		store.removeTicket(ticketId);
+	}
+
 	async function updateTicketStatus(
 		ticketId: number,
 		transitionId: number,
@@ -88,6 +93,7 @@ export function useProject(projectId?: string) {
 		ticketTypes,
 		tickets,
 		createTicket,
+		deleteTicket,
 		updateTicketStatus,
 		updateTicketPriority,
 	};

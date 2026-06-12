@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
@@ -9,6 +10,7 @@ import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
@@ -28,6 +30,7 @@ import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TicketService {
@@ -37,6 +40,7 @@ public class TicketService {
 	private final WorkflowStatusRepository workflowStatusRepository;
 	private final WorkflowTransitionRepository workflowTransitionRepository;
 	private final TicketRepository ticketRepository;
+	private final TicketCommentRepository ticketCommentRepository;
 
 	public TicketListResponse getTickets(long projectId) {
 		final var tickets = ticketRepository.findAllByProjectIdOrderByNameAsc(projectId).stream()
@@ -125,6 +129,21 @@ public class TicketService {
 		final var savedTicket = ticketRepository.save(ticket);
 
 		return toTicketResponse(savedTicket);
+	}
+
+	@Transactional
+	public void deleteTicket(long projectId, long ticketId) {
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		if (ticketRepository.existsByParentTicketId(ticket.getId())) {
+			throw new ValidationException("Ticket hat noch Kindtickets");
+		}
+
+		ticketCommentRepository.deleteAllByTicketId(ticket.getId());
+		ticketRepository.delete(ticket);
+
+		log.trace("Deleted ticket with ID {} in project with ID {}", ticketId, projectId);
 	}
 
 	@Transactional

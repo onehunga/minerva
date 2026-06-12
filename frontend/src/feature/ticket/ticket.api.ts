@@ -25,6 +25,10 @@ export async function createTicket(
 	return client.post(`/v1/projects/${projectId}/tickets`, request).then((res) => res.data);
 }
 
+export async function deleteTicket(projectId: number, ticketId: number): Promise<void> {
+	return client.delete(`/v1/projects/${projectId}/tickets/${ticketId}`);
+}
+
 export async function updateTicketStatus(
 	projectId: number,
 	ticketId: number,

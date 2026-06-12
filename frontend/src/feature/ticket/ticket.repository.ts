@@ -14,6 +14,7 @@ export interface ITicketRepository {
 	getTickets(projectId: number): Promise<Ticket[]>;
 	getTicketTypes(projectId: number): Promise<TicketType[]>;
 	createTicket(projectId: number, request: CreateTicketRequest): Promise<Ticket>;
+	deleteTicket(projectId: number, ticketId: number): Promise<void>;
 	updateTicketStatus(projectId: number, ticketId: number, transitionId: number): Promise<void>;
 	updateTicketPriority(
 		projectId: number,
@@ -43,6 +44,10 @@ export class TicketRepository implements ITicketRepository {
 
 	async createTicket(projectId: number, request: CreateTicketRequest): Promise<Ticket> {
 		return api.createTicket(projectId, request);
+	}
+
+	async deleteTicket(projectId: number, ticketId: number): Promise<void> {
+		return api.deleteTicket(projectId, ticketId);
 	}
 
 	async updateTicketStatus(

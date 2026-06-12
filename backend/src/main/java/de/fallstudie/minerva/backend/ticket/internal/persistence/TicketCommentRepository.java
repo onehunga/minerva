@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TicketCommentRepository extends JpaRepository<TicketCommentModel, Long> {
 	List<TicketCommentModel> findAllByTicketIdOrderByCreatedAtAscIdAsc(long ticketId);
+
+	void deleteAllByTicketId(long ticketId);
 }

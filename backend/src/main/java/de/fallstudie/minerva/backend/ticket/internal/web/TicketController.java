@@ -3,6 +3,7 @@ package de.fallstudie.minerva.backend.ticket.internal.web;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -51,6 +52,17 @@ public class TicketController {
 				projectId);
 
 		return ticketService.createTicket(identity, projectId, request);
+	}
+
+	@DeleteMapping("/tickets/{ticketId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
+	public void deleteTicket(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId) {
+		log.info("User with ID {} is deleting ticket with ID {} in project with ID {}",
+				identity.userId(), ticketId, projectId);
+
+		ticketService.deleteTicket(projectId, ticketId);
 	}
 
 	@GetMapping("/tickets/{ticketId}/comments")

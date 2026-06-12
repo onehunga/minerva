@@ -9,4 +9,6 @@ public interface TicketRepository extends JpaRepository<TicketModel, Long> {
 	List<TicketModel> findAllByProjectIdOrderByNameAsc(long projectId);
 
 	Optional<TicketModel> findByIdAndProjectId(long id, long projectId);
+
+	boolean existsByParentTicketId(long parentTicketId);
 }

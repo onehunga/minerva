@@ -1,8 +1,6 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,13 +9,11 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
-import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -26,9 +22,8 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepos
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
-import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketPriorityRequest;
 
-class TicketPriorityUpdateTests {
+class TicketDeletionTests {
 	private TicketTypeRepository ticketTypeRepository;
 	private TicketChildRuleRepository ticketChildRuleRepository;
 	private WorkflowRepository workflowRepository;
@@ -53,48 +48,46 @@ class TicketPriorityUpdateTests {
 	}
 
 	@Test
-	void updateTicketPrioritySavesPriority() {
+	void deleteTicketDeletesCommentsBeforeTicket() {
 		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
 				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
 				TestProjects.OPEN_STATUS_ID);
 		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
 				.thenReturn(Optional.of(ticket));
+		when(ticketRepository.existsByParentTicketId(ticket.getId())).thenReturn(false);
 
-		ticketService.updateTicketPriority(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketPriorityRequest(TicketPriorityName.HIGH));
+		ticketService.deleteTicket(TestProjects.PROJECT_ID, ticket.getId());
 
-		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
-		verify(ticketRepository).save(ticketCaptor.capture());
-		assertEquals(TicketPriorityName.HIGH, ticketCaptor.getValue().getPriority());
+		verify(ticketCommentRepository).deleteAllByTicketId(ticket.getId());
+		verify(ticketRepository).delete(ticket);
 	}
 
 	@Test
-	void updateTicketPriorityRejectsUnknownTicket() {
+	void deleteTicketRejectsUnknownTicket() {
 		when(ticketRepository.findByIdAndProjectId(TestProjects.CHILD_TICKET_ID,
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
-		assertThrows(ResourceNotFoundException.class,
-				() -> ticketService.updateTicketPriority(TestProjects.PROJECT_ID,
-						TestProjects.CHILD_TICKET_ID,
-						new UpdateTicketPriorityRequest(TicketPriorityName.HIGH)));
+		assertThrows(ResourceNotFoundException.class, () -> ticketService
+				.deleteTicket(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID));
 
-		verify(ticketRepository, never()).save(any());
+		verify(ticketRepository, never()).existsByParentTicketId(TestProjects.CHILD_TICKET_ID);
+		verify(ticketCommentRepository, never()).deleteAllByTicketId(TestProjects.CHILD_TICKET_ID);
+		verify(ticketRepository, never()).delete(Mockito.any(TicketModel.class));
 	}
 
 	@Test
-	void updateTicketPriorityRejectsNullPriority() {
+	void deleteTicketRejectsTicketWithChildren() {
+		final var ticket = TestProjects.ticket(TestProjects.PARENT_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.PARENT_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+		when(ticketRepository.existsByParentTicketId(ticket.getId())).thenReturn(true);
+
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketPriority(TestProjects.PROJECT_ID,
-						TestProjects.CHILD_TICKET_ID, new UpdateTicketPriorityRequest(null)));
+				() -> ticketService.deleteTicket(TestProjects.PROJECT_ID, ticket.getId()));
 
-		verify(ticketRepository, never()).save(any());
-	}
-
-	@Test
-	void updateTicketPriorityRejectsNullRequest() {
-		assertThrows(IllegalArgumentException.class, () -> ticketService
-				.updateTicketPriority(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, null));
-
-		verify(ticketRepository, never()).save(any());
+		verify(ticketCommentRepository, never()).deleteAllByTicketId(ticket.getId());
+		verify(ticketRepository, never()).delete(Mockito.any(TicketModel.class));
 	}
 }

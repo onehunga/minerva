@@ -29,6 +29,10 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		tickets.value.push(ticket);
 	}
 
+	function removeTicket(ticketId: number): void {
+		tickets.value = tickets.value.filter((ticket) => ticket.id !== ticketId);
+	}
+
 	function updateTicketStatus(ticketId: number, statusId: number): void {
 		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
 
@@ -57,6 +61,7 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		setTicketTypes,
 		setTickets,
 		addTicket,
+		removeTicket,
 		updateTicketStatus,
 		updateTicketPriority,
 	};
