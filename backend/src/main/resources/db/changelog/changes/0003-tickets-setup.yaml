@@ -196,7 +196,6 @@ databaseChangeLog:
                   name: from_state
                   type: BIGINT
                   constraints:
-                    nullable: false
                     foreignKeyName: fk_workflow_transitions_from_state
                     references: workflow_states(id)
               - column:
