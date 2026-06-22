@@ -14,9 +14,11 @@ import CreateTicketForm from "./CreateTicketForm.vue";
 
 const {
 	details: projectDetails,
+	projectUsers,
 	deleteTicket,
 	updateTicketStatus,
 	updateTicketPriority,
+	updateTicketAssignee,
 } = useProject();
 
 const TICKET_PRIORITIES: TicketPriorityName[] = ["LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST"];
@@ -43,6 +45,16 @@ const selectedPriority = ref<TicketPriorityName | null>(null);
 const isDeletingTicket = ref(false);
 const isUpdatingStatus = ref(false);
 const isUpdatingPriority = ref(false);
+const isUpdatingAssignee = ref(false);
+
+const selectedAssignee = ref<number | null>(props.ticket.assignedTo);
+const projectMemberUsers = computed(() => projectUsers.value.filter((user) => user.member));
+const possibleAssignees = computed<Array<number | null>>(() => [
+	null,
+	...projectMemberUsers.value
+		.map((user) => user.id)
+		.filter((userId) => userId !== props.ticket.assignedTo),
+]);
 
 const canModifyTickets = computed(
 	() => projectDetails.value != null && projectDetails.value.projectRole !== "VIEWER",
@@ -83,6 +95,37 @@ watch(selectedTransition, () => {
 
 watch(selectedPriority, () => {
 	submitPriorityUpdate();
+});
+
+watch(
+	() => props.ticket.assignedTo,
+	(assignedTo) => {
+		selectedAssignee.value = assignedTo;
+	},
+);
+
+watch(selectedAssignee, async () => {
+	if (selectedAssignee.value === props.ticket.assignedTo) {
+		return;
+	}
+
+	if (isUpdatingAssignee.value || !canModifyTickets.value) {
+		selectedAssignee.value = props.ticket.assignedTo;
+		return;
+	}
+
+	const assignedTo = selectedAssignee.value;
+	const previousAssignee = props.ticket.assignedTo;
+	isUpdatingAssignee.value = true;
+
+	try {
+		await updateTicketAssignee(props.ticket.id, assignedTo);
+	} catch {
+		alert("Der Bearbeiter konnte nicht aktualisiert werden.");
+		selectedAssignee.value = previousAssignee;
+	} finally {
+		isUpdatingAssignee.value = false;
+	}
 });
 
 async function submitStatusUpdate(): Promise<void> {
@@ -163,6 +206,14 @@ function formatPriority(priority: TicketPriorityName): string {
 	return TICKET_PRIORITY_LABELS[priority];
 }
 
+function formatProjectUser(userId: number): string {
+	return projectMemberUsers.value.find((user) => user.id === userId)?.username ?? `#${userId}`;
+}
+
+function formatAssignee(userId: number | null): string {
+	return userId == null ? "Nicht zugewiesen" : formatProjectUser(userId);
+}
+
 function formatDate(value: string | null): string {
 	if (value == null) {
 		return "-";
@@ -204,18 +255,6 @@ function formatDate(value: string | null): string {
 				{{ transition.name }} → {{ getStateName(transition.toStateId) }}
 			</template>
 		</CustomSelect>
-		<!-- <select
-			id="ticket-status"
-			v-model="selectedTransitionId"
-			:disabled="isUpdatingStatus || availableTransitions.length === 0"
-		>
-			<option
-				v-for="transition in availableTransitions"
-				:key="transition.id"
-				:value="transition.id"
-			></option>
-		</select>
- -->
 		<label for="ticket-priority">Priorität</label>
 		<CustomSelect
 			v-if="canModifyTickets"
@@ -244,12 +283,26 @@ function formatDate(value: string | null): string {
 			</div>
 			<div>
 				<dt>Erstellt von</dt>
-				<dd>#{{ ticket.createdBy }}</dd>
+				<dd>{{ formatProjectUser(ticket.createdBy) }}</dd>
 			</div>
 			<div>
 				<dt>Zugewiesen an</dt>
 				<dd>
-					{{ ticket.assignedTo == null ? "Nicht zugewiesen" : `#${ticket.assignedTo}` }}
+					<CustomSelect
+						:options="possibleAssignees"
+						v-model="selectedAssignee"
+						v-if="canModifyTickets"
+					>
+						<template #trigger>
+							{{ formatAssignee(ticket.assignedTo) }}
+						</template>
+						<template #option="{ value: userId }">
+							{{ formatAssignee(userId) }}
+						</template>
+					</CustomSelect>
+					<p v-else class="ticket-detail__readonly-value">
+						{{ formatAssignee(ticket.assignedTo) }}
+					</p>
 				</dd>
 			</div>
 			<div>

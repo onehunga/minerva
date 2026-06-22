@@ -6,6 +6,7 @@ import type { Ticket, TicketPriorityName, TicketType } from "../ticket/ticket.mo
 export const useActiveProjectStore = defineStore("activeUsers", () => {
 	const activeProject = ref<null | string>(null);
 	const details = ref<null | model.ProjectDetails>(null);
+	const projectUsers = ref<model.ProjectUser[]>([]);
 	const ticketTypes = ref<TicketType[]>([]);
 	const tickets = ref<Ticket[]>([]);
 
@@ -15,6 +16,10 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 
 	function setProjectDetails(projectDetails: model.ProjectDetails | null): void {
 		details.value = projectDetails;
+	}
+
+	function setProjectUsers(users: model.ProjectUser[]): void {
+		projectUsers.value = users;
 	}
 
 	function setTicketTypes(projectTicketTypes: TicketType[]): void {
@@ -51,18 +56,30 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		}
 	}
 
+	function updateTicketAssignee(ticketId: number, assignedTo: number | null): void {
+		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
+
+		if (ticket !== undefined) {
+			ticket.assignedTo = assignedTo;
+			ticket.updatedAt = new Date().toISOString();
+		}
+	}
+
 	return {
 		activeProject,
 		details,
+		projectUsers,
 		ticketTypes,
 		tickets,
 		setActiveProject,
 		setProjectDetails,
+		setProjectUsers,
 		setTicketTypes,
 		setTickets,
 		addTicket,
 		removeTicket,
 		updateTicketStatus,
 		updateTicketPriority,
+		updateTicketAssignee,
 	};
 });

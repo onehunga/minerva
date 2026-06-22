@@ -89,6 +89,10 @@ export type UpdateTicketPriorityRequest = {
 	priority: TicketPriorityName;
 };
 
+export type UpdateTicketAssigneeRequest = {
+	assignedTo: number | null;
+};
+
 export type Ticket = {
 	id: number;
 	projectId: number;

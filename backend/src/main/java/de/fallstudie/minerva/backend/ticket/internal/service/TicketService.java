@@ -22,6 +22,7 @@ import de.fallstudie.minerva.backend.ticket.internal.web.TicketListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeResponse;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketAssigneeRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketPriorityRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowStateResponse;
@@ -185,6 +186,19 @@ public class TicketService {
 		ticketRepository.save(ticket);
 	}
 
+	/// TODO: verify that assignee is a project member, currently blocket by Modulith, since Project already depends on Ticket, we cannot check the Project from Ticket
+	@Transactional
+	public void updateTicketAssignee(long projectId, long ticketId,
+			UpdateTicketAssigneeRequest request) {
+		validateUpdateTicketAssigneeRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setAssignedTo(request.assignedTo());
+		ticketRepository.save(ticket);
+	}
+
 	private TicketResponse toTicketResponse(TicketModel ticket) {
 		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
 				ticket.getStatusId(), ticket.getPriority(), ticket.getParentTicketId(),
@@ -239,6 +253,12 @@ public class TicketService {
 
 		if (request.priority() == null) {
 			throw new ValidationException("Priorität ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketAssigneeRequest(UpdateTicketAssigneeRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
 		}
 	}
 }

@@ -108,4 +108,15 @@ public class TicketController {
 
 		ticketService.updateTicketPriority(projectId, ticketId, request);
 	}
+
+	@PatchMapping("/tickets/{ticketId}/assignee")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
+	public void updateTicketAssignee(@PathVariable long projectId, @PathVariable long ticketId,
+			@RequestBody UpdateTicketAssigneeRequest request) {
+		log.info("Updating assignee of ticket with ID {} in project with ID {}", ticketId,
+				projectId);
+
+		ticketService.updateTicketAssignee(projectId, ticketId, request);
+	}
 }

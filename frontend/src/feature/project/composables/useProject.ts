@@ -40,12 +40,21 @@ export function useProject(projectId?: string) {
 		store.setTicketTypes(await ticketRepository.getTicketTypes(Number(store.activeProject)));
 	}
 
+	async function fetchProjectUsers() {
+		store.setProjectUsers(await projectRepository.getProjectUsers(Number(store.activeProject)));
+	}
+
 	async function fetchTickets() {
 		store.setTickets(await ticketRepository.getTickets(Number(store.activeProject)));
 	}
 
 	async function fetchProjectData() {
-		await Promise.all([fetchProjectDetails(), fetchTicketTypes(), fetchTickets()]);
+		await Promise.all([
+			fetchProjectDetails(),
+			fetchProjectUsers(),
+			fetchTicketTypes(),
+			fetchTickets(),
+		]);
 	}
 
 	async function createTicket(req: CreateTicketRequest): Promise<Ticket> {
@@ -86,15 +95,28 @@ export function useProject(projectId?: string) {
 		store.updateTicketPriority(ticketId, priority);
 	}
 
-	const { details, ticketTypes, tickets } = storeToRefs(store);
+	async function updateTicketAssignee(
+		ticketId: number,
+		assignedTo: number | null,
+	): Promise<void> {
+		await ticketRepository.updateTicketAssignee(Number(store.activeProject), ticketId, {
+			assignedTo,
+		});
+
+		store.updateTicketAssignee(ticketId, assignedTo);
+	}
+
+	const { details, projectUsers, ticketTypes, tickets } = storeToRefs(store);
 
 	return {
 		details,
+		projectUsers,
 		ticketTypes,
 		tickets,
 		createTicket,
 		deleteTicket,
 		updateTicketStatus,
 		updateTicketPriority,
+		updateTicketAssignee,
 	};
 }

@@ -8,6 +8,7 @@ import type {
 	TicketListResponse,
 	TicketPriorityName,
 	TicketTypeListResponse,
+	UpdateTicketAssigneeRequest,
 } from "./ticket.model";
 
 export async function getTickets(projectId: number): Promise<TicketListResponse> {
@@ -43,6 +44,14 @@ export async function updateTicketPriority(
 	priority: TicketPriorityName,
 ): Promise<void> {
 	return client.patch(`/v1/projects/${projectId}/tickets/${ticketId}/priority`, { priority });
+}
+
+export async function updateTicketAssignee(
+	projectId: number,
+	ticketId: number,
+	request: UpdateTicketAssigneeRequest,
+): Promise<void> {
+	return client.patch(`/v1/projects/${projectId}/tickets/${ticketId}/assignee`, request);
 }
 
 export async function getTicketComments(
