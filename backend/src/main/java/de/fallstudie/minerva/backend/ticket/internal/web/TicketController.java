@@ -98,6 +98,17 @@ public class TicketController {
 		ticketService.updateTicketStatus(projectId, ticketId, request);
 	}
 
+	@PatchMapping("/tickets/{ticketId}/details")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
+	public void updateTicketDetails(@PathVariable long projectId, @PathVariable long ticketId,
+			@RequestBody UpdateTicketDetailsRequest request) {
+		log.info("Updating details of ticket with ID {} in project with ID {}", ticketId,
+				projectId);
+
+		ticketService.updateTicketDetails(projectId, ticketId, request);
+	}
+
 	@PatchMapping("/tickets/{ticketId}/priority")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")

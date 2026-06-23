@@ -7,6 +7,7 @@ import type {
 	TicketPriorityName,
 	TicketType,
 	UpdateTicketAssigneeRequest,
+	UpdateTicketDetailsRequest,
 } from "./ticket.model";
 
 export const TicketRepositoryKey = Symbol("TicketRepository");
@@ -21,6 +22,11 @@ export interface ITicketRepository {
 		projectId: number,
 		ticketId: number,
 		priority: TicketPriorityName,
+	): Promise<void>;
+	updateTicketDetails(
+		projectId: number,
+		ticketId: number,
+		request: UpdateTicketDetailsRequest,
 	): Promise<void>;
 	updateTicketAssignee(
 		projectId: number,
@@ -70,6 +76,14 @@ export class TicketRepository implements ITicketRepository {
 		priority: TicketPriorityName,
 	): Promise<void> {
 		return api.updateTicketPriority(projectId, ticketId, priority);
+	}
+
+	async updateTicketDetails(
+		projectId: number,
+		ticketId: number,
+		request: UpdateTicketDetailsRequest,
+	): Promise<void> {
+		return api.updateTicketDetails(projectId, ticketId, request);
 	}
 
 	async updateTicketAssignee(

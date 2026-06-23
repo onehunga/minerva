@@ -18,6 +18,7 @@ const {
 	deleteTicket,
 	updateTicketStatus,
 	updateTicketPriority,
+	updateTicketDetails,
 	updateTicketAssignee,
 } = useProject();
 
@@ -45,7 +46,11 @@ const selectedPriority = ref<TicketPriorityName | null>(null);
 const isDeletingTicket = ref(false);
 const isUpdatingStatus = ref(false);
 const isUpdatingPriority = ref(false);
+const isUpdatingDetails = ref(false);
 const isUpdatingAssignee = ref(false);
+const editingField = ref<"name" | "description" | null>(null);
+const draftName = ref(props.ticket.name);
+const draftDescription = ref(props.ticket.description);
 
 const selectedAssignee = ref<number | null>(props.ticket.assignedTo);
 const projectMemberUsers = computed(() => projectUsers.value.filter((user) => user.member));
@@ -96,6 +101,16 @@ watch(selectedTransition, () => {
 watch(selectedPriority, () => {
 	submitPriorityUpdate();
 });
+
+watch(
+	() => [props.ticket.id, props.ticket.name, props.ticket.description],
+	() => {
+		if (editingField.value == null) {
+			draftName.value = props.ticket.name;
+			draftDescription.value = props.ticket.description;
+		}
+	},
+);
 
 watch(
 	() => props.ticket.assignedTo,
@@ -174,6 +189,47 @@ async function submitDeleteTicket(): Promise<void> {
 	}
 }
 
+function beginDetailsEdit(field: "name" | "description"): void {
+	if (!canModifyTickets.value || isUpdatingDetails.value) {
+		return;
+	}
+
+	draftName.value = props.ticket.name;
+	draftDescription.value = props.ticket.description;
+	editingField.value = field;
+}
+
+function cancelDetailsEdit(): void {
+	draftName.value = props.ticket.name;
+	draftDescription.value = props.ticket.description;
+	editingField.value = null;
+}
+
+async function submitDetailsUpdate(): Promise<void> {
+	if (isUpdatingDetails.value || !canModifyTickets.value || !draftName.value.trim()) {
+		return;
+	}
+
+	const name = draftName.value.trim();
+	const description = draftDescription.value.trim();
+
+	if (name === props.ticket.name && description === props.ticket.description) {
+		editingField.value = null;
+		return;
+	}
+
+	isUpdatingDetails.value = true;
+
+	try {
+		await updateTicketDetails(props.ticket.id, name, description);
+		editingField.value = null;
+	} catch {
+		alert("Die Ticketdetails konnten nicht aktualisiert werden.");
+	} finally {
+		isUpdatingDetails.value = false;
+	}
+}
+
 async function submitPriorityUpdate(): Promise<void> {
 	if (selectedPriority.value == null) {
 		return;
@@ -230,7 +286,42 @@ function formatDate(value: string | null): string {
 	<article class="ticket-detail">
 		<header class="ticket-detail__header">
 			<p class="ticket-detail__eyebrow">Ticket #{{ ticket.id }}</p>
-			<h3>{{ ticket.name }}</h3>
+			<div v-if="editingField === 'name'" class="ticket-detail__inline-edit">
+				<input
+					v-model="draftName"
+					aria-label="Ticketname"
+					:disabled="isUpdatingDetails"
+					@keyup.enter="submitDetailsUpdate"
+					@keyup.escape="cancelDetailsEdit"
+				/>
+				<button
+					type="button"
+					aria-label="Ticketname speichern"
+					:disabled="isUpdatingDetails || !draftName.trim()"
+					@click="submitDetailsUpdate"
+				>
+					✓
+				</button>
+				<button
+					type="button"
+					aria-label="Ticketname bearbeiten abbrechen"
+					:disabled="isUpdatingDetails"
+					@click="cancelDetailsEdit"
+				>
+					×
+				</button>
+			</div>
+			<h3 v-else>
+				<button
+					v-if="canModifyTickets"
+					type="button"
+					class="ticket-detail__editable"
+					@click="beginDetailsEdit('name')"
+				>
+					{{ ticket.name }}
+				</button>
+				<template v-else>{{ ticket.name }}</template>
+			</h3>
 			<button
 				v-if="canModifyTickets"
 				type="button"
@@ -242,8 +333,40 @@ function formatDate(value: string | null): string {
 			</button>
 		</header>
 
-		<p class="ticket-detail__description">
-			{{ ticket.description || "Keine Beschreibung hinterlegt." }}
+		<div v-if="editingField === 'description'" class="ticket-detail__inline-edit">
+			<textarea
+				v-model="draftDescription"
+				aria-label="Ticketbeschreibung"
+				:disabled="isUpdatingDetails"
+				@keyup.escape="cancelDetailsEdit"
+			></textarea>
+			<button
+				type="button"
+				aria-label="Ticketbeschreibung speichern"
+				:disabled="isUpdatingDetails || !draftName.trim()"
+				@click="submitDetailsUpdate"
+			>
+				✓
+			</button>
+			<button
+				type="button"
+				aria-label="Ticketbeschreibung bearbeiten abbrechen"
+				:disabled="isUpdatingDetails"
+				@click="cancelDetailsEdit"
+			>
+				×
+			</button>
+		</div>
+		<p v-else class="ticket-detail__description">
+			<button
+				v-if="canModifyTickets"
+				type="button"
+				class="ticket-detail__editable"
+				@click="beginDetailsEdit('description')"
+			>
+				{{ ticket.description || "Keine Beschreibung hinterlegt." }}
+			</button>
+			<template v-else>{{ ticket.description || "Keine Beschreibung hinterlegt." }}</template>
 		</p>
 
 		<label for="ticket-status">Status</label>
@@ -383,6 +506,39 @@ function formatDate(value: string | null): string {
 .ticket-detail__header h3,
 .ticket-detail__eyebrow {
 	margin: 0;
+}
+
+.ticket-detail__editable {
+	display: inline;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.ticket-detail__inline-edit {
+	display: flex;
+	gap: 0.5rem;
+	align-items: start;
+}
+
+.ticket-detail__inline-edit input,
+.ticket-detail__inline-edit textarea {
+	flex: 1;
+	min-width: 0;
+	padding: 0.45rem 0.55rem;
+	border: 1px solid currentColor;
+	background: Canvas;
+	color: CanvasText;
+	font: inherit;
+}
+
+.ticket-detail__inline-edit textarea {
+	min-height: 5rem;
+	resize: vertical;
 }
 
 .ticket-detail__eyebrow {

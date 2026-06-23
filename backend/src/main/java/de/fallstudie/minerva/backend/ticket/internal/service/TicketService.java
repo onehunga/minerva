@@ -23,6 +23,7 @@ import de.fallstudie.minerva.backend.ticket.internal.web.TicketResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketAssigneeRequest;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketDetailsRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketPriorityRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowStateResponse;
@@ -175,6 +176,19 @@ public class TicketService {
 	}
 
 	@Transactional
+	public void updateTicketDetails(long projectId, long ticketId,
+			UpdateTicketDetailsRequest request) {
+		validateUpdateTicketDetailsRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setName(request.name().trim());
+		ticket.setDescription(request.description() == null ? "" : request.description().trim());
+		ticketRepository.save(ticket);
+	}
+
+	@Transactional
 	public void updateTicketPriority(long projectId, long ticketId,
 			UpdateTicketPriorityRequest request) {
 		validateUpdateTicketPriorityRequest(request);
@@ -253,6 +267,24 @@ public class TicketService {
 
 		if (request.priority() == null) {
 			throw new ValidationException("Priorität ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketDetailsRequest(UpdateTicketDetailsRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Ticket muss einen Namen haben");
+		}
+
+		if (request.name().length() > 255) {
+			throw new ValidationException("Ticketname darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.description() != null && request.description().length() > 255) {
+			throw new ValidationException("Ticketbeschreibung darf maximal 255 Zeichen lang sein");
 		}
 	}
 

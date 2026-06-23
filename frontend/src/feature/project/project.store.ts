@@ -56,6 +56,16 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		}
 	}
 
+	function updateTicketDetails(ticketId: number, name: string, description: string): void {
+		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
+
+		if (ticket !== undefined) {
+			ticket.name = name;
+			ticket.description = description;
+			ticket.updatedAt = new Date().toISOString();
+		}
+	}
+
 	function updateTicketAssignee(ticketId: number, assignedTo: number | null): void {
 		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
 
@@ -80,6 +90,7 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		removeTicket,
 		updateTicketStatus,
 		updateTicketPriority,
+		updateTicketDetails,
 		updateTicketAssignee,
 	};
 });

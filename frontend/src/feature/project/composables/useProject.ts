@@ -95,6 +95,19 @@ export function useProject(projectId?: string) {
 		store.updateTicketPriority(ticketId, priority);
 	}
 
+	async function updateTicketDetails(
+		ticketId: number,
+		name: string,
+		description: string,
+	): Promise<void> {
+		await ticketRepository.updateTicketDetails(Number(store.activeProject), ticketId, {
+			name,
+			description,
+		});
+
+		store.updateTicketDetails(ticketId, name, description);
+	}
+
 	async function updateTicketAssignee(
 		ticketId: number,
 		assignedTo: number | null,
@@ -117,6 +130,7 @@ export function useProject(projectId?: string) {
 		deleteTicket,
 		updateTicketStatus,
 		updateTicketPriority,
+		updateTicketDetails,
 		updateTicketAssignee,
 	};
 }
