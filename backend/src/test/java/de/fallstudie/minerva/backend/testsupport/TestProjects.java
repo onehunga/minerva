@@ -53,11 +53,11 @@ public final class TestProjects {
 	}
 
 	public static CreateProjectRequest createProjectRequest() {
-		return new CreateProjectRequest("Minerva", "Ticket project", workflowConfiguration());
+		return new CreateProjectRequest("Minerva", "Ticket project");
 	}
 
 	public static CreateProjectRequest createProjectRequest(String name, String description) {
-		return new CreateProjectRequest(name, description, workflowConfiguration());
+		return new CreateProjectRequest(name, description);
 	}
 
 	public static WorkflowConfigurationsCreateRequest workflowConfiguration() {

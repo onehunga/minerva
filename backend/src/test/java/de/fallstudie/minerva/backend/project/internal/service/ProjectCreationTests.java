@@ -24,7 +24,6 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectReposit
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
-import de.fallstudie.minerva.backend.ticket.TicketConfigurationService;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.UserService;
 
@@ -33,7 +32,6 @@ class ProjectCreationTests {
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
-	private TicketConfigurationService ticketConfigurationService;
 	private ProjectService projectService;
 
 	@BeforeEach
@@ -42,13 +40,12 @@ class ProjectCreationTests {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
-		ticketConfigurationService = Mockito.mock(TicketConfigurationService.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, ticketConfigurationService, userService);
+				projectRoleRepository, userService);
 	}
 
 	@Test
-	void createProjectSavesProjectRolesOwnerMemberAndTicketConfiguration() {
+	void createProjectSavesProjectRolesAndOwnerMember() {
 		final var roleId = new AtomicLong(TestProjects.OWNER_ROLE_ID);
 		final var request = TestProjects.createProjectRequest();
 		when(projectRepository.existsByName("Minerva")).thenReturn(false);
@@ -88,8 +85,6 @@ class ProjectCreationTests {
 		assertEquals(TestProjects.PROJECT_ID, savedMember.getProjectId());
 		assertEquals(TestProjects.OWNER_USER_ID, savedMember.getUserId());
 		assertEquals(TestProjects.OWNER_ROLE_ID, savedMember.getRoleId());
-		verify(ticketConfigurationService).createTicketConfiguration(TestProjects.PROJECT_ID,
-				request.workflowConfiguration());
 	}
 
 	@Test
@@ -113,8 +108,6 @@ class ProjectCreationTests {
 		verify(projectRepository, never()).save(any());
 		verify(projectRoleRepository, never()).save(any());
 		verify(projectMemberRepository, never()).save(any());
-		verify(ticketConfigurationService, never()).createTicketConfiguration(any(Long.class),
-				any());
 	}
 
 	private void assertInvalidProject(String name, String description) {
@@ -125,7 +118,5 @@ class ProjectCreationTests {
 		verify(projectRepository, never()).save(any());
 		verify(projectRoleRepository, never()).save(any());
 		verify(projectMemberRepository, never()).save(any());
-		verify(ticketConfigurationService, never()).createTicketConfiguration(any(Long.class),
-				any());
 	}
 }

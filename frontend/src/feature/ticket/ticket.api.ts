@@ -10,6 +10,7 @@ import type {
 	TicketTypeListResponse,
 	UpdateTicketAssigneeRequest,
 	UpdateTicketDetailsRequest,
+	WorkflowConfiguration,
 } from "./ticket.model";
 
 export async function getTickets(projectId: number): Promise<TicketListResponse> {
@@ -80,4 +81,11 @@ export async function createTicketComment(
 	return client
 		.post(`/v1/projects/${projectId}/tickets/${ticketId}/comments`, request)
 		.then((res) => res.data);
+}
+
+export async function createTicketConfiguration(
+	projectId: number,
+	config: WorkflowConfiguration,
+): Promise<void> {
+	return client.post(`/v1/projects/${projectId}/ticket-configurations`, config);
 }
