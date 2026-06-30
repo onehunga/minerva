@@ -19,13 +19,14 @@ import org.mockito.Mockito;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
-import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 
 class TicketStatusUpdateTests {
@@ -35,6 +36,7 @@ class TicketStatusUpdateTests {
 	private WorkflowStatusRepository workflowStatusRepository;
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
+	private TicketCommentRepository ticketCommentRepository;
 	private TicketService ticketService;
 
 	@BeforeEach
@@ -45,9 +47,10 @@ class TicketStatusUpdateTests {
 		workflowStatusRepository = Mockito.mock(WorkflowStatusRepository.class);
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
+		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
 		ticketService = new TicketService(ticketTypeRepository, ticketChildRuleRepository,
 				workflowRepository, workflowStatusRepository, workflowTransitionRepository,
-				ticketRepository);
+				ticketRepository, ticketCommentRepository);
 	}
 
 	@Test

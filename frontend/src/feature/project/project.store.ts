@@ -1,11 +1,12 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import type { model } from ".";
-import type { Ticket, TicketType } from "../ticket/ticket.model";
+import type { Ticket, TicketPriorityName, TicketType } from "../ticket/ticket.model";
 
 export const useActiveProjectStore = defineStore("activeUsers", () => {
 	const activeProject = ref<null | string>(null);
 	const details = ref<null | model.ProjectDetails>(null);
+	const projectUsers = ref<model.ProjectUser[]>([]);
 	const ticketTypes = ref<TicketType[]>([]);
 	const tickets = ref<Ticket[]>([]);
 
@@ -15,6 +16,10 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 
 	function setProjectDetails(projectDetails: model.ProjectDetails | null): void {
 		details.value = projectDetails;
+	}
+
+	function setProjectUsers(users: model.ProjectUser[]): void {
+		projectUsers.value = users;
 	}
 
 	function setTicketTypes(projectTicketTypes: TicketType[]): void {
@@ -29,6 +34,10 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		tickets.value.push(ticket);
 	}
 
+	function removeTicket(ticketId: number): void {
+		tickets.value = tickets.value.filter((ticket) => ticket.id !== ticketId);
+	}
+
 	function updateTicketStatus(ticketId: number, statusId: number): void {
 		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
 
@@ -38,16 +47,50 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		}
 	}
 
+	function updateTicketPriority(ticketId: number, priority: TicketPriorityName): void {
+		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
+
+		if (ticket !== undefined) {
+			ticket.priority = priority;
+			ticket.updatedAt = new Date().toISOString();
+		}
+	}
+
+	function updateTicketDetails(ticketId: number, name: string, description: string): void {
+		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
+
+		if (ticket !== undefined) {
+			ticket.name = name;
+			ticket.description = description;
+			ticket.updatedAt = new Date().toISOString();
+		}
+	}
+
+	function updateTicketAssignee(ticketId: number, assignedTo: number | null): void {
+		const ticket = tickets.value.find((currentTicket) => currentTicket.id === ticketId);
+
+		if (ticket !== undefined) {
+			ticket.assignedTo = assignedTo;
+			ticket.updatedAt = new Date().toISOString();
+		}
+	}
+
 	return {
 		activeProject,
 		details,
+		projectUsers,
 		ticketTypes,
 		tickets,
 		setActiveProject,
 		setProjectDetails,
+		setProjectUsers,
 		setTicketTypes,
 		setTickets,
 		addTicket,
+		removeTicket,
 		updateTicketStatus,
+		updateTicketPriority,
+		updateTicketDetails,
+		updateTicketAssignee,
 	};
 });

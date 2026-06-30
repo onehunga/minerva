@@ -9,6 +9,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 
+import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
+
 @Entity
 @Table(name = "tickets")
 @Getter
@@ -28,6 +30,10 @@ public class TicketModel {
 
 	@Column(nullable = false)
 	private long statusId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private TicketPriorityName priority = TicketPriorityName.NORMAL;
 
 	private Long parentTicketId = null;
 

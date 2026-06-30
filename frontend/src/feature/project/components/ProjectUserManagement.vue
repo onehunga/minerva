@@ -22,6 +22,8 @@ const selectedUserId = ref<number | null>(null);
 const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
 const roleChanges = ref<Record<number, model.ProjectRole>>({});
 
+const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
+const memberUsers = computed(() => users.value.filter((user) => user.member));
 const availableUsers = computed(() => users.value.filter((user) => !user.member));
 
 onMounted(loadProjectUsers);
@@ -64,7 +66,12 @@ async function submitProjectUser(): Promise<void> {
 }
 
 function canUpdateProjectRole(user: model.ProjectUser): boolean {
-	return user.member && user.id !== userStore.userDetails?.id && user.projectRole !== null;
+	return (
+		isOwner.value &&
+		user.member &&
+		user.id !== userStore.userDetails?.id &&
+		user.projectRole !== null
+	);
 }
 
 function hasRoleChanged(user: model.ProjectUser): boolean {
@@ -94,7 +101,7 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 		<p v-else-if="errorMessage && users.length === 0" role="alert">
 			{{ errorMessage }}
 		</p>
-		<p v-else-if="users.length === 0">Es sind keine Benutzer vorhanden.</p>
+		<p v-else-if="memberUsers.length === 0">Es sind keine Projektmitglieder vorhanden.</p>
 
 		<template v-else>
 			<p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
@@ -109,7 +116,7 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 					</tr>
 				</thead>
 				<tbody>
-					<tr v-for="user in users" :key="user.id">
+					<tr v-for="user in memberUsers" :key="user.id">
 						<td>{{ user.username }}</td>
 						<td>
 							<select
@@ -142,7 +149,7 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 				</tbody>
 			</table>
 
-			<form class="project-user-form" @submit.prevent="submitProjectUser">
+			<form v-if="isOwner" class="project-user-form" @submit.prevent="submitProjectUser">
 				<div class="form-field">
 					<label for="project-user">Benutzer</label>
 					<select

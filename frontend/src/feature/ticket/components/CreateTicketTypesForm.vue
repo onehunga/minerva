@@ -100,9 +100,7 @@ const possibleTicketChildTypes = computed(() => {
 
 	const allTicketTypes = Array.from(configureTickets.ticketTypes.value.values());
 	const possibleChildren = allTicketTypes.filter(
-		(ticket) =>
-			ticket.name !== activeTicketTypeDetails.value?.name &&
-			!activeTicketTypeDetails.value?.children.has(ticket.name),
+		(ticket) => !activeTicketTypeDetails.value?.children.has(ticket.name),
 	);
 
 	return possibleChildren;

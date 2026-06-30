@@ -1,7 +1,7 @@
 import { storeToRefs } from "pinia";
 import { useTicketRepository } from "@/feature/ticket";
 import { useActiveProjectStore, useProjectRepository } from "..";
-import type { CreateTicketRequest, Ticket } from "@/feature/ticket";
+import type { CreateTicketRequest, Ticket, TicketPriorityName } from "@/feature/ticket";
 
 /**
  * Management für das aktive Projekt.
@@ -40,18 +40,32 @@ export function useProject(projectId?: string) {
 		store.setTicketTypes(await ticketRepository.getTicketTypes(Number(store.activeProject)));
 	}
 
+	async function fetchProjectUsers() {
+		store.setProjectUsers(await projectRepository.getProjectUsers(Number(store.activeProject)));
+	}
+
 	async function fetchTickets() {
 		store.setTickets(await ticketRepository.getTickets(Number(store.activeProject)));
 	}
 
 	async function fetchProjectData() {
-		await Promise.all([fetchProjectDetails(), fetchTicketTypes(), fetchTickets()]);
+		await Promise.all([
+			fetchProjectDetails(),
+			fetchProjectUsers(),
+			fetchTicketTypes(),
+			fetchTickets(),
+		]);
 	}
 
 	async function createTicket(req: CreateTicketRequest): Promise<Ticket> {
 		const newTicket = await ticketRepository.createTicket(Number(store.activeProject), req);
 		store.addTicket(newTicket);
 		return newTicket;
+	}
+
+	async function deleteTicket(ticketId: number): Promise<void> {
+		await ticketRepository.deleteTicket(Number(store.activeProject), ticketId);
+		store.removeTicket(ticketId);
 	}
 
 	async function updateTicketStatus(
@@ -68,7 +82,55 @@ export function useProject(projectId?: string) {
 		store.updateTicketStatus(ticketId, statusId);
 	}
 
-	const { details, ticketTypes, tickets } = storeToRefs(store);
+	async function updateTicketPriority(
+		ticketId: number,
+		priority: TicketPriorityName,
+	): Promise<void> {
+		await ticketRepository.updateTicketPriority(
+			Number(store.activeProject),
+			ticketId,
+			priority,
+		);
 
-	return { details, ticketTypes, tickets, createTicket, updateTicketStatus };
+		store.updateTicketPriority(ticketId, priority);
+	}
+
+	async function updateTicketDetails(
+		ticketId: number,
+		name: string,
+		description: string,
+	): Promise<void> {
+		await ticketRepository.updateTicketDetails(Number(store.activeProject), ticketId, {
+			name,
+			description,
+		});
+
+		store.updateTicketDetails(ticketId, name, description);
+	}
+
+	async function updateTicketAssignee(
+		ticketId: number,
+		assignedTo: number | null,
+	): Promise<void> {
+		await ticketRepository.updateTicketAssignee(Number(store.activeProject), ticketId, {
+			assignedTo,
+		});
+
+		store.updateTicketAssignee(ticketId, assignedTo);
+	}
+
+	const { details, projectUsers, ticketTypes, tickets } = storeToRefs(store);
+
+	return {
+		details,
+		projectUsers,
+		ticketTypes,
+		tickets,
+		createTicket,
+		deleteTicket,
+		updateTicketStatus,
+		updateTicketPriority,
+		updateTicketDetails,
+		updateTicketAssignee,
+	};
 }

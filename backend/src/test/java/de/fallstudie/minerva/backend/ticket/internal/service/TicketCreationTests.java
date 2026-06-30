@@ -20,8 +20,10 @@ import org.mockito.Mockito;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeModel;
@@ -39,6 +41,7 @@ class TicketCreationTests {
 	private WorkflowStatusRepository workflowStatusRepository;
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
+	private TicketCommentRepository ticketCommentRepository;
 	private TicketService ticketService;
 
 	@BeforeEach
@@ -49,9 +52,10 @@ class TicketCreationTests {
 		workflowStatusRepository = Mockito.mock(WorkflowStatusRepository.class);
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
+		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
 		ticketService = new TicketService(ticketTypeRepository, ticketChildRuleRepository,
 				workflowRepository, workflowStatusRepository, workflowTransitionRepository,
-				ticketRepository);
+				ticketRepository, ticketCommentRepository);
 	}
 
 	@Test
@@ -73,12 +77,14 @@ class TicketCreationTests {
 		assertEquals(TestProjects.PROJECT_ID, response.projectId());
 		assertEquals(ticketType.getId(), response.ticketTypeId());
 		assertEquals(status.getId(), response.statusId());
+		assertEquals(TicketPriorityName.NORMAL, response.priority());
 		assertEquals(null, response.parentTicketId());
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
 		final var savedTicket = ticketCaptor.getValue();
 		assertEquals("Root ticket", savedTicket.getName());
 		assertEquals("Beschreibung", savedTicket.getDescription());
+		assertEquals(TicketPriorityName.NORMAL, savedTicket.getPriority());
 		assertEquals(TestProjects.OWNER_USER_ID, savedTicket.getCreatedBy());
 		assertEquals(null, savedTicket.getParentTicketId());
 	}

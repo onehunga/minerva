@@ -1,12 +1,15 @@
+import { storeToRefs } from "pinia";
 import { ref } from "vue";
-import type { ProjectRole, ProjectUser } from "../project.model";
+import { useActiveProjectStore } from "../project.store";
+import type { ProjectRole } from "../project.model";
 import { useProjectRepository } from "./useProjectRepository";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function useProjectUsers(projectId: number) {
 	const projectRepository = useProjectRepository();
+	const store = useActiveProjectStore();
+	const { projectUsers: users } = storeToRefs(store);
 
-	const users = ref<ProjectUser[]>([]);
 	const isLoadingUsers = ref(false);
 	const isAddingUser = ref(false);
 	const updatingUserRoleId = ref<number | null>(null);
@@ -18,7 +21,7 @@ export function useProjectUsers(projectId: number) {
 		errorMessage.value = "";
 
 		try {
-			users.value = await projectRepository.getProjectUsers(projectId);
+			store.setProjectUsers(await projectRepository.getProjectUsers(projectId));
 		} catch {
 			errorMessage.value = "Projektbenutzer konnten nicht geladen werden.";
 		} finally {

@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
@@ -9,6 +10,7 @@ import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
@@ -20,6 +22,9 @@ import de.fallstudie.minerva.backend.ticket.internal.web.TicketListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeListResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeResponse;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketAssigneeRequest;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketDetailsRequest;
+import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketPriorityRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowStateResponse;
 import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowTransitionResponse;
@@ -27,6 +32,7 @@ import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class TicketService {
@@ -36,6 +42,7 @@ public class TicketService {
 	private final WorkflowStatusRepository workflowStatusRepository;
 	private final WorkflowTransitionRepository workflowTransitionRepository;
 	private final TicketRepository ticketRepository;
+	private final TicketCommentRepository ticketCommentRepository;
 
 	public TicketListResponse getTickets(long projectId) {
 		final var tickets = ticketRepository.findAllByProjectIdOrderByNameAsc(projectId).stream()
@@ -127,6 +134,21 @@ public class TicketService {
 	}
 
 	@Transactional
+	public void deleteTicket(long projectId, long ticketId) {
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		if (ticketRepository.existsByParentTicketId(ticket.getId())) {
+			throw new ValidationException("Ticket hat noch Kindtickets");
+		}
+
+		ticketCommentRepository.deleteAllByTicketId(ticket.getId());
+		ticketRepository.delete(ticket);
+
+		log.trace("Deleted ticket with ID {} in project with ID {}", ticketId, projectId);
+	}
+
+	@Transactional
 	public void updateTicketStatus(long projectId, long ticketId,
 			UpdateTicketStatusRequest request) {
 		validateUpdateTicketStatusRequest(request);
@@ -153,11 +175,49 @@ public class TicketService {
 		ticketRepository.save(ticket);
 	}
 
+	@Transactional
+	public void updateTicketDetails(long projectId, long ticketId,
+			UpdateTicketDetailsRequest request) {
+		validateUpdateTicketDetailsRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setName(request.name().trim());
+		ticket.setDescription(request.description() == null ? "" : request.description().trim());
+		ticketRepository.save(ticket);
+	}
+
+	@Transactional
+	public void updateTicketPriority(long projectId, long ticketId,
+			UpdateTicketPriorityRequest request) {
+		validateUpdateTicketPriorityRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setPriority(request.priority());
+		ticketRepository.save(ticket);
+	}
+
+	/// TODO: verify that assignee is a project member, currently blocket by Modulith, since Project already depends on Ticket, we cannot check the Project from Ticket
+	@Transactional
+	public void updateTicketAssignee(long projectId, long ticketId,
+			UpdateTicketAssigneeRequest request) {
+		validateUpdateTicketAssigneeRequest(request);
+
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setAssignedTo(request.assignedTo());
+		ticketRepository.save(ticket);
+	}
+
 	private TicketResponse toTicketResponse(TicketModel ticket) {
 		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
-				ticket.getStatusId(), ticket.getParentTicketId(), ticket.getName(),
-				ticket.getDescription(), ticket.getCreatedBy(), ticket.getAssignedTo(),
-				ticket.getCreatedAt(), ticket.getUpdatedAt());
+				ticket.getStatusId(), ticket.getPriority(), ticket.getParentTicketId(),
+				ticket.getName(), ticket.getDescription(), ticket.getCreatedBy(),
+				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt());
 	}
 
 	private void validateCreateTicketRequest(CreateTicketRequest request) {
@@ -197,6 +257,40 @@ public class TicketService {
 
 		if (request.transitionId() <= 0) {
 			throw new ValidationException("Statusübergang ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketPriorityRequest(UpdateTicketPriorityRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.priority() == null) {
+			throw new ValidationException("Priorität ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketDetailsRequest(UpdateTicketDetailsRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Ticket muss einen Namen haben");
+		}
+
+		if (request.name().length() > 255) {
+			throw new ValidationException("Ticketname darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.description() != null && request.description().length() > 255) {
+			throw new ValidationException("Ticketbeschreibung darf maximal 255 Zeichen lang sein");
+		}
+	}
+
+	private void validateUpdateTicketAssigneeRequest(UpdateTicketAssigneeRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
 		}
 	}
 }

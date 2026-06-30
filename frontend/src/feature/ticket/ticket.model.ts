@@ -1,5 +1,7 @@
 export type TicketStatusCategory = "OPEN" | "IN_PROGRESS" | "COMPLETED";
 
+export type TicketPriorityName = "LOWEST" | "LOW" | "NORMAL" | "HIGH" | "HIGHEST";
+
 export type TicketDetails = {
 	name: string;
 	description: string;
@@ -83,11 +85,22 @@ export type UpdateTicketStatusRequest = {
 	transitionId: number;
 };
 
+export type UpdateTicketPriorityRequest = {
+	priority: TicketPriorityName;
+};
+
+export type UpdateTicketDetailsRequest = TicketDetails;
+
+export type UpdateTicketAssigneeRequest = {
+	assignedTo: number | null;
+};
+
 export type Ticket = {
 	id: number;
 	projectId: number;
 	ticketTypeId: number;
 	statusId: number;
+	priority: TicketPriorityName;
 	parentTicketId: number | null;
 	name: string;
 	description: string;
@@ -99,4 +112,22 @@ export type Ticket = {
 
 export type TicketListResponse = {
 	tickets: Ticket[];
+};
+
+export type TicketComment = {
+	id: number;
+	ticketId: number;
+	authorId: number;
+	authorUsername: string;
+	content: string;
+	createdAt: string | null;
+	updatedAt: string | null;
+};
+
+export type TicketCommentListResponse = {
+	comments: TicketComment[];
+};
+
+export type CreateTicketCommentRequest = {
+	content: string;
 };

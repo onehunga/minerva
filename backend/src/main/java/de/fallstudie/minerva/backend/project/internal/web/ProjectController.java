@@ -41,7 +41,7 @@ public class ProjectController {
 	}
 
 	@GetMapping("/{id}/users")
-	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	@PreAuthorize("@projectPolicy.canViewProject(principal, #id)")
 	public ProjectUserListResponse getProjectUsers(@AuthenticationPrincipal Identity identity,
 			@PathVariable long id) {
 		log.info("User with ID {} is requesting users for project with ID {}", identity.userId(),
