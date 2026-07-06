@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.project.internal.policy;
+package de.fallstudie.minerva.backend.project;
 
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
 import org.springframework.stereotype.Component;
@@ -50,6 +50,25 @@ public class ProjectPolicies {
 
 		final var roleId = projectMemberRepository
 				.findByProjectIdAndUserId(projectId, identity.userId())
+				.orElseThrow(() -> new IllegalStateException(
+						"User is not a member of the project, but existence was checked before"))
+				.getRoleId();
+		final var projectRole = projectRoleRepository.findById(roleId)
+				.orElseThrow(() -> new IllegalStateException("Role with id " + roleId
+						+ " does not exist, but existence was checked before"));
+
+		return projectRole.getName() == ProjectRoleName.OWNER
+				|| projectRole.getName() == ProjectRoleName.CONTRIBUTOR;
+	}
+
+	public boolean canBeAssigned(long projectId, long userId) {
+		log.trace("Checking if user {} can be assigned in project {}", userId, projectId);
+
+		if (!projectMemberRepository.existsByProjectIdAndUserId(projectId, userId)) {
+			return false;
+		}
+
+		final var roleId = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
 				.orElseThrow(() -> new IllegalStateException(
 						"User is not a member of the project, but existence was checked before"))
 				.getRoleId();

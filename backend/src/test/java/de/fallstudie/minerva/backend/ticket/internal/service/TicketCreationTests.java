@@ -16,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
@@ -42,10 +43,12 @@ class TicketCreationTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ProjectPolicies projectPolicies;
 	private TicketService ticketService;
 
 	@BeforeEach
 	void setUp() {
+		projectPolicies = Mockito.mock(ProjectPolicies.class);
 		ticketTypeRepository = Mockito.mock(TicketTypeRepository.class);
 		ticketChildRuleRepository = Mockito.mock(TicketChildRuleRepository.class);
 		workflowRepository = Mockito.mock(WorkflowRepository.class);
@@ -53,9 +56,9 @@ class TicketCreationTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
-		ticketService = new TicketService(ticketTypeRepository, ticketChildRuleRepository,
-				workflowRepository, workflowStatusRepository, workflowTransitionRepository,
-				ticketRepository, ticketCommentRepository);
+		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
+				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
 	}
 
 	@Test
