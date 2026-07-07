@@ -50,14 +50,6 @@ public class ProjectController {
 		return projectService.getProjectUsers(identity, id);
 	}
 
-	@PostMapping("")
-	public long createProject(@AuthenticationPrincipal Identity identity,
-			@RequestBody CreateProjectRequest request) {
-		log.info("Creating project with name '{}'", request.name());
-
-		return projectService.createProject(identity, request);
-	}
-
 	@PostMapping("/{id}/users")
 	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")

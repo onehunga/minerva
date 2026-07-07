@@ -17,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.project.ProjectCreationService;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
@@ -33,6 +34,7 @@ class ProjectCreationTests {
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
 	private ProjectService projectService;
+	private ProjectCreationService projectCreationService;
 
 	@BeforeEach
 	void setUp() {
@@ -42,12 +44,13 @@ class ProjectCreationTests {
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
 				projectRoleRepository, userService);
+		projectCreationService = new ProjectCreationService(projectService);
 	}
 
 	@Test
 	void createProjectSavesProjectRolesAndOwnerMember() {
 		final var roleId = new AtomicLong(TestProjects.OWNER_ROLE_ID);
-		final var request = TestProjects.createProjectRequest();
+		final var command = TestProjects.createProjectCommand();
 		when(projectRepository.existsByName("Minerva")).thenReturn(false);
 		when(projectRepository.save(any(ProjectModel.class))).thenAnswer(invocation -> {
 			final ProjectModel project = invocation.getArgument(0);
@@ -60,7 +63,7 @@ class ProjectCreationTests {
 			return role;
 		});
 
-		final long projectId = projectService.createProject(TestProjects.OWNER, request);
+		final long projectId = projectCreationService.createProject(TestProjects.OWNER, command);
 
 		assertEquals(TestProjects.PROJECT_ID, projectId);
 
@@ -102,8 +105,8 @@ class ProjectCreationTests {
 	void createProjectRejectsDuplicateName() {
 		when(projectRepository.existsByName("Minerva")).thenReturn(true);
 
-		assertThrows(DuplicateResourceException.class, () -> projectService
-				.createProject(TestProjects.OWNER, TestProjects.createProjectRequest()));
+		assertThrows(DuplicateResourceException.class, () -> projectCreationService
+				.createProject(TestProjects.OWNER, TestProjects.createProjectCommand()));
 
 		verify(projectRepository, never()).save(any());
 		verify(projectRoleRepository, never()).save(any());
@@ -112,8 +115,8 @@ class ProjectCreationTests {
 
 	private void assertInvalidProject(String name, String description) {
 		assertThrows(ValidationException.class,
-				() -> projectService.createProject(TestProjects.OWNER,
-						TestProjects.createProjectRequest(name, description)));
+				() -> projectCreationService.createProject(TestProjects.OWNER,
+						TestProjects.createProjectCommand(name, description)));
 
 		verify(projectRepository, never()).save(any());
 		verify(projectRoleRepository, never()).save(any());

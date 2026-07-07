@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useProjectRepository } from "..";
-import { useTicketRepository } from "@/feature/ticket";
 import {
 	CreateTicketTypesForm,
 	useConfigureTickets,
@@ -28,7 +27,6 @@ const DEFAULT_TICKETS: CreateTicketType[] = [
 ];
 
 const repository = useProjectRepository();
-const ticketRepository = useTicketRepository();
 
 const name = ref("");
 const description = ref("");
@@ -65,8 +63,11 @@ function buildTicketWorkflow(): WorkflowConfiguration {
 async function createProject() {
 	const ticketWorkflow = buildTicketWorkflow();
 
-	const projectId = await repository.createProject(name.value, description.value);
-	await ticketRepository.createTicketConfiguration(projectId, ticketWorkflow);
+	await repository.createProject({
+		name: name.value,
+		description: description.value,
+		ticketConfiguration: ticketWorkflow,
+	});
 
 	name.value = "";
 	description.value = "";

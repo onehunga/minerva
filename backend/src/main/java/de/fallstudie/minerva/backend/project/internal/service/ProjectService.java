@@ -3,13 +3,12 @@ package de.fallstudie.minerva.backend.project.internal.service;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import de.fallstudie.minerva.backend.user.UserService;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.project.CreateProjectCommand;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
@@ -17,17 +16,18 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectReposit
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
-import de.fallstudie.minerva.backend.project.internal.web.CreateProjectRequest;
+import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectDetailsResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
-import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
 import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
 import de.fallstudie.minerva.backend.user.Identity;
+import de.fallstudie.minerva.backend.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
@@ -83,12 +83,12 @@ public class ProjectService {
 	 * @return Die ID des neu erstellten Projekts
 	 */
 	@Transactional
-	public long createProject(Identity identity, CreateProjectRequest request) {
-		validateCreateProjectRequest(request);
+	public long createProject(Identity identity, CreateProjectCommand command) {
+		validateCreateProjectCommand(command);
 
 		final var project = new ProjectModel();
-		project.setName(request.name());
-		project.setDescription(request.description());
+		project.setName(command.name());
+		project.setDescription(command.description());
 		project.setCreatedBy(identity.userId());
 		projectRepository.save(project);
 
@@ -175,20 +175,20 @@ public class ProjectService {
 		projectMemberRepository.save(member);
 	}
 
-	private void validateCreateProjectRequest(CreateProjectRequest request) {
-		if (request == null) {
-			throw new IllegalArgumentException("Request must not be null");
+	private void validateCreateProjectCommand(CreateProjectCommand command) {
+		if (command == null) {
+			throw new IllegalArgumentException("Command must not be null");
 		}
 
-		if (request.name() == null || request.name().isBlank()) {
+		if (command.name() == null || command.name().isBlank()) {
 			throw new ValidationException("Projekt muss einen Namen haben");
 		}
 
-		if (request.description() != null && request.description().length() > 500) {
+		if (command.description() != null && command.description().length() > 500) {
 			throw new ValidationException("Projektbeschreibung darf maximal 500 Zeichen lang sein");
 		}
 
-		if (projectRepository.existsByName(request.name())) {
+		if (projectRepository.existsByName(command.name())) {
 			throw new DuplicateResourceException("Projektname ist bereits vergeben");
 		}
 	}

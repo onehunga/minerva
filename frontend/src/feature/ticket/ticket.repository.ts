@@ -8,7 +8,6 @@ import type {
 	TicketType,
 	UpdateTicketAssigneeRequest,
 	UpdateTicketDetailsRequest,
-	WorkflowConfiguration,
 } from "./ticket.model";
 
 export const TicketRepositoryKey = Symbol("TicketRepository");
@@ -40,7 +39,6 @@ export interface ITicketRepository {
 		ticketId: number,
 		request: CreateTicketCommentRequest,
 	): Promise<TicketComment>;
-	createTicketConfiguration(projectId: number, config: WorkflowConfiguration): Promise<void>;
 }
 
 export class TicketRepository implements ITicketRepository {
@@ -108,12 +106,5 @@ export class TicketRepository implements ITicketRepository {
 		request: CreateTicketCommentRequest,
 	): Promise<TicketComment> {
 		return api.createTicketComment(projectId, ticketId, request);
-	}
-
-	async createTicketConfiguration(
-		projectId: number,
-		config: WorkflowConfiguration,
-	): Promise<void> {
-		return api.createTicketConfiguration(projectId, config);
 	}
 }

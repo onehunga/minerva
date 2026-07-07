@@ -1,5 +1,6 @@
 import { client } from "@/api";
 import type {
+	CreateProjectRequest,
 	ProjectDetails,
 	ProjectRecordListResponse,
 	ProjectRole,
@@ -14,13 +15,8 @@ export async function getProjectById(id: number): Promise<ProjectDetails> {
 	return client.get(`/v1/projects/${id}`).then((res) => res.data);
 }
 
-export async function createProject(name: string, description: string): Promise<number> {
-	return client
-		.post("/v1/projects", {
-			name,
-			description,
-		})
-		.then((res) => res.data);
+export async function createProject(request: CreateProjectRequest): Promise<number> {
+	return client.post("/v1/projects", request).then((res) => res.data);
 }
 
 export async function getProjectUsers(id: number): Promise<ProjectUserListResponse> {
