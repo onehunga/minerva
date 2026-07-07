@@ -1,5 +1,6 @@
 import { api } from ".";
 import type {
+	ActivityEvent,
 	CreateTicketCommentRequest,
 	CreateTicketRequest,
 	Ticket,
@@ -39,6 +40,7 @@ export interface ITicketRepository {
 		ticketId: number,
 		request: CreateTicketCommentRequest,
 	): Promise<TicketComment>;
+	getTicketActivities(projectId: number, ticketId: number): Promise<ActivityEvent[]>;
 }
 
 export class TicketRepository implements ITicketRepository {
@@ -106,5 +108,11 @@ export class TicketRepository implements ITicketRepository {
 		request: CreateTicketCommentRequest,
 	): Promise<TicketComment> {
 		return api.createTicketComment(projectId, ticketId, request);
+	}
+
+	async getTicketActivities(projectId: number, ticketId: number): Promise<ActivityEvent[]> {
+		const response = await api.getTicketActivities(projectId, ticketId);
+
+		return response.events;
 	}
 }

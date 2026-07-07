@@ -10,6 +10,7 @@ import type {
 import CustomSelect from "@/components/CustomSelect.vue";
 import { useProject } from "@/feature/project";
 import TicketComments from "./TicketComments.vue";
+import TicketActivity from "./TicketActivity.vue";
 import CreateTicketForm from "./CreateTicketForm.vue";
 
 const {
@@ -443,6 +444,8 @@ function formatDate(value: string | null): string {
 			:ticket-id="ticket.id"
 			:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
 		/>
+
+		<TicketActivity :project-id="ticket.projectId" :ticket-id="ticket.id" />
 
 		<section class="ticket-detail__children" aria-labelledby="ticket-children-heading">
 			<h4 id="ticket-children-heading">Kindtickets</h4>
