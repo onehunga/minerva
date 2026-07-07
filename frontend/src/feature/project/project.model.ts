@@ -1,3 +1,11 @@
+import type { WorkflowConfiguration } from "@/feature/ticket/ticket.model";
+
+export type CreateProjectRequest = {
+	name: string;
+	description: string;
+	ticketConfiguration: WorkflowConfiguration;
+};
+
 export type ProjectRecord = {
 	id: number;
 	name: string;

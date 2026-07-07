@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.ticket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeModel;
@@ -99,5 +101,17 @@ class TicketConfigurationServiceTests {
 		assertEquals(childTicketType.getId(), parentChildRules.getFirst().getChildTicketId());
 		assertEquals(0, ticketChildRuleRepository
 				.findAllByParentTicketIdOrderByIdAsc(forbiddenChildType.getId()).size());
+	}
+
+	@Test
+	void createTicketConfigurationRejectsExistingProjectConfiguration() {
+		ticketConfigurationService.createTicketConfiguration(TestProjects.PROJECT_ID,
+				TestProjects.workflowConfiguration());
+
+		assertThrows(DuplicateResourceException.class,
+				() -> ticketConfigurationService.createTicketConfiguration(TestProjects.PROJECT_ID,
+						TestProjects.workflowConfiguration()));
+		assertEquals(3, ticketTypeRepository
+				.findAllByProjectIdOrderByNameAsc(TestProjects.PROJECT_ID).size());
 	}
 }

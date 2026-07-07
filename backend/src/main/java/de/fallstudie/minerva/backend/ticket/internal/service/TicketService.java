@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import java.util.List;
 
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class TicketService {
+	private final ProjectPolicies projectPolicies;
 	private final TicketTypeRepository ticketTypeRepository;
 	private final TicketChildRuleRepository ticketChildRuleRepository;
 	private final WorkflowRepository workflowRepository;
@@ -200,7 +202,6 @@ public class TicketService {
 		ticketRepository.save(ticket);
 	}
 
-	/// TODO: verify that assignee is a project member, currently blocket by Modulith, since Project already depends on Ticket, we cannot check the Project from Ticket
 	@Transactional
 	public void updateTicketAssignee(long projectId, long ticketId,
 			UpdateTicketAssigneeRequest request) {
@@ -208,6 +209,13 @@ public class TicketService {
 
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		if (request.assignedTo() != null) {
+			if (!this.projectPolicies.canBeAssigned(projectId, request.assignedTo())) {
+				throw new ValidationException(
+						"Der Nutzer kann diesem Projekt nicht zugewiesen werden");
+			}
+		}
 
 		ticket.setAssignedTo(request.assignedTo());
 		ticketRepository.save(ticket);

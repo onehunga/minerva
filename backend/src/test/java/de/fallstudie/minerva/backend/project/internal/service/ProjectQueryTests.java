@@ -16,7 +16,6 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberR
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
-import de.fallstudie.minerva.backend.ticket.TicketConfigurationService;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.UserService;
 
@@ -25,7 +24,6 @@ class ProjectQueryTests {
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
-	private TicketConfigurationService ticketConfigurationService;
 	private ProjectService projectService;
 
 	@BeforeEach
@@ -34,9 +32,8 @@ class ProjectQueryTests {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
-		ticketConfigurationService = Mockito.mock(TicketConfigurationService.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, ticketConfigurationService, userService);
+				projectRoleRepository, userService);
 	}
 
 	@Test

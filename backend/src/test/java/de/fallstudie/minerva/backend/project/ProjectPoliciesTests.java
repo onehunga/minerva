@@ -1,4 +1,4 @@
-package de.fallstudie.minerva.backend.project.internal.policy;
+package de.fallstudie.minerva.backend.project;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;

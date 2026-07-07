@@ -63,7 +63,11 @@ function buildTicketWorkflow(): WorkflowConfiguration {
 async function createProject() {
 	const ticketWorkflow = buildTicketWorkflow();
 
-	await repository.createProject(name.value, description.value, ticketWorkflow);
+	await repository.createProject({
+		name: name.value,
+		description: description.value,
+		ticketConfiguration: ticketWorkflow,
+	});
 
 	name.value = "";
 	description.value = "";

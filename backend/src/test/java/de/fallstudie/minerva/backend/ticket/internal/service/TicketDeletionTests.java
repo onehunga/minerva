@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
@@ -31,10 +32,12 @@ class TicketDeletionTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ProjectPolicies projectPolicies;
 	private TicketService ticketService;
 
 	@BeforeEach
 	void setUp() {
+		projectPolicies = Mockito.mock(ProjectPolicies.class);
 		ticketTypeRepository = Mockito.mock(TicketTypeRepository.class);
 		ticketChildRuleRepository = Mockito.mock(TicketChildRuleRepository.class);
 		workflowRepository = Mockito.mock(WorkflowRepository.class);
@@ -42,9 +45,9 @@ class TicketDeletionTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
-		ticketService = new TicketService(ticketTypeRepository, ticketChildRuleRepository,
-				workflowRepository, workflowStatusRepository, workflowTransitionRepository,
-				ticketRepository, ticketCommentRepository);
+		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
+				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
 	}
 
 	@Test

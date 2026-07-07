@@ -6,6 +6,8 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TicketTypeRepository extends JpaRepository<TicketTypeModel, Long> {
+	boolean existsByProjectId(long projectId);
+
 	List<TicketTypeModel> findAllByProjectIdOrderByNameAsc(long projectId);
 
 	Optional<TicketTypeModel> findByIdAndProjectId(long id, long projectId);

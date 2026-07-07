@@ -1,5 +1,6 @@
 package de.fallstudie.minerva.backend.ticket;
 
+import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.ticket.internal.WorkflowConfigurationsValidator;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.*;
 import jakarta.transaction.Transactional;
@@ -25,6 +26,11 @@ public class TicketConfigurationService {
 	@Transactional
 	public void createTicketConfiguration(long projectId, WorkflowConfigurationsCreateRequest req) {
 		new WorkflowConfigurationsValidator(req).validate();
+
+		if (ticketTypeRepository.existsByProjectId(projectId)) {
+			throw new DuplicateResourceException(
+					"Ticketkonfiguration existiert bereits für dieses Projekt");
+		}
 
 		log.info("Creating ticket configuration for project {}", projectId);
 

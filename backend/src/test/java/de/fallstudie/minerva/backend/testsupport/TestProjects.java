@@ -4,11 +4,12 @@ import java.util.List;
 
 import org.springframework.test.util.ReflectionTestUtils;
 
+import de.fallstudie.minerva.backend.project.CreateProjectCommand;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
-import de.fallstudie.minerva.backend.project.internal.web.CreateProjectRequest;
+import de.fallstudie.minerva.backend.projectsetup.internal.web.ProjectSetupRequest;
 import de.fallstudie.minerva.backend.ticket.TicketStateConfigurationRequest;
 import de.fallstudie.minerva.backend.ticket.TicketStateTransitionConfigurationRequest;
 import de.fallstudie.minerva.backend.ticket.TicketTypeConfigurationRequest;
@@ -52,12 +53,16 @@ public final class TestProjects {
 	private TestProjects() {
 	}
 
-	public static CreateProjectRequest createProjectRequest() {
-		return new CreateProjectRequest("Minerva", "Ticket project", workflowConfiguration());
+	public static CreateProjectCommand createProjectCommand() {
+		return new CreateProjectCommand("Minerva", "Ticket project");
 	}
 
-	public static CreateProjectRequest createProjectRequest(String name, String description) {
-		return new CreateProjectRequest(name, description, workflowConfiguration());
+	public static CreateProjectCommand createProjectCommand(String name, String description) {
+		return new CreateProjectCommand(name, description);
+	}
+
+	public static ProjectSetupRequest projectSetupRequest() {
+		return new ProjectSetupRequest("Minerva", "Ticket project", workflowConfiguration());
 	}
 
 	public static WorkflowConfigurationsCreateRequest workflowConfiguration() {
