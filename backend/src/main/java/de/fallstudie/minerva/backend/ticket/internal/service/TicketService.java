@@ -1,13 +1,16 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import java.util.List;
+import java.util.Objects;
 
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
@@ -45,6 +48,7 @@ public class TicketService {
 	private final WorkflowTransitionRepository workflowTransitionRepository;
 	private final TicketRepository ticketRepository;
 	private final TicketCommentRepository ticketCommentRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public TicketListResponse getTickets(long projectId) {
 		final var tickets = ticketRepository.findAllByProjectIdOrderByNameAsc(projectId).stream()
@@ -130,9 +134,7 @@ public class TicketService {
 		ticket.setDescription(request.description() == null ? "" : request.description().trim());
 		ticket.setCreatedBy(identity.userId());
 
-		final var savedTicket = ticketRepository.save(ticket);
-
-		return toTicketResponse(savedTicket);
+		return toTicketResponse(ticketRepository.save(ticket));
 	}
 
 	@Transactional
@@ -151,7 +153,7 @@ public class TicketService {
 	}
 
 	@Transactional
-	public void updateTicketStatus(long projectId, long ticketId,
+	public void updateTicketStatus(Identity identity, long projectId, long ticketId,
 			UpdateTicketStatusRequest request) {
 		validateUpdateTicketStatusRequest(request);
 
@@ -163,9 +165,10 @@ public class TicketService {
 		final var transition = workflowTransitionRepository.findById(request.transitionId())
 				.orElseThrow(() -> new ValidationException("Statusübergang nicht gefunden"));
 
-		workflowStatusRepository.findByIdAndWorkflowId(transition.getToState(), workflow.getId())
-				.orElseThrow(
-						() -> new ValidationException("Zielstatus gehört nicht zur Ticketart"));
+		final var previousStatus = workflowStatusRepository
+				.findByIdAndWorkflowId(ticket.getStatusId(), workflow.getId())
+				.orElseThrow(() -> new ValidationException(
+						"Aktueller Status gehört nicht zur Ticketart"));
 
 		if (transition.getFromState() != null
 				&& transition.getFromState() != ticket.getStatusId()) {
@@ -173,8 +176,16 @@ public class TicketService {
 					"Statusübergang ist für den aktuellen Status nicht erlaubt");
 		}
 
+		final var targetStatus = workflowStatusRepository
+				.findByIdAndWorkflowId(transition.getToState(), workflow.getId()).orElseThrow(
+						() -> new ValidationException("Zielstatus gehört nicht zur Ticketart"));
+
 		ticket.setStatusId(transition.getToState());
 		ticketRepository.save(ticket);
+		eventPublisher.publishEvent(
+				new TicketEvent.StatusChanged(identity.userId(), projectId, ticket.getId(),
+						previousStatus.getId(), previousStatus.getName(), targetStatus.getId(),
+						targetStatus.getName(), transition.getId(), transition.getName()));
 	}
 
 	@Transactional
@@ -184,9 +195,13 @@ public class TicketService {
 
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var newName = request.name().trim();
+		final var newDescription = request.description() == null
+				? ""
+				: request.description().trim();
 
-		ticket.setName(request.name().trim());
-		ticket.setDescription(request.description() == null ? "" : request.description().trim());
+		ticket.setName(newName);
+		ticket.setDescription(newDescription);
 		ticketRepository.save(ticket);
 	}
 
@@ -203,12 +218,13 @@ public class TicketService {
 	}
 
 	@Transactional
-	public void updateTicketAssignee(long projectId, long ticketId,
+	public void updateTicketAssignee(Identity identity, long projectId, long ticketId,
 			UpdateTicketAssigneeRequest request) {
 		validateUpdateTicketAssigneeRequest(request);
 
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var previousAssigneeId = ticket.getAssignedTo();
 
 		if (request.assignedTo() != null) {
 			if (!this.projectPolicies.canBeAssigned(projectId, request.assignedTo())) {
@@ -219,6 +235,10 @@ public class TicketService {
 
 		ticket.setAssignedTo(request.assignedTo());
 		ticketRepository.save(ticket);
+		if (!Objects.equals(previousAssigneeId, request.assignedTo())) {
+			eventPublisher.publishEvent(new TicketEvent.AssigneeChanged(identity.userId(),
+					projectId, ticket.getId(), previousAssigneeId, request.assignedTo()));
+		}
 	}
 
 	private TicketResponse toTicketResponse(TicketModel ticket) {

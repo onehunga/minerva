@@ -15,6 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
@@ -38,6 +39,7 @@ class TicketStatusUpdateTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private ProjectPolicies projectPolicies;
 	private TicketService ticketService;
 
@@ -51,9 +53,11 @@ class TicketStatusUpdateTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
 				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
-				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository,
+				eventPublisher);
 	}
 
 	@Test
@@ -68,8 +72,8 @@ class TicketStatusUpdateTests {
 		stubTicketWorkflowTransitionAndTargetStatus(ticket, workflow, transition.getId(),
 				transition, targetStatus.getId());
 
-		ticketService.updateTicketStatus(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketStatusRequest(transition.getId()));
+		ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(), new UpdateTicketStatusRequest(transition.getId()));
 
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
@@ -88,8 +92,8 @@ class TicketStatusUpdateTests {
 		stubTicketWorkflowTransitionAndTargetStatus(ticket, workflow, transition.getId(),
 				transition, targetStatus.getId());
 
-		ticketService.updateTicketStatus(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketStatusRequest(transition.getId()));
+		ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(), new UpdateTicketStatusRequest(transition.getId()));
 
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
@@ -109,8 +113,8 @@ class TicketStatusUpdateTests {
 				transition, targetStatus.getId());
 
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketStatus(TestProjects.PROJECT_ID, ticket.getId(),
-						new UpdateTicketStatusRequest(transition.getId())));
+				() -> ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						ticket.getId(), new UpdateTicketStatusRequest(transition.getId())));
 
 		verify(ticketRepository, never()).save(any());
 	}
@@ -121,7 +125,7 @@ class TicketStatusUpdateTests {
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> ticketService.updateTicketStatus(TestProjects.PROJECT_ID,
+				() -> ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						TestProjects.CHILD_TICKET_ID,
 						new UpdateTicketStatusRequest(TestProjects.START_PROGRESS_TRANSITION_ID)));
 
@@ -139,7 +143,8 @@ class TicketStatusUpdateTests {
 				ticket.getTicketTypeId())).thenReturn(Optional.empty());
 
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketStatus(TestProjects.PROJECT_ID, ticket.getId(),
+				() -> ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						ticket.getId(),
 						new UpdateTicketStatusRequest(TestProjects.START_PROGRESS_TRANSITION_ID)));
 
 		verify(ticketRepository, never()).save(any());
@@ -160,7 +165,8 @@ class TicketStatusUpdateTests {
 				.thenReturn(Optional.empty());
 
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketStatus(TestProjects.PROJECT_ID, ticket.getId(),
+				() -> ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						ticket.getId(),
 						new UpdateTicketStatusRequest(TestProjects.START_PROGRESS_TRANSITION_ID)));
 
 		verify(ticketRepository, never()).save(any());
@@ -180,12 +186,14 @@ class TicketStatusUpdateTests {
 				ticket.getTicketTypeId())).thenReturn(Optional.of(workflow));
 		when(workflowTransitionRepository.findById(transition.getId()))
 				.thenReturn(Optional.of(transition));
+		when(workflowStatusRepository.findByIdAndWorkflowId(ticket.getStatusId(), workflow.getId()))
+				.thenReturn(Optional.of(TestProjects.openStatus(workflow.getId())));
 		when(workflowStatusRepository.findByIdAndWorkflowId(transition.getToState(),
 				workflow.getId())).thenReturn(Optional.empty());
 
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketStatus(TestProjects.PROJECT_ID, ticket.getId(),
-						new UpdateTicketStatusRequest(transition.getId())));
+				() -> ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						ticket.getId(), new UpdateTicketStatusRequest(transition.getId())));
 
 		verify(ticketRepository, never()).save(any());
 	}
@@ -194,7 +202,7 @@ class TicketStatusUpdateTests {
 	@ValueSource(longs = {0L, -1L})
 	void updateTicketStatusRejectsInvalidTransitionId(long transitionId) {
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketStatus(TestProjects.PROJECT_ID,
+				() -> ticketService.updateTicketStatus(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						TestProjects.CHILD_TICKET_ID, new UpdateTicketStatusRequest(transitionId)));
 
 		verify(ticketRepository, never()).save(any());
@@ -215,5 +223,9 @@ class TicketStatusUpdateTests {
 				.thenReturn(Optional.of(TestProjects.workflowStatus(targetStatusId,
 						workflow.getId(), "Target",
 						de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusCategory.IN_PROGRESS)));
+		when(workflowStatusRepository.findByIdAndWorkflowId(ticket.getStatusId(), workflow.getId()))
+				.thenReturn(Optional.of(TestProjects.workflowStatus(ticket.getStatusId(),
+						workflow.getId(), "Current",
+						de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusCategory.OPEN)));
 	}
 }

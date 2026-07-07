@@ -19,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
@@ -34,6 +35,7 @@ class TicketCommentTests {
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
 	private UserService userService;
+	private ApplicationEventPublisher eventPublisher;
 	private TicketCommentService ticketCommentService;
 
 	@BeforeEach
@@ -41,8 +43,9 @@ class TicketCommentTests {
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
 		userService = Mockito.mock(UserService.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketCommentService = new TicketCommentService(ticketRepository, ticketCommentRepository,
-				userService);
+				userService, eventPublisher);
 	}
 
 	@Test

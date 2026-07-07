@@ -1,9 +1,11 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
@@ -23,6 +25,7 @@ public class TicketCommentService {
 	private final TicketRepository ticketRepository;
 	private final TicketCommentRepository ticketCommentRepository;
 	private final UserService userService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public TicketCommentListResponse getTicketComments(long projectId, long ticketId) {
 		ensureTicketExists(projectId, ticketId);
@@ -45,7 +48,11 @@ public class TicketCommentService {
 		comment.setAuthorId(identity.userId());
 		comment.setContent(content);
 
-		return toTicketCommentResponse(ticketCommentRepository.save(comment));
+		final var savedComment = ticketCommentRepository.save(comment);
+		eventPublisher.publishEvent(new TicketEvent.CommentCreated(identity.userId(), projectId,
+				ticketId, savedComment.getId(), savedComment.getContent()));
+
+		return toTicketCommentResponse(savedComment);
 	}
 
 	private void ensureTicketExists(long projectId, long ticketId) {

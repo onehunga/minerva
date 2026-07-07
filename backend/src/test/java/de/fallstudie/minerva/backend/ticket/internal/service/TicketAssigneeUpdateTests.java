@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
@@ -38,6 +39,7 @@ class TicketAssigneeUpdateTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private TicketService ticketService;
 
 	@BeforeEach
@@ -50,9 +52,11 @@ class TicketAssigneeUpdateTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
 				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
-				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository,
+				eventPublisher);
 	}
 
 	@Test
@@ -63,8 +67,8 @@ class TicketAssigneeUpdateTests {
 		when(projectPolicies.canBeAssigned(TestProjects.PROJECT_ID,
 				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(true);
 
-		ticketService.updateTicketAssignee(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketAssigneeRequest(TestProjects.CONTRIBUTOR_USER_ID));
+		ticketService.updateTicketAssignee(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(), new UpdateTicketAssigneeRequest(TestProjects.CONTRIBUTOR_USER_ID));
 
 		verify(projectPolicies).canBeAssigned(TestProjects.PROJECT_ID,
 				TestProjects.CONTRIBUTOR_USER_ID);
@@ -80,8 +84,8 @@ class TicketAssigneeUpdateTests {
 		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
 				.thenReturn(Optional.of(ticket));
 
-		ticketService.updateTicketAssignee(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketAssigneeRequest(null));
+		ticketService.updateTicketAssignee(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(), new UpdateTicketAssigneeRequest(null));
 
 		verify(projectPolicies, never()).canBeAssigned(Mockito.anyLong(), Mockito.anyLong());
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
@@ -95,8 +99,8 @@ class TicketAssigneeUpdateTests {
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> ticketService.updateTicketAssignee(TestProjects.PROJECT_ID,
-						TestProjects.CHILD_TICKET_ID,
+				() -> ticketService.updateTicketAssignee(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID,
 						new UpdateTicketAssigneeRequest(TestProjects.CONTRIBUTOR_USER_ID)));
 
 		verify(ticketRepository, never()).save(any());
@@ -104,8 +108,9 @@ class TicketAssigneeUpdateTests {
 
 	@Test
 	void updateTicketAssigneeRejectsNullRequest() {
-		assertThrows(IllegalArgumentException.class, () -> ticketService
-				.updateTicketAssignee(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> ticketService.updateTicketAssignee(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, null));
 
 		verify(ticketRepository, never()).save(any());
 	}
@@ -121,7 +126,8 @@ class TicketAssigneeUpdateTests {
 				.canBeAssigned(TestProjects.PROJECT_ID, TestProjects.CONTRIBUTOR_USER_ID);
 
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketAssignee(TestProjects.PROJECT_ID, ticket.getId(),
+				() -> ticketService.updateTicketAssignee(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, ticket.getId(),
 						new UpdateTicketAssigneeRequest(TestProjects.CONTRIBUTOR_USER_ID)));
 
 		verify(ticketRepository, never()).save(any());

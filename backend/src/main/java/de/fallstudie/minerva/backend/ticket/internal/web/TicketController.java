@@ -57,10 +57,8 @@ public class TicketController {
 	@DeleteMapping("/tickets/{ticketId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void deleteTicket(@AuthenticationPrincipal Identity identity,
-			@PathVariable long projectId, @PathVariable long ticketId) {
-		log.info("User with ID {} is deleting ticket with ID {} in project with ID {}",
-				identity.userId(), ticketId, projectId);
+	public void deleteTicket(@PathVariable long projectId, @PathVariable long ticketId) {
+		log.info("Deleting ticket with ID {} in project with ID {}", ticketId, projectId);
 
 		ticketService.deleteTicket(projectId, ticketId);
 	}
@@ -91,11 +89,12 @@ public class TicketController {
 	@PatchMapping("/tickets/{ticketId}/status")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void updateTicketStatus(@PathVariable long projectId, @PathVariable long ticketId,
+	public void updateTicketStatus(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody UpdateTicketStatusRequest request) {
 		log.info("Updating status of ticket with ID {} in project with ID {}", ticketId, projectId);
 
-		ticketService.updateTicketStatus(projectId, ticketId, request);
+		ticketService.updateTicketStatus(identity, projectId, ticketId, request);
 	}
 
 	@PatchMapping("/tickets/{ticketId}/details")
@@ -123,11 +122,12 @@ public class TicketController {
 	@PatchMapping("/tickets/{ticketId}/assignee")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void updateTicketAssignee(@PathVariable long projectId, @PathVariable long ticketId,
+	public void updateTicketAssignee(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody UpdateTicketAssigneeRequest request) {
 		log.info("Updating assignee of ticket with ID {} in project with ID {}", ticketId,
 				projectId);
 
-		ticketService.updateTicketAssignee(projectId, ticketId, request);
+		ticketService.updateTicketAssignee(identity, projectId, ticketId, request);
 	}
 }
