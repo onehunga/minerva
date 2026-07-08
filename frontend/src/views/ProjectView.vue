@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { ProjectDetails } from "@/feature/project";
 import { useProject } from "@/feature/project/composables/useProject";
+import { onBeforeMount } from "vue";
 
 const props = defineProps<{
 	id: string;
 }>();
 
-useProject(props.id);
+onBeforeMount(() => {
+	useProject(props.id);
+});
 </script>
 
 <template>

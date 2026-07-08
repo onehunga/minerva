@@ -52,6 +52,14 @@ public class ActivityService {
 		activityScopeRepository.saveAll(scopeModels);
 	}
 
+	public ActivityEventListResponse getProjectActivities(long projectId) {
+		final var events = activityEventRepository
+				.findAllForProject(ActivityScopeType.PROJECT, projectId).stream()
+				.map(this::toResponse).toList();
+
+		return new ActivityEventListResponse(events);
+	}
+
 	public ActivityEventListResponse getTicketActivities(long projectId, long ticketId) {
 		final var events = activityEventRepository
 				.findAllForTicketInProject(ActivityScopeType.PROJECT, projectId,

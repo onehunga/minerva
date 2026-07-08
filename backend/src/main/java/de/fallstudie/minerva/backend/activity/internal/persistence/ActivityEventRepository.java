@@ -33,4 +33,19 @@ public interface ActivityEventRepository extends JpaRepository<ActivityEventMode
 			@Param("projectId") long projectId,
 			@Param("ticketScopeType") ActivityScopeType ticketScopeType,
 			@Param("ticketId") long ticketId);
+
+	@Query("""
+			select event
+			from ActivityEventModel event
+			where exists (
+				select projectScope.id
+				from ActivityScopeModel projectScope
+				where projectScope.eventId = event.id
+					and projectScope.scopeType = :scopeType
+					and projectScope.scopeId = :projectId
+			)
+			order by event.occurredAt desc, event.id desc
+			""")
+	List<ActivityEventModel> findAllForProject(@Param("scopeType") ActivityScopeType scopeType,
+			@Param("projectId") long projectId);
 }

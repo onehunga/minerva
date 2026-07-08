@@ -17,6 +17,14 @@ import lombok.extern.slf4j.Slf4j;
 public class ActivityController {
 	private final ActivityService activityService;
 
+	@GetMapping("/activities")
+	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
+	public ActivityEventListResponse getProjectActivities(@PathVariable long projectId) {
+		log.info("Requesting activities for project with ID {}", projectId);
+
+		return activityService.getProjectActivities(projectId);
+	}
+
 	@GetMapping("/tickets/{ticketId}/activities")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
 	public ActivityEventListResponse getTicketActivities(@PathVariable long projectId,
