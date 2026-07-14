@@ -23,6 +23,7 @@ import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
@@ -94,6 +95,9 @@ class TicketCreationTests {
 		assertEquals(TicketPriorityName.NORMAL, savedTicket.getPriority());
 		assertEquals(TestProjects.OWNER_USER_ID, savedTicket.getCreatedBy());
 		assertEquals(null, savedTicket.getParentTicketId());
+		verify(eventPublisher).publishEvent(
+				new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
+						savedTicket.getId(), ticketType.getId(), status.getId(), "Root ticket"));
 	}
 
 	@Test
@@ -125,6 +129,9 @@ class TicketCreationTests {
 		verify(ticketRepository).save(ticketCaptor.capture());
 		assertEquals(parentTicket.getId(), ticketCaptor.getValue().getParentTicketId());
 		assertEquals(childTicketType.getId(), ticketCaptor.getValue().getTicketTypeId());
+		verify(eventPublisher).publishEvent(
+				new TicketEvent.SubticketAdded(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
+						parentTicket.getId(), ticketCaptor.getValue().getId(), "Ticket"));
 	}
 
 	@Test

@@ -100,23 +100,25 @@ public class TicketController {
 	@PatchMapping("/tickets/{ticketId}/details")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void updateTicketDetails(@PathVariable long projectId, @PathVariable long ticketId,
+	public void updateTicketDetails(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody UpdateTicketDetailsRequest request) {
 		log.info("Updating details of ticket with ID {} in project with ID {}", ticketId,
 				projectId);
 
-		ticketService.updateTicketDetails(projectId, ticketId, request);
+		ticketService.updateTicketDetails(identity, projectId, ticketId, request);
 	}
 
 	@PatchMapping("/tickets/{ticketId}/priority")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void updateTicketPriority(@PathVariable long projectId, @PathVariable long ticketId,
+	public void updateTicketPriority(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId,
 			@RequestBody UpdateTicketPriorityRequest request) {
 		log.info("Updating priority of ticket with ID {} in project with ID {}", ticketId,
 				projectId);
 
-		ticketService.updateTicketPriority(projectId, ticketId, request);
+		ticketService.updateTicketPriority(identity, projectId, ticketId, request);
 	}
 
 	@PatchMapping("/tickets/{ticketId}/assignee")

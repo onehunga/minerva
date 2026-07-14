@@ -22,6 +22,7 @@ import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -67,13 +68,17 @@ class TicketDetailsUpdateTests {
 		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
 				.thenReturn(Optional.of(ticket));
 
-		ticketService.updateTicketDetails(TestProjects.PROJECT_ID, ticket.getId(),
+		ticketService.updateTicketDetails(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(),
 				new UpdateTicketDetailsRequest("  Neuer Name  ", "  Neue Beschreibung  "));
 
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
 		assertEquals("Neuer Name", ticketCaptor.getValue().getName());
 		assertEquals("Neue Beschreibung", ticketCaptor.getValue().getDescription());
+		verify(eventPublisher).publishEvent(new TicketEvent.DetailsUpdated(
+				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID, ticket.getId(), "Ticket 41",
+				"Neuer Name", "Description 41", "Neue Beschreibung"));
 	}
 
 	@Test
@@ -82,8 +87,8 @@ class TicketDetailsUpdateTests {
 		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
 				.thenReturn(Optional.of(ticket));
 
-		ticketService.updateTicketDetails(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketDetailsRequest("Neuer Name", null));
+		ticketService.updateTicketDetails(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(), new UpdateTicketDetailsRequest("Neuer Name", null));
 
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
@@ -96,7 +101,7 @@ class TicketDetailsUpdateTests {
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> ticketService.updateTicketDetails(TestProjects.PROJECT_ID,
+				() -> ticketService.updateTicketDetails(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						TestProjects.CHILD_TICKET_ID,
 						new UpdateTicketDetailsRequest("Neuer Name", "Beschreibung")));
 
@@ -107,7 +112,7 @@ class TicketDetailsUpdateTests {
 	@MethodSource("invalidUpdateTicketDetailsRequests")
 	void updateTicketDetailsRejectsInvalidRequest(UpdateTicketDetailsRequest request) {
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketDetails(TestProjects.PROJECT_ID,
+				() -> ticketService.updateTicketDetails(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						TestProjects.CHILD_TICKET_ID, request));
 
 		verify(ticketRepository, never()).save(any());
@@ -115,8 +120,9 @@ class TicketDetailsUpdateTests {
 
 	@Test
 	void updateTicketDetailsRejectsNullRequest() {
-		assertThrows(IllegalArgumentException.class, () -> ticketService
-				.updateTicketDetails(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> ticketService.updateTicketDetails(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CHILD_TICKET_ID, null));
 
 		verify(ticketRepository, never()).save(any());
 	}

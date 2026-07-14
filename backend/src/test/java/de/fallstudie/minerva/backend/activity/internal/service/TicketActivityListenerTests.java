@@ -47,4 +47,24 @@ class TicketActivityListenerTests {
 				new ActivityScopeCommand(ActivityScopeType.TICKET, TestProjects.CHILD_TICKET_ID)),
 				scopesCaptor.getValue());
 	}
+
+	@Test
+	void subticketAddedAppendsActivityToTheParentTicket() {
+		final var event = new TicketEvent.SubticketAdded(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.PARENT_TICKET_ID,
+				TestProjects.CHILD_TICKET_ID, "Child ticket");
+
+		listener.on(event);
+
+		final var typeCaptor = ArgumentCaptor.forClass(ActivityEventType.class);
+		final var scopesCaptor = ArgumentCaptor.forClass(List.class);
+		verify(activityService).append(typeCaptor.capture(), Mockito.same(event),
+				scopesCaptor.capture());
+
+		assertEquals(ActivityEventType.TICKET_SUBTICKET_ADDED, typeCaptor.getValue());
+		assertEquals(List.of(
+				new ActivityScopeCommand(ActivityScopeType.PROJECT, TestProjects.PROJECT_ID),
+				new ActivityScopeCommand(ActivityScopeType.TICKET, TestProjects.PARENT_TICKET_ID)),
+				scopesCaptor.getValue());
+	}
 }

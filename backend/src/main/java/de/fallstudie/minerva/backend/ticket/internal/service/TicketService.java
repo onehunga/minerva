@@ -134,7 +134,16 @@ public class TicketService {
 		ticket.setDescription(request.description() == null ? "" : request.description().trim());
 		ticket.setCreatedBy(identity.userId());
 
-		return toTicketResponse(ticketRepository.save(ticket));
+		final var savedTicket = ticketRepository.save(ticket);
+		eventPublisher.publishEvent(new TicketEvent.TicketCreated(identity.userId(), projectId,
+				savedTicket.getId(), savedTicket.getTicketTypeId(), savedTicket.getStatusId(),
+				savedTicket.getName()));
+		if (savedTicket.getParentTicketId() != null) {
+			eventPublisher.publishEvent(new TicketEvent.SubticketAdded(identity.userId(), projectId,
+					savedTicket.getParentTicketId(), savedTicket.getId(), savedTicket.getName()));
+		}
+
+		return toTicketResponse(savedTicket);
 	}
 
 	@Transactional
@@ -189,7 +198,7 @@ public class TicketService {
 	}
 
 	@Transactional
-	public void updateTicketDetails(long projectId, long ticketId,
+	public void updateTicketDetails(Identity identity, long projectId, long ticketId,
 			UpdateTicketDetailsRequest request) {
 		validateUpdateTicketDetailsRequest(request);
 
@@ -199,22 +208,33 @@ public class TicketService {
 		final var newDescription = request.description() == null
 				? ""
 				: request.description().trim();
+		final var previousName = ticket.getName();
+		final var previousDescription = ticket.getDescription();
 
 		ticket.setName(newName);
 		ticket.setDescription(newDescription);
 		ticketRepository.save(ticket);
+		if (!previousName.equals(newName) || !previousDescription.equals(newDescription)) {
+			eventPublisher.publishEvent(new TicketEvent.DetailsUpdated(identity.userId(), projectId,
+					ticket.getId(), previousName, newName, previousDescription, newDescription));
+		}
 	}
 
 	@Transactional
-	public void updateTicketPriority(long projectId, long ticketId,
+	public void updateTicketPriority(Identity identity, long projectId, long ticketId,
 			UpdateTicketPriorityRequest request) {
 		validateUpdateTicketPriorityRequest(request);
 
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
 
+		final var previousPriority = ticket.getPriority();
 		ticket.setPriority(request.priority());
 		ticketRepository.save(ticket);
+		if (previousPriority != request.priority()) {
+			eventPublisher.publishEvent(new TicketEvent.PriorityChanged(identity.userId(),
+					projectId, ticket.getId(), previousPriority, request.priority()));
+		}
 	}
 
 	@Transactional

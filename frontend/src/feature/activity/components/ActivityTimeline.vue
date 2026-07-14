@@ -17,9 +17,13 @@ withDefaults(
 const headingId = useId();
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
+	TICKET_CREATED: "Ticket erstellt",
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
 	TICKET_STATUS_CHANGED: "Status geändert",
+	TICKET_DETAILS_UPDATED: "Titel oder Beschreibung geändert",
+	TICKET_PRIORITY_CHANGED: "Priorität geändert",
 	TICKET_ASSIGNEE_CHANGED: "Bearbeiter geändert",
+	TICKET_SUBTICKET_ADDED: "Subticket hinzugefügt",
 };
 
 function formatType(type: ActivityEventType): string {
