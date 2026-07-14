@@ -7,3 +7,5 @@ export { default as ActivityTimeline } from "./components/ActivityTimeline.vue";
 export * from "./composables/useActivityRepository";
 export * from "./composables/useProjectActivities";
 export * from "./composables/useTicketActivities";
+export * from "./composables/useUserActivities";
+export * from "./composables/useUserActorActivities";

@@ -1,11 +1,20 @@
 <script setup lang="ts">
+import { useId } from "vue";
 import type { ActivityEvent, ActivityEventType } from "../activity.model";
 
-defineProps<{
-	events: ActivityEvent[];
-	isLoading: boolean;
-	errorMessage: string;
-}>();
+withDefaults(
+	defineProps<{
+		events: ActivityEvent[];
+		isLoading: boolean;
+		errorMessage: string;
+		heading?: string;
+	}>(),
+	{
+		heading: "Aktivitäten",
+	},
+);
+
+const headingId = useId();
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
@@ -30,8 +39,8 @@ function formatDate(value: string | null): string {
 </script>
 
 <template>
-	<section class="activity-timeline" aria-labelledby="activity-timeline-heading">
-		<h4 id="activity-timeline-heading">Aktivitäten</h4>
+	<section class="activity-timeline" :aria-labelledby="headingId">
+		<h4 :id="headingId">{{ heading }}</h4>
 
 		<p v-if="isLoading">Aktivitäten werden geladen...</p>
 		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>

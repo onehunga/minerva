@@ -69,6 +69,22 @@ public class ActivityService {
 		return new ActivityEventListResponse(events);
 	}
 
+	public ActivityEventListResponse getUserActivities(long userId) {
+		final var events = activityEventRepository
+				.findAllForUserProjects(ActivityScopeType.PROJECT, userId).stream()
+				.map(this::toResponse).toList();
+
+		return new ActivityEventListResponse(events);
+	}
+
+	public ActivityEventListResponse getUserActorActivities(long userId) {
+		final var events = activityEventRepository
+				.findAllForUserActor(ActivityScopeType.PROJECT, userId).stream()
+				.map(this::toResponse).toList();
+
+		return new ActivityEventListResponse(events);
+	}
+
 	private ActivityScopeModel toScopeModel(long eventId, ActivityScopeCommand scope,
 			Instant occurredAt) {
 		final var model = new ActivityScopeModel();

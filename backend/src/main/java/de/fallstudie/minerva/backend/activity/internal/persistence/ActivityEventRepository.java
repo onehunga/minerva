@@ -48,4 +48,39 @@ public interface ActivityEventRepository extends JpaRepository<ActivityEventMode
 			""")
 	List<ActivityEventModel> findAllForProject(@Param("scopeType") ActivityScopeType scopeType,
 			@Param("projectId") long projectId);
+
+	/// Lädt alle aktivitäten von Projekten, bei denen ein Nutzer ein Teil ist.
+	@Query("""
+			select event
+			from ActivityEventModel event
+			where exists (
+				select projectScope.id
+				from ActivityScopeModel projectScope
+				join ProjectMemberModel member on member.projectId = projectScope.scopeId
+				where projectScope.eventId = event.id
+					and projectScope.scopeType = :scopeType
+					and member.userId = :userId
+			)
+			order by event.occurredAt desc, event.id desc
+			""")
+	List<ActivityEventModel> findAllForUserProjects(@Param("scopeType") ActivityScopeType scopeType,
+			@Param("userId") long userId);
+
+	/// Lädt alle Aktivitäten, welche ein Nutzer selbst durchgeführt hat.
+	@Query("""
+			select event
+			from ActivityEventModel event
+			where event.actorUserId = :userId
+				and exists (
+					select projectScope.id
+					from ActivityScopeModel projectScope
+					join ProjectMemberModel member on member.projectId = projectScope.scopeId
+					where projectScope.eventId = event.id
+						and projectScope.scopeType = :scopeType
+						and member.userId = :userId
+				)
+			order by event.occurredAt desc, event.id desc
+			""")
+	List<ActivityEventModel> findAllForUserActor(@Param("scopeType") ActivityScopeType scopeType,
+			@Param("userId") long userId);
 }
