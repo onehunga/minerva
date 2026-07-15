@@ -17,6 +17,9 @@ withDefaults(
 const headingId = useId();
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
+	PROJECT_CREATED: "Projekt erstellt",
+	PROJECT_USER_ADDED: "Nutzer hinzugefügt",
+	PROJECT_USER_ROLE_CHANGED: "Nutzerrolle geändert",
 	TICKET_CREATED: "Ticket erstellt",
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
 	TICKET_STATUS_CHANGED: "Status geändert",

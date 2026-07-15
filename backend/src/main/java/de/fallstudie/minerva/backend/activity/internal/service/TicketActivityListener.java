@@ -29,6 +29,6 @@ public class TicketActivityListener {
 		var scopes = List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT, event.projectId()),
 				new ActivityScopeCommand(ActivityScopeType.TICKET, event.ticketId()));
 
-		activityService.append(activity, event, scopes);
+		activityService.append(activity, event.actorUserId(), event, scopes);
 	}
 }

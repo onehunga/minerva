@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
@@ -33,7 +34,7 @@ class ProjectQueryTests {
 		projectRepository = Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, userService);
+				projectRoleRepository, userService, Mockito.mock(ApplicationEventPublisher.class));
 	}
 
 	@Test

@@ -8,7 +8,6 @@ import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScope
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScopeRepository;
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventListResponse;
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventResponse;
-import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.user.UserDTO;
 import de.fallstudie.minerva.backend.user.UserService;
 import jakarta.transaction.Transactional;
@@ -32,18 +31,18 @@ public class ActivityService {
 	private final UserService userService;
 
 	@Transactional
-	public void append(ActivityEventType type, TicketEvent event,
+	public void append(ActivityEventType type, long actorUserId, Object payload,
 			List<ActivityScopeCommand> scopes) {
 		assert type != null;
-		assert event != null;
+		assert payload != null;
 		assert scopes != null && !scopes.isEmpty();
 
 		final var occurredAt = Instant.now();
 		final var model = new ActivityEventModel();
 		model.setType(type);
 		model.setSchemaVersion(SCHEMA_VERSION);
-		model.setActorUserId(event.actorUserId());
-		model.setPayloadJson(toJson(event));
+		model.setActorUserId(actorUserId);
+		model.setPayloadJson(toJson(payload));
 		model.setOccurredAt(occurredAt);
 
 		final var savedEvent = activityEventRepository.save(model);
@@ -109,9 +108,9 @@ public class ActivityService {
 		return userService.findById(actorUserId).map(UserDTO::username).orElse(null);
 	}
 
-	private String toJson(TicketEvent event) {
+	private String toJson(Object payload) {
 		try {
-			return objectMapper.writeValueAsString(event);
+			return objectMapper.writeValueAsString(payload);
 		} catch (JacksonException exception) {
 			throw new IllegalStateException("Could not serialize activity payload", exception);
 		}

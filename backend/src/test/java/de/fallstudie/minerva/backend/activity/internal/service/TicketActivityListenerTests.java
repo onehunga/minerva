@@ -35,12 +35,14 @@ class TicketActivityListenerTests {
 		listener.on(event);
 
 		final var typeCaptor = ArgumentCaptor.forClass(ActivityEventType.class);
+		final var actorUserIdCaptor = ArgumentCaptor.forClass(Long.class);
 		final var eventCaptor = ArgumentCaptor.forClass(TicketEvent.class);
 		final var scopesCaptor = ArgumentCaptor.forClass(List.class);
-		verify(activityService).append(typeCaptor.capture(), eventCaptor.capture(),
-				scopesCaptor.capture());
+		verify(activityService).append(typeCaptor.capture(), actorUserIdCaptor.capture(),
+				eventCaptor.capture(), scopesCaptor.capture());
 
 		assertEquals(ActivityEventType.TICKET_STATUS_CHANGED, typeCaptor.getValue());
+		assertEquals(TestProjects.OWNER_USER_ID, actorUserIdCaptor.getValue());
 		assertEquals(event, eventCaptor.getValue());
 		assertEquals(List.of(
 				new ActivityScopeCommand(ActivityScopeType.PROJECT, TestProjects.PROJECT_ID),
@@ -58,8 +60,8 @@ class TicketActivityListenerTests {
 
 		final var typeCaptor = ArgumentCaptor.forClass(ActivityEventType.class);
 		final var scopesCaptor = ArgumentCaptor.forClass(List.class);
-		verify(activityService).append(typeCaptor.capture(), Mockito.same(event),
-				scopesCaptor.capture());
+		verify(activityService).append(typeCaptor.capture(), Mockito.eq(TestProjects.OWNER_USER_ID),
+				Mockito.same(event), scopesCaptor.capture());
 
 		assertEquals(ActivityEventType.TICKET_SUBTICKET_ADDED, typeCaptor.getValue());
 		assertEquals(List.of(
