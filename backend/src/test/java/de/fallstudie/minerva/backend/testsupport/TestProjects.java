@@ -11,6 +11,7 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleMod
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.projectsetup.internal.web.ProjectSetupRequest;
 import de.fallstudie.minerva.backend.ticket.TicketStateConfigurationRequest;
+import de.fallstudie.minerva.backend.ticket.TicketStatusCategory;
 import de.fallstudie.minerva.backend.ticket.TicketStateTransitionConfigurationRequest;
 import de.fallstudie.minerva.backend.ticket.TicketTypeConfigurationRequest;
 import de.fallstudie.minerva.backend.ticket.WorkflowConfigurationsCreateRequest;
@@ -18,7 +19,6 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRule
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowModel;
-import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusCategory;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionModel;
 import de.fallstudie.minerva.backend.user.Identity;
@@ -144,7 +144,7 @@ public final class TestProjects {
 	}
 
 	public static WorkflowStatusModel workflowStatus(long id, long workflowId, String name,
-			WorkflowStatusCategory category) {
+			TicketStatusCategory category) {
 		final var status = new WorkflowStatusModel();
 		ReflectionTestUtils.setField(status, "id", id);
 		status.setWorkflowId(workflowId);
@@ -154,16 +154,16 @@ public final class TestProjects {
 	}
 
 	public static WorkflowStatusModel openStatus(long workflowId) {
-		return workflowStatus(OPEN_STATUS_ID, workflowId, "Open", WorkflowStatusCategory.OPEN);
+		return workflowStatus(OPEN_STATUS_ID, workflowId, "Open", TicketStatusCategory.OPEN);
 	}
 
 	public static WorkflowStatusModel inProgressStatus(long workflowId) {
 		return workflowStatus(IN_PROGRESS_STATUS_ID, workflowId, "In Progress",
-				WorkflowStatusCategory.IN_PROGRESS);
+				TicketStatusCategory.IN_PROGRESS);
 	}
 
 	public static WorkflowStatusModel doneStatus(long workflowId) {
-		return workflowStatus(DONE_STATUS_ID, workflowId, "Done", WorkflowStatusCategory.COMPLETED);
+		return workflowStatus(DONE_STATUS_ID, workflowId, "Done", TicketStatusCategory.COMPLETED);
 	}
 
 	public static WorkflowTransitionModel workflowTransition(long id, Long fromStateId,

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import de.fallstudie.minerva.backend.ticket.TicketStatusCategory;
+
 @Entity
 @Table(name = "workflow_states")
 @Getter
@@ -26,5 +28,5 @@ public class WorkflowStatusModel {
 	@Setter
 	@Column(nullable = false)
 	@Enumerated(EnumType.STRING)
-	private WorkflowStatusCategory workflowStatusCategory;
+	private TicketStatusCategory workflowStatusCategory;
 }

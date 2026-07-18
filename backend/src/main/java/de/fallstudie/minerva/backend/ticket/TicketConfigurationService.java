@@ -77,7 +77,7 @@ public class TicketConfigurationService {
 			ticketStateModel.setName(ticketState.name());
 			ticketStateModel.setWorkflowId(workflowModel.getId());
 			ticketStateModel.setWorkflowStatusCategory(
-					WorkflowStatusCategory.valueOf(ticketState.category()));
+					TicketStatusCategory.valueOf(ticketState.category()));
 
 			this.workflowStatusRepository.save(ticketStateModel);
 

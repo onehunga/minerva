@@ -19,7 +19,6 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRule
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
-import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusCategory;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
@@ -77,11 +76,11 @@ class TicketConfigurationServiceTests {
 		assertEquals(3, parentStates.size());
 		final var parentStatesByName = parentStates.stream()
 				.collect(Collectors.toMap(WorkflowStatusModel::getName, Function.identity()));
-		assertEquals(WorkflowStatusCategory.OPEN,
+		assertEquals(TicketStatusCategory.OPEN,
 				parentStatesByName.get("Open").getWorkflowStatusCategory());
-		assertEquals(WorkflowStatusCategory.IN_PROGRESS,
+		assertEquals(TicketStatusCategory.IN_PROGRESS,
 				parentStatesByName.get("In Progress").getWorkflowStatusCategory());
-		assertEquals(WorkflowStatusCategory.COMPLETED,
+		assertEquals(TicketStatusCategory.COMPLETED,
 				parentStatesByName.get("Done").getWorkflowStatusCategory());
 
 		final var transitions = workflowTransitionRepository.findAllForWorkflowStates(
