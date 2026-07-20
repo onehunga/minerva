@@ -59,19 +59,21 @@ public class TicketController {
 	@DeleteMapping("/tickets/{ticketId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void deleteTicket(@PathVariable long projectId, @PathVariable long ticketId) {
+	public void deleteTicket(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId) {
 		log.info("Deleting ticket with ID {} in project with ID {}", ticketId, projectId);
 
-		ticketService.deleteTicket(projectId, ticketId);
+		ticketService.deleteTicket(identity, projectId, ticketId);
 	}
 
 	@PatchMapping("/tickets/{ticketId}/archive")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
-	public void archiveTicket(@PathVariable long projectId, @PathVariable long ticketId) {
+	public void archiveTicket(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId) {
 		log.info("Archiving ticket with ID {} in project with ID {}", ticketId, projectId);
 
-		ticketService.archiveTicket(projectId, ticketId);
+		ticketService.archiveTicket(identity, projectId, ticketId);
 	}
 
 	@GetMapping("/tickets/{ticketId}/comments")

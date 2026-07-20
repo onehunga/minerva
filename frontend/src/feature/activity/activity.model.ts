@@ -8,7 +8,9 @@ export type ActivityEventType =
 	| "TICKET_DETAILS_UPDATED"
 	| "TICKET_PRIORITY_CHANGED"
 	| "TICKET_ASSIGNEE_CHANGED"
-	| "TICKET_SUBTICKET_ADDED";
+	| "TICKET_SUBTICKET_ADDED"
+	| "TICKET_ARCHIVED"
+	| "TICKET_DELETED";
 
 export type ActivityEvent = {
 	id: number;

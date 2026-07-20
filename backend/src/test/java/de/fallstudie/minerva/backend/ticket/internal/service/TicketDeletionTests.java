@@ -16,6 +16,7 @@ import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -63,10 +64,13 @@ class TicketDeletionTests {
 				.thenReturn(Optional.of(ticket));
 		when(ticketRepository.existsByParentTicketId(ticket.getId())).thenReturn(false);
 
-		ticketService.deleteTicket(TestProjects.PROJECT_ID, ticket.getId());
+		ticketService.deleteTicket(TestProjects.OWNER, TestProjects.PROJECT_ID, ticket.getId());
 
 		verify(ticketCommentRepository).deleteAllByTicketId(ticket.getId());
 		verify(ticketRepository).delete(ticket);
+		verify(eventPublisher)
+				.publishEvent(new TicketEvent.TicketDeleted(TestProjects.OWNER_USER_ID,
+						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
 	}
 
 	@Test
@@ -74,12 +78,14 @@ class TicketDeletionTests {
 		when(ticketRepository.findByIdAndProjectId(TestProjects.CHILD_TICKET_ID,
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
-		assertThrows(ResourceNotFoundException.class, () -> ticketService
-				.deleteTicket(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID));
+		assertThrows(ResourceNotFoundException.class,
+				() -> ticketService.deleteTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CHILD_TICKET_ID));
 
 		verify(ticketRepository, never()).existsByParentTicketId(TestProjects.CHILD_TICKET_ID);
 		verify(ticketCommentRepository, never()).deleteAllByTicketId(TestProjects.CHILD_TICKET_ID);
 		verify(ticketRepository, never()).delete(Mockito.any(TicketModel.class));
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
 	}
 
 	@Test
@@ -91,10 +97,11 @@ class TicketDeletionTests {
 				.thenReturn(Optional.of(ticket));
 		when(ticketRepository.existsByParentTicketId(ticket.getId())).thenReturn(true);
 
-		assertThrows(ValidationException.class,
-				() -> ticketService.deleteTicket(TestProjects.PROJECT_ID, ticket.getId()));
+		assertThrows(ValidationException.class, () -> ticketService.deleteTicket(TestProjects.OWNER,
+				TestProjects.PROJECT_ID, ticket.getId()));
 
 		verify(ticketCommentRepository, never()).deleteAllByTicketId(ticket.getId());
 		verify(ticketRepository, never()).delete(Mockito.any(TicketModel.class));
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
 	}
 }

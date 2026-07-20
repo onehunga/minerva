@@ -16,6 +16,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -27,19 +28,20 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransit
 
 class TicketArchivalTests {
 	private TicketRepository ticketRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private TicketService ticketService;
 
 	@BeforeEach
 	void setUp() {
 		ticketRepository = Mockito.mock(TicketRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketService = new TicketService(Mockito.mock(ProjectPolicies.class),
 				Mockito.mock(TicketTypeRepository.class),
 				Mockito.mock(TicketChildRuleRepository.class),
 				Mockito.mock(WorkflowRepository.class),
 				Mockito.mock(WorkflowStatusRepository.class),
 				Mockito.mock(WorkflowTransitionRepository.class), ticketRepository,
-				Mockito.mock(TicketCommentRepository.class),
-				Mockito.mock(ApplicationEventPublisher.class));
+				Mockito.mock(TicketCommentRepository.class), eventPublisher);
 	}
 
 	@Test
@@ -50,11 +52,14 @@ class TicketArchivalTests {
 		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
 				.thenReturn(Optional.of(ticket));
 
-		ticketService.archiveTicket(TestProjects.PROJECT_ID, ticket.getId());
+		ticketService.archiveTicket(TestProjects.OWNER, TestProjects.PROJECT_ID, ticket.getId());
 
 		assertNotNull(ticket.getArchivedAt());
 		verify(ticketRepository).save(ticket);
 		verify(ticketRepository).flush();
+		verify(eventPublisher)
+				.publishEvent(new TicketEvent.TicketArchived(TestProjects.OWNER_USER_ID,
+						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
 	}
 
 	@Test
@@ -62,10 +67,12 @@ class TicketArchivalTests {
 		when(ticketRepository.findByIdAndProjectId(TestProjects.CHILD_TICKET_ID,
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
-		assertThrows(ResourceNotFoundException.class, () -> ticketService
-				.archiveTicket(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID));
+		assertThrows(ResourceNotFoundException.class,
+				() -> ticketService.archiveTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CHILD_TICKET_ID));
 
 		verify(ticketRepository, never()).save(Mockito.any(TicketModel.class));
 		verify(ticketRepository, never()).flush();
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
 	}
 }

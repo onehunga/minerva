@@ -27,6 +27,8 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_PRIORITY_CHANGED: "Priorität geändert",
 	TICKET_ASSIGNEE_CHANGED: "Bearbeiter geändert",
 	TICKET_SUBTICKET_ADDED: "Subticket hinzugefügt",
+	TICKET_ARCHIVED: "Ticket archiviert",
+	TICKET_DELETED: "Ticket gelöscht",
 };
 
 function formatType(type: ActivityEventType): string {

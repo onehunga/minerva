@@ -61,13 +61,15 @@ public class TicketService {
 	}
 
 	@Transactional
-	public void archiveTicket(long projectId, long ticketId) {
+	public void archiveTicket(Identity identity, long projectId, long ticketId) {
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
 
 		ticket.setArchivedAt(Instant.now());
 		ticketRepository.save(ticket);
 		ticketRepository.flush();
+		eventPublisher.publishEvent(new TicketEvent.TicketArchived(identity.userId(), projectId,
+				ticket.getId(), ticket.getName()));
 	}
 
 	public TicketTypeListResponse getTicketTypes(long projectId) {
@@ -160,7 +162,7 @@ public class TicketService {
 	}
 
 	@Transactional
-	public void deleteTicket(long projectId, long ticketId) {
+	public void deleteTicket(Identity identity, long projectId, long ticketId) {
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
 
@@ -170,6 +172,8 @@ public class TicketService {
 
 		ticketCommentRepository.deleteAllByTicketId(ticket.getId());
 		ticketRepository.delete(ticket);
+		eventPublisher.publishEvent(new TicketEvent.TicketDeleted(identity.userId(), projectId,
+				ticket.getId(), ticket.getName()));
 
 		log.trace("Deleted ticket with ID {} in project with ID {}", ticketId, projectId);
 	}

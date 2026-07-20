@@ -69,4 +69,31 @@ class TicketActivityListenerTests {
 				new ActivityScopeCommand(ActivityScopeType.TICKET, TestProjects.PARENT_TICKET_ID)),
 				scopesCaptor.getValue());
 	}
+
+	@Test
+	void ticketArchivedAppendsTicketAndProjectScopedActivity() {
+		final var event = new TicketEvent.TicketArchived(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");
+
+		listener.on(event);
+
+		verify(activityService).append(ActivityEventType.TICKET_ARCHIVED,
+				TestProjects.OWNER_USER_ID, event,
+				List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT,
+						TestProjects.PROJECT_ID),
+						new ActivityScopeCommand(ActivityScopeType.TICKET,
+								TestProjects.CHILD_TICKET_ID)));
+	}
+
+	@Test
+	void ticketDeletedAppendsOnlyProjectScopedActivity() {
+		final var event = new TicketEvent.TicketDeleted(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");
+
+		listener.on(event);
+
+		verify(activityService).append(ActivityEventType.TICKET_DELETED, TestProjects.OWNER_USER_ID,
+				event, List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT,
+						TestProjects.PROJECT_ID)));
+	}
 }

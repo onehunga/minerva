@@ -74,8 +74,8 @@ class TicketRepositoryStatisticsTests {
 		assertEquals(1, recent.size());
 		assertEquals(ticket.getId(), recent.getFirst().id());
 		assertEquals("Offen", recent.getFirst().statusName());
-		assertEquals(List.of(ticket), ticketRepository
-				.findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(PROJECT_ID));
+		assertEquals(List.of(ticket),
+				ticketRepository.findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(PROJECT_ID));
 		assertEquals(List.of(archivedTicket), ticketRepository
 				.findAllByProjectIdAndArchivedAtIsNotNullOrderByNameAsc(PROJECT_ID));
 	}
