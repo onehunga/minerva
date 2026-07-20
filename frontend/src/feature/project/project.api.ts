@@ -47,3 +47,7 @@ export async function updateProjectUserRole(
 		role,
 	});
 }
+
+export async function removeProjectUser(projectId: number, userId: number): Promise<void> {
+	return client.delete(`/v1/projects/${projectId}/users/${userId}`);
+}

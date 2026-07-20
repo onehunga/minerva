@@ -219,4 +219,55 @@ class ProjectUserManagementTests {
 
 		verify(projectMemberRepository, never()).save(any());
 	}
+
+	@Test
+	void removeProjectUserDeletesMemberAndPublishesEvent() {
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.CONTRIBUTOR_ROLE_ID);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.of(member));
+
+		projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID);
+
+		verify(projectMemberRepository).delete(member);
+		verify(eventPublisher).publishEvent(new ProjectEvent.UserRemoved(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CONTRIBUTOR_USER_ID));
+	}
+
+	@Test
+	void removeProjectUserRejectsSelfRemoval() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+
+		assertThrows(ValidationException.class,
+				() -> projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.OWNER_USER_ID));
+
+		verify(projectMemberRepository, never()).delete(any());
+	}
+
+	@Test
+	void removeProjectUserRejectsUnknownMember() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CONTRIBUTOR_USER_ID));
+
+		verify(projectMemberRepository, never()).delete(any());
+	}
+
+	@Test
+	void removeProjectUserRejectsUnknownProject() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(false);
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CONTRIBUTOR_USER_ID));
+
+		verify(projectMemberRepository, never()).delete(any());
+	}
 }

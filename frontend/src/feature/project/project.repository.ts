@@ -17,6 +17,7 @@ export interface IProjectRepository {
 	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
 	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
 	updateProjectUserRole(projectId: number, userId: number, role: ProjectRole): Promise<void>;
+	removeProjectUser(projectId: number, userId: number): Promise<void>;
 }
 
 export class ProjectRepository implements IProjectRepository {
@@ -54,5 +55,9 @@ export class ProjectRepository implements IProjectRepository {
 		role: ProjectRole,
 	): Promise<void> {
 		return api.updateProjectUserRole(projectId, userId, role);
+	}
+
+	async removeProjectUser(projectId: number, userId: number): Promise<void> {
+		return api.removeProjectUser(projectId, userId);
 	}
 }

@@ -16,4 +16,7 @@ public sealed interface ProjectEvent {
 	record UserRoleChanged(long actorUserId, long projectId, long userId, String oldRole,
 			String newRole) implements ProjectEvent {
 	}
+
+	record UserRemoved(long actorUserId, long projectId, long userId) implements ProjectEvent {
+	}
 }

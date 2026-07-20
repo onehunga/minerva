@@ -173,6 +173,22 @@ public class ProjectService {
 				userId, previousRole.getName().name(), projectRoleName.name()));
 	}
 
+	@Transactional
+	public void removeProjectUser(Identity identity, long projectId, long userId) {
+		validateProjectExists(projectId);
+
+		if (identity.userId() == userId) {
+			throw new ValidationException(
+					"Ein Owner kann sich nicht selbst aus dem Projekt entfernen");
+		}
+
+		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
+				.orElseThrow(() -> new ResourceNotFoundException("Projektmitglied nicht gefunden"));
+		projectMemberRepository.delete(member);
+		eventPublisher
+				.publishEvent(new ProjectEvent.UserRemoved(identity.userId(), projectId, userId));
+	}
+
 	private ProjectRoleModel[] createProjectRoles(ProjectModel project) {
 		ProjectRoleModel ownerRole = new ProjectRoleModel();
 		ownerRole.setProjectId(project.getId());

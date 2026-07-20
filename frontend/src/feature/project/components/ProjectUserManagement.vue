@@ -12,6 +12,8 @@ const {
 	isAddingUser,
 	isLoadingUsers,
 	loadUsers,
+	removeProjectUser,
+	removingUserId,
 	successMessage,
 	updateProjectUserRole,
 	updatingUserRoleId,
@@ -91,6 +93,16 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 		syncRoleChanges();
 	}
 }
+
+async function removeUser(user: model.ProjectUser): Promise<void> {
+	if (!confirm(`Projektmitglied ${user.username} wirklich entfernen?`)) {
+		return;
+	}
+
+	if (await removeProjectUser(user.id)) {
+		syncRoleChanges();
+	}
+}
 </script>
 
 <template>
@@ -123,7 +135,7 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 								v-if="canUpdateProjectRole(user)"
 								v-model="roleChanges[user.id]"
 								:aria-label="`Projektrolle für ${user.username}`"
-								:disabled="updatingUserRoleId !== null"
+								:disabled="updatingUserRoleId !== null || removingUserId !== null"
 							>
 								<option value="OWNER">OWNER</option>
 								<option value="CONTRIBUTOR">CONTRIBUTOR</option>
@@ -135,7 +147,11 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 							<button
 								v-if="canUpdateProjectRole(user)"
 								type="button"
-								:disabled="!hasRoleChanged(user) || updatingUserRoleId !== null"
+								:disabled="
+									!hasRoleChanged(user) ||
+									updatingUserRoleId !== null ||
+									removingUserId !== null
+								"
 								@click="submitProjectUserRole(user)"
 							>
 								{{
@@ -143,6 +159,14 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 										? "Wird gespeichert..."
 										: "Speichern"
 								}}
+							</button>
+							<button
+								v-if="canUpdateProjectRole(user)"
+								type="button"
+								:disabled="updatingUserRoleId !== null || removingUserId !== null"
+								@click="removeUser(user)"
+							>
+								{{ removingUserId === user.id ? "Wird entfernt..." : "Entfernen" }}
 							</button>
 						</td>
 					</tr>

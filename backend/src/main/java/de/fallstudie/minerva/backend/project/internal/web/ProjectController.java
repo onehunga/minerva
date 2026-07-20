@@ -3,6 +3,7 @@ package de.fallstudie.minerva.backend.project.internal.web;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -80,5 +81,16 @@ public class ProjectController {
 				identity.userId(), userId, id);
 
 		projectService.updateProjectUserRole(identity, id, userId, request);
+	}
+
+	@DeleteMapping("/{id}/users/{userId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void removeProjectUser(@AuthenticationPrincipal Identity identity, @PathVariable long id,
+			@PathVariable long userId) {
+		log.info("User with ID {} is removing user {} from project with ID {}", identity.userId(),
+				userId, id);
+
+		projectService.removeProjectUser(identity, id, userId);
 	}
 }
