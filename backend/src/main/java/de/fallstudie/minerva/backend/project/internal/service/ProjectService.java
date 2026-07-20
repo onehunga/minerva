@@ -4,11 +4,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.CreateProjectCommand;
+import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
@@ -37,6 +39,7 @@ public class ProjectService {
 	private final ProjectRepository projectRepository;
 	private final ProjectRoleRepository projectRoleRepository;
 	private final UserService userService;
+	private final ApplicationEventPublisher eventPublisher;
 
 	public ProjectRecordListResponse getAllProjects(Identity identity) {
 		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
@@ -96,6 +99,10 @@ public class ProjectService {
 		final var ownerRole = roles[0];
 
 		addProjectMember(project, ownerRole, identity);
+		eventPublisher.publishEvent(new ProjectEvent.ProjectCreated(identity.userId(),
+				project.getId(), project.getName(), project.getDescription()));
+		eventPublisher.publishEvent(new ProjectEvent.UserAdded(identity.userId(), project.getId(),
+				identity.userId(), ownerRole.getName().name()));
 
 		return project.getId();
 	}
@@ -122,6 +129,8 @@ public class ProjectService {
 		member.setUserId(request.userId());
 		member.setRoleId(role.getId());
 		projectMemberRepository.save(member);
+		eventPublisher.publishEvent(new ProjectEvent.UserAdded(identity.userId(), projectId,
+				request.userId(), projectRoleName.name()));
 	}
 
 	@Transactional
@@ -144,8 +153,12 @@ public class ProjectService {
 			return;
 		}
 
+		final var previousRole = projectRoleRepository.findById(member.getRoleId())
+				.orElseThrow(() -> new ValidationException("Projektrolle existiert nicht"));
 		member.setRoleId(role.getId());
 		projectMemberRepository.save(member);
+		eventPublisher.publishEvent(new ProjectEvent.UserRoleChanged(identity.userId(), projectId,
+				userId, previousRole.getName().name(), projectRoleName.name()));
 	}
 
 	private ProjectRoleModel[] createProjectRoles(ProjectModel project) {

@@ -9,6 +9,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
@@ -28,6 +29,7 @@ class TicketTypeQueryTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private ProjectPolicies projectPolicies;
 	private TicketService ticketService;
 
@@ -41,9 +43,11 @@ class TicketTypeQueryTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
 				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
-				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository,
+				eventPublisher);
 	}
 
 	@Test

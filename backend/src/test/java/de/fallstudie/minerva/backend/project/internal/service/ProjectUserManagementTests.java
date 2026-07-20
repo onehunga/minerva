@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
@@ -24,6 +25,7 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleNam
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
 import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
 import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
+import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.UserService;
 
@@ -32,6 +34,7 @@ class ProjectUserManagementTests {
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private ProjectService projectService;
 
 	@BeforeEach
@@ -40,8 +43,9 @@ class ProjectUserManagementTests {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, userService);
+				projectRoleRepository, userService, eventPublisher);
 	}
 
 	@Test
@@ -92,6 +96,8 @@ class ProjectUserManagementTests {
 		assertEquals(TestProjects.PROJECT_ID, savedMember.getProjectId());
 		assertEquals(TestProjects.CONTRIBUTOR_USER_ID, savedMember.getUserId());
 		assertEquals(TestProjects.CONTRIBUTOR_ROLE_ID, savedMember.getRoleId());
+		verify(eventPublisher).publishEvent(new ProjectEvent.UserAdded(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CONTRIBUTOR_USER_ID, "CONTRIBUTOR"));
 	}
 
 	@Test
@@ -148,11 +154,15 @@ class ProjectUserManagementTests {
 				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.VIEWER_ROLE_ID);
 		final var contributorRole = TestProjects.projectRole(TestProjects.CONTRIBUTOR_ROLE_ID,
 				TestProjects.PROJECT_ID, ProjectRoleName.CONTRIBUTOR);
+		final var viewerRole = TestProjects.projectRole(TestProjects.VIEWER_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.VIEWER);
 		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
 		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
 				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.of(member));
 		when(projectRoleRepository.findByProjectIdAndName(TestProjects.PROJECT_ID,
 				ProjectRoleName.CONTRIBUTOR)).thenReturn(Optional.of(contributorRole));
+		when(projectRoleRepository.findById(TestProjects.VIEWER_ROLE_ID))
+				.thenReturn(Optional.of(viewerRole));
 
 		projectService.updateProjectUserRole(TestProjects.OWNER, TestProjects.PROJECT_ID,
 				TestProjects.CONTRIBUTOR_USER_ID, new UpdateProjectUserRoleRequest("CONTRIBUTOR"));
@@ -160,6 +170,9 @@ class ProjectUserManagementTests {
 		final var memberCaptor = ArgumentCaptor.forClass(ProjectMemberModel.class);
 		verify(projectMemberRepository).save(memberCaptor.capture());
 		assertEquals(TestProjects.CONTRIBUTOR_ROLE_ID, memberCaptor.getValue().getRoleId());
+		verify(eventPublisher).publishEvent(new ProjectEvent.UserRoleChanged(
+				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, "VIEWER", "CONTRIBUTOR"));
 	}
 
 	@Test
@@ -178,6 +191,7 @@ class ProjectUserManagementTests {
 				TestProjects.CONTRIBUTOR_USER_ID, new UpdateProjectUserRoleRequest("CONTRIBUTOR"));
 
 		verify(projectMemberRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@Test

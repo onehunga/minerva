@@ -13,11 +13,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.ProjectCreationService;
+import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
@@ -33,6 +35,7 @@ class ProjectCreationTests {
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private ProjectService projectService;
 	private ProjectCreationService projectCreationService;
 
@@ -42,8 +45,9 @@ class ProjectCreationTests {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, userService);
+				projectRoleRepository, userService, eventPublisher);
 		projectCreationService = new ProjectCreationService(projectService);
 	}
 
@@ -88,6 +92,11 @@ class ProjectCreationTests {
 		assertEquals(TestProjects.PROJECT_ID, savedMember.getProjectId());
 		assertEquals(TestProjects.OWNER_USER_ID, savedMember.getUserId());
 		assertEquals(TestProjects.OWNER_ROLE_ID, savedMember.getRoleId());
+
+		verify(eventPublisher).publishEvent(new ProjectEvent.ProjectCreated(
+				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID, "Minerva", "Ticket project"));
+		verify(eventPublisher).publishEvent(new ProjectEvent.UserAdded(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.OWNER_USER_ID, "OWNER"));
 	}
 
 	@Test

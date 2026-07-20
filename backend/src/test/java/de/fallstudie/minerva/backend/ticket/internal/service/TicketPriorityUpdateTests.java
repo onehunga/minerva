@@ -13,12 +13,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -37,6 +39,7 @@ class TicketPriorityUpdateTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private ProjectPolicies projectPolicies;
 	private TicketService ticketService;
 
@@ -50,9 +53,11 @@ class TicketPriorityUpdateTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
 				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
-				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository,
+				eventPublisher);
 	}
 
 	@Test
@@ -63,12 +68,15 @@ class TicketPriorityUpdateTests {
 		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
 				.thenReturn(Optional.of(ticket));
 
-		ticketService.updateTicketPriority(TestProjects.PROJECT_ID, ticket.getId(),
-				new UpdateTicketPriorityRequest(TicketPriorityName.HIGH));
+		ticketService.updateTicketPriority(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				ticket.getId(), new UpdateTicketPriorityRequest(TicketPriorityName.HIGH));
 
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
 		assertEquals(TicketPriorityName.HIGH, ticketCaptor.getValue().getPriority());
+		verify(eventPublisher).publishEvent(
+				new TicketEvent.PriorityChanged(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
+						ticket.getId(), TicketPriorityName.NORMAL, TicketPriorityName.HIGH));
 	}
 
 	@Test
@@ -77,8 +85,8 @@ class TicketPriorityUpdateTests {
 				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> ticketService.updateTicketPriority(TestProjects.PROJECT_ID,
-						TestProjects.CHILD_TICKET_ID,
+				() -> ticketService.updateTicketPriority(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID,
 						new UpdateTicketPriorityRequest(TicketPriorityName.HIGH)));
 
 		verify(ticketRepository, never()).save(any());
@@ -87,16 +95,18 @@ class TicketPriorityUpdateTests {
 	@Test
 	void updateTicketPriorityRejectsNullPriority() {
 		assertThrows(ValidationException.class,
-				() -> ticketService.updateTicketPriority(TestProjects.PROJECT_ID,
-						TestProjects.CHILD_TICKET_ID, new UpdateTicketPriorityRequest(null)));
+				() -> ticketService.updateTicketPriority(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID,
+						new UpdateTicketPriorityRequest(null)));
 
 		verify(ticketRepository, never()).save(any());
 	}
 
 	@Test
 	void updateTicketPriorityRejectsNullRequest() {
-		assertThrows(IllegalArgumentException.class, () -> ticketService
-				.updateTicketPriority(TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, null));
+		assertThrows(IllegalArgumentException.class,
+				() -> ticketService.updateTicketPriority(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, null));
 
 		verify(ticketRepository, never()).save(any());
 	}

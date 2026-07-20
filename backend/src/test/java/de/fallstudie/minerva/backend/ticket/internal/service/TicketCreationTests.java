@@ -16,12 +16,14 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
@@ -43,6 +45,7 @@ class TicketCreationTests {
 	private WorkflowTransitionRepository workflowTransitionRepository;
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
+	private ApplicationEventPublisher eventPublisher;
 	private ProjectPolicies projectPolicies;
 	private TicketService ticketService;
 
@@ -56,9 +59,11 @@ class TicketCreationTests {
 		workflowTransitionRepository = Mockito.mock(WorkflowTransitionRepository.class);
 		ticketRepository = Mockito.mock(TicketRepository.class);
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
+		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
 		ticketService = new TicketService(projectPolicies, ticketTypeRepository,
 				ticketChildRuleRepository, workflowRepository, workflowStatusRepository,
-				workflowTransitionRepository, ticketRepository, ticketCommentRepository);
+				workflowTransitionRepository, ticketRepository, ticketCommentRepository,
+				eventPublisher);
 	}
 
 	@Test
@@ -90,6 +95,9 @@ class TicketCreationTests {
 		assertEquals(TicketPriorityName.NORMAL, savedTicket.getPriority());
 		assertEquals(TestProjects.OWNER_USER_ID, savedTicket.getCreatedBy());
 		assertEquals(null, savedTicket.getParentTicketId());
+		verify(eventPublisher).publishEvent(
+				new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
+						savedTicket.getId(), ticketType.getId(), status.getId(), "Root ticket"));
 	}
 
 	@Test
@@ -121,6 +129,9 @@ class TicketCreationTests {
 		verify(ticketRepository).save(ticketCaptor.capture());
 		assertEquals(parentTicket.getId(), ticketCaptor.getValue().getParentTicketId());
 		assertEquals(childTicketType.getId(), ticketCaptor.getValue().getTicketTypeId());
+		verify(eventPublisher).publishEvent(
+				new TicketEvent.SubticketAdded(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
+						parentTicket.getId(), ticketCaptor.getValue().getId(), "Ticket"));
 	}
 
 	@Test

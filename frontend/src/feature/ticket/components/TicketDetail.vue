@@ -9,8 +9,15 @@ import type {
 } from "../ticket.model";
 import CustomSelect from "@/components/CustomSelect.vue";
 import { useProject } from "@/feature/project";
+import { ActivityTimeline, useTicketActivities } from "@/feature/activity";
 import TicketComments from "./TicketComments.vue";
 import CreateTicketForm from "./CreateTicketForm.vue";
+
+const props = defineProps<{
+	ticket: Ticket;
+	ticketType?: TicketType;
+	childTickets: Ticket[];
+}>();
 
 const {
 	details: projectDetails,
@@ -22,6 +29,12 @@ const {
 	updateTicketAssignee,
 } = useProject();
 
+const {
+	events: activityEvents,
+	isLoading: isActivityLoading,
+	errorMessage: activityError,
+} = useTicketActivities(props.ticket.projectId, props.ticket.id);
+
 const TICKET_PRIORITIES: TicketPriorityName[] = ["LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST"];
 const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
 	LOWEST: "Niedrigste",
@@ -30,13 +43,6 @@ const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
 	HIGH: "Hoch",
 	HIGHEST: "Höchste",
 };
-
-const props = defineProps<{
-	ticket: Ticket;
-	ticketType?: TicketType;
-	childTickets: Ticket[];
-}>();
-
 const emit = defineEmits<{
 	(event: "selectTicket", ticketId: number): void;
 }>();
@@ -442,6 +448,12 @@ function formatDate(value: string | null): string {
 			:project-id="ticket.projectId"
 			:ticket-id="ticket.id"
 			:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
+		/>
+
+		<ActivityTimeline
+			:events="activityEvents"
+			:is-loading="isActivityLoading"
+			:error-message="activityError"
 		/>
 
 		<section class="ticket-detail__children" aria-labelledby="ticket-children-heading">

@@ -1,9 +1,20 @@
 <script setup lang="ts">
 import { useProject } from "..";
+import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { CreateTicketForm, TicketList } from "@/feature/ticket";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
 const { details } = useProject();
+
+const props = defineProps<{
+	id: number;
+}>();
+
+const {
+	events: activityEvents,
+	isLoading: isActivityLoading,
+	errorMessage: activityError,
+} = useProjectActivities(props.id);
 </script>
 
 <template>
@@ -21,6 +32,12 @@ const { details } = useProject();
 			</p>
 			<CreateTicketForm v-else :parent-ticket-id="null" />
 		</section>
+
+		<ActivityTimeline
+			:events="activityEvents"
+			:is-loading="isActivityLoading"
+			:error-message="activityError"
+		/>
 
 		<section v-if="details.projectRole === 'OWNER'" class="project-section">
 			<ProjectUserManagement />
