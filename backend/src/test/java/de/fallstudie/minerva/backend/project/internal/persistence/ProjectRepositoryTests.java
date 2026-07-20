@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.project.internal.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -24,11 +25,15 @@ class ProjectRepositoryTests {
 		final var firstUserProject = createProject("First user project", 1L);
 		final var sharedProject = createProject("Shared project", 2L);
 		final var otherUserProject = createProject("Other user project", 2L);
+		final var archivedProject = createProject("Archived project", 1L);
+		archivedProject.setArchivedAt(Instant.now());
+		projectRepository.saveAndFlush(archivedProject);
 
 		createMembership(firstUserProject, 42L);
 		createMembership(sharedProject, 42L);
 		createMembership(sharedProject, 84L);
 		createMembership(otherUserProject, 84L);
+		createMembership(archivedProject, 42L);
 
 		final var projects = projectRepository.findAllByUserId(42L);
 

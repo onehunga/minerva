@@ -1,7 +1,11 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -70,6 +74,7 @@ class ProjectQueryTests {
 		assertEquals("Minerva", response.name());
 		assertEquals("Ticket project", response.description());
 		assertEquals(ProjectRoleName.OWNER, response.projectRole());
+		assertFalse(response.archived());
 	}
 
 	@Test
@@ -104,5 +109,27 @@ class ProjectQueryTests {
 
 		assertThrows(ResourceNotFoundException.class,
 				() -> projectService.getProjectById(TestProjects.OWNER, TestProjects.PROJECT_ID));
+	}
+
+	@Test
+	void archiveProjectArchivesExistingProject() {
+		final var project = TestProjects.project(TestProjects.PROJECT_ID);
+		when(projectRepository.findById(TestProjects.PROJECT_ID)).thenReturn(Optional.of(project));
+
+		projectService.archiveProject(TestProjects.PROJECT_ID);
+
+		assertNotNull(project.getArchivedAt());
+		verify(projectRepository).save(project);
+		verify(projectRepository).flush();
+	}
+
+	@Test
+	void archiveProjectRejectsUnknownProject() {
+		when(projectRepository.findById(TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> projectService.archiveProject(TestProjects.PROJECT_ID));
+		verify(projectRepository, never()).save(Mockito.any());
+		verify(projectRepository, never()).flush();
 	}
 }

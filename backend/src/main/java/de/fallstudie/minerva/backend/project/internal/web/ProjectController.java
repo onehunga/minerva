@@ -40,6 +40,15 @@ public class ProjectController {
 		return projectService.getProjectById(identity, id);
 	}
 
+	@PatchMapping("/{id}/archive")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void archiveProject(@AuthenticationPrincipal Identity identity, @PathVariable long id) {
+		log.info("User with ID {} is archiving project with ID {}", identity.userId(), id);
+
+		projectService.archiveProject(id);
+	}
+
 	@GetMapping("/{id}/users")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #id)")
 	public ProjectUserListResponse getProjectUsers(@AuthenticationPrincipal Identity identity,

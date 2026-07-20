@@ -1,5 +1,6 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
+import java.time.Instant;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -61,7 +62,18 @@ public class ProjectService {
 				.orElseThrow(() -> new ResourceNotFoundException("Projektrolle nicht gefunden"));
 
 		return new ProjectDetailsResponse(project.getId(), project.getName(),
-				project.getDescription(), projectRole.getName());
+				project.getDescription(), projectRole.getName(), project.getArchivedAt() != null);
+	}
+
+	@Transactional
+	public void archiveProject(long projectId) {
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+
+		project.setArchivedAt(Instant.now());
+		projectRepository.save(project);
+		projectRepository.flush();
 	}
 
 	public ProjectUserListResponse getProjectUsers(Identity identity, long projectId) {

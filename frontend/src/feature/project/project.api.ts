@@ -19,6 +19,10 @@ export async function createProject(request: CreateProjectRequest): Promise<numb
 	return client.post("/v1/projects", request).then((res) => res.data);
 }
 
+export async function archiveProject(id: number): Promise<void> {
+	return client.patch(`/v1/projects/${id}/archive`);
+}
+
 export async function getProjectUsers(id: number): Promise<ProjectUserListResponse> {
 	return client.get(`/v1/projects/${id}/users`).then((res) => res.data);
 }

@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { useProject } from "..";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useProject, useProjectRepository } from "..";
 import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketList } from "@/feature/ticket";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
 const { details } = useProject();
+const projectRepository = useProjectRepository();
+const router = useRouter();
+const isArchivingProject = ref(false);
 
 const props = defineProps<{
 	id: number;
@@ -21,6 +26,23 @@ const {
 	isLoading: isProjectDashboardLoading,
 	errorMessage: projectDashboardError,
 } = useProjectDashboard(props.id);
+
+async function submitArchiveProject(): Promise<void> {
+	if (isArchivingProject.value || !confirm("Projekt wirklich archivieren?")) {
+		return;
+	}
+
+	isArchivingProject.value = true;
+
+	try {
+		await projectRepository.archiveProject(props.id);
+		await router.push({ name: "landing" });
+	} catch {
+		alert("Das Projekt konnte nicht archiviert werden.");
+	} finally {
+		isArchivingProject.value = false;
+	}
+}
 </script>
 
 <template>
@@ -29,6 +51,9 @@ const {
 			<h1>{{ details.name }}</h1>
 			<p>{{ details.description }}</p>
 		</section>
+		<p v-if="details.archived" class="archive-banner" role="status">
+			Dieses Projekt ist archiviert.
+		</p>
 
 		<section class="project-section">
 			<h2>Dashboard</h2>
@@ -58,6 +83,16 @@ const {
 		<section v-if="details.projectRole === 'OWNER'" class="project-section">
 			<ProjectUserManagement />
 		</section>
+
+		<section
+			v-if="details.projectRole === 'OWNER' && !details.archived"
+			class="project-section"
+		>
+			<h2>Projekt archivieren</h2>
+			<button type="button" :disabled="isArchivingProject" @click="submitArchiveProject">
+				{{ isArchivingProject ? "Wird archiviert..." : "Projekt archivieren" }}
+			</button>
+		</section>
 	</div>
 	<p v-else>Loading...</p>
 </template>
@@ -83,5 +118,12 @@ const {
 .project-section h1,
 .project-section p {
 	margin: 0;
+}
+
+.archive-banner {
+	margin: 0;
+	padding: 1rem;
+	border: 2px solid currentColor;
+	font-weight: 700;
 }
 </style>

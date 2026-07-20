@@ -1,0 +1,12 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0006-project-archival
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: projects
+            columns:
+              - column:
+                  name: archived_at
+                  type: TIMESTAMP

@@ -13,6 +13,7 @@ export interface IProjectRepository {
 	getAllProjects(): Promise<Array<ProjectRecord>>;
 	getProjectDetails(id: number): Promise<ProjectDetails>;
 	createProject(request: CreateProjectRequest): Promise<number>;
+	archiveProject(id: number): Promise<void>;
 	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
 	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
 	updateProjectUserRole(projectId: number, userId: number, role: ProjectRole): Promise<void>;
@@ -31,6 +32,10 @@ export class ProjectRepository implements IProjectRepository {
 
 	async createProject(request: CreateProjectRequest): Promise<number> {
 		return api.createProject(request);
+	}
+
+	async archiveProject(id: number): Promise<void> {
+		return api.archiveProject(id);
 	}
 
 	async getProjectUsers(id: number): Promise<Array<ProjectUser>> {

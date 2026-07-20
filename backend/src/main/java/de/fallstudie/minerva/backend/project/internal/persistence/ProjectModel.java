@@ -44,4 +44,8 @@ public class ProjectModel {
 	@UpdateTimestamp
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt = Instant.now();
+
+	@Column(name = "archived_at")
+	@Setter
+	private Instant archivedAt;
 }

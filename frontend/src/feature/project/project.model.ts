@@ -22,6 +22,7 @@ export type ProjectDetails = {
 	name: string;
 	description: string;
 	projectRole: ProjectRole;
+	archived: boolean;
 };
 
 export type ProjectUser = {
