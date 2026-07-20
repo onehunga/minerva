@@ -68,14 +68,19 @@ public class ProjectService {
 	}
 
 	@Transactional
-	public void archiveProject(long projectId) {
+	public void archiveProject(Identity identity, long projectId) {
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
+		if (project.getArchivedAt() != null) {
+			return;
+		}
 
 		project.setArchivedAt(Instant.now());
 		projectRepository.save(project);
 		projectRepository.flush();
+		eventPublisher.publishEvent(
+				new ProjectEvent.ProjectArchived(identity.userId(), projectId, project.getName()));
 	}
 
 	@Transactional

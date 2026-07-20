@@ -58,7 +58,7 @@ public class ProjectController {
 	public void archiveProject(@AuthenticationPrincipal Identity identity, @PathVariable long id) {
 		log.info("User with ID {} is archiving project with ID {}", identity.userId(), id);
 
-		projectService.archiveProject(id);
+		projectService.archiveProject(identity, id);
 	}
 
 	@GetMapping("/{id}/users")

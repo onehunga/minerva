@@ -19,6 +19,7 @@ const headingId = useId();
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_CREATED: "Projekt erstellt",
 	PROJECT_DETAILS_UPDATED: "Projektname oder Beschreibung geändert",
+	PROJECT_ARCHIVED: "Projekt archiviert",
 	PROJECT_USER_ADDED: "Nutzer hinzugefügt",
 	PROJECT_USER_ROLE_CHANGED: "Nutzerrolle geändert",
 	PROJECT_USER_REMOVED: "Nutzer entfernt",

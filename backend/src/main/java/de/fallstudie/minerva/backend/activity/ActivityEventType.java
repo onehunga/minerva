@@ -3,6 +3,7 @@ package de.fallstudie.minerva.backend.activity;
 public enum ActivityEventType {
 	PROJECT_CREATED,
 	PROJECT_DETAILS_UPDATED,
+	PROJECT_ARCHIVED,
 	PROJECT_USER_ADDED,
 	PROJECT_USER_ROLE_CHANGED,
 	PROJECT_USER_REMOVED,

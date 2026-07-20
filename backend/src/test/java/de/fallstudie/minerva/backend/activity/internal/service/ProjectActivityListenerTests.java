@@ -27,4 +27,19 @@ class ProjectActivityListenerTests {
 				List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT,
 						TestProjects.PROJECT_ID)));
 	}
+
+	@Test
+	void projectArchivedAppendsProjectScopedActivity() {
+		final var activityService = mock(ActivityService.class);
+		final var listener = new ProjectActivityListener(activityService);
+		final var event = new ProjectEvent.ProjectArchived(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, "Minerva");
+
+		listener.on(event);
+
+		verify(activityService).append(ActivityEventType.PROJECT_ARCHIVED,
+				TestProjects.OWNER_USER_ID, event,
+				List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT,
+						TestProjects.PROJECT_ID)));
+	}
 }
