@@ -1,6 +1,7 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -78,15 +79,27 @@ public class ProjectService {
 	}
 
 	@Transactional
-	public void updateProjectDetails(long projectId, UpdateProjectDetailsRequest request) {
+	public void updateProjectDetails(Identity identity, long projectId,
+			UpdateProjectDetailsRequest request) {
 		validateUpdateProjectDetailsRequest(request);
 
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
-		project.setName(request.name().trim());
-		project.setDescription(request.description() == null ? "" : request.description().trim());
+		final var newName = request.name().trim();
+		final var newDescription = request.description() == null
+				? ""
+				: request.description().trim();
+		final var previousName = project.getName();
+		final var previousDescription = project.getDescription();
+
+		project.setName(newName);
+		project.setDescription(newDescription);
 		projectRepository.save(project);
+		if (!previousName.equals(newName) || !Objects.equals(previousDescription, newDescription)) {
+			eventPublisher.publishEvent(new ProjectEvent.DetailsUpdated(identity.userId(),
+					projectId, previousName, newName, previousDescription, newDescription));
+		}
 	}
 
 	public ProjectUserListResponse getProjectUsers(Identity identity, long projectId) {

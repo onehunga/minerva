@@ -18,6 +18,7 @@ public class ProjectActivityListener {
 	public void on(ProjectEvent event) {
 		var activity = switch (event) {
 			case ProjectEvent.ProjectCreated _ -> ActivityEventType.PROJECT_CREATED;
+			case ProjectEvent.DetailsUpdated _ -> ActivityEventType.PROJECT_DETAILS_UPDATED;
 			case ProjectEvent.UserAdded _ -> ActivityEventType.PROJECT_USER_ADDED;
 			case ProjectEvent.UserRoleChanged _ -> ActivityEventType.PROJECT_USER_ROLE_CHANGED;
 			case ProjectEvent.UserRemoved _ -> ActivityEventType.PROJECT_USER_REMOVED;

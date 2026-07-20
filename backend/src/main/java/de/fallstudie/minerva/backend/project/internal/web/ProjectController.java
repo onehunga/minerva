@@ -49,7 +49,7 @@ public class ProjectController {
 		log.info("User with ID {} is updating details for project with ID {}", identity.userId(),
 				id);
 
-		projectService.updateProjectDetails(id, request);
+		projectService.updateProjectDetails(identity, id, request);
 	}
 
 	@PatchMapping("/{id}/archive")
