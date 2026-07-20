@@ -10,10 +10,10 @@ public interface ProjectRepository extends JpaRepository<ProjectModel, Long> {
 	boolean existsByName(String name);
 
 	@Query("""
-			SELECT p
-			FROM ProjectModel p
-			JOIN ProjectMemberModel pm ON pm.projectId = p.id
-			WHERE pm.userId = :userId
+				SELECT p
+				FROM ProjectModel p
+				JOIN ProjectMemberModel pm ON pm.projectId = p.id
+				WHERE pm.userId = :userId
 			""")
 	List<ProjectModel> findAllByUserId(@Param("userId") long userId);
 }

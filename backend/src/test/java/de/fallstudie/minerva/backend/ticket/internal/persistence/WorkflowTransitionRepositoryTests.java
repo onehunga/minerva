@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import de.fallstudie.minerva.backend.ticket.TicketStatusCategory;
+
 @DataJpaTest(properties = {"spring.jpa.hibernate.ddl-auto=create-drop",
 		"spring.liquibase.enabled=false"})
 @ActiveProfiles("test")
@@ -21,10 +23,10 @@ class WorkflowTransitionRepositoryTests {
 
 	@Test
 	void findAllForWorkflowStatesReturnsSpecificAndAnyTransitionsForGivenStates() {
-		final var open = saveStatus(10L, "Open", WorkflowStatusCategory.OPEN);
-		final var inProgress = saveStatus(10L, "In Progress", WorkflowStatusCategory.IN_PROGRESS);
-		final var done = saveStatus(10L, "Done", WorkflowStatusCategory.COMPLETED);
-		final var foreign = saveStatus(11L, "Foreign", WorkflowStatusCategory.OPEN);
+		final var open = saveStatus(10L, "Open", TicketStatusCategory.OPEN);
+		final var inProgress = saveStatus(10L, "In Progress", TicketStatusCategory.IN_PROGRESS);
+		final var done = saveStatus(10L, "Done", TicketStatusCategory.COMPLETED);
+		final var foreign = saveStatus(11L, "Foreign", TicketStatusCategory.OPEN);
 		final var specificTransition = saveTransition("Start", open.getId(), inProgress.getId());
 		final var anyTransition = saveTransition("Close from any", null, done.getId());
 		saveTransition("Foreign", foreign.getId(), foreign.getId());
@@ -36,7 +38,7 @@ class WorkflowTransitionRepositoryTests {
 	}
 
 	private WorkflowStatusModel saveStatus(long workflowId, String name,
-			WorkflowStatusCategory category) {
+			TicketStatusCategory category) {
 		final var status = new WorkflowStatusModel();
 		status.setWorkflowId(workflowId);
 		status.setName(name);

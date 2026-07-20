@@ -7,6 +7,7 @@ import type {
 	WorkflowState,
 	WorkflowTransition,
 } from "../ticket.model";
+import { TICKET_PRIORITY_ORDER, TICKET_PRIORITY_LABELS } from "../priority-labels";
 import CustomSelect from "@/components/CustomSelect.vue";
 import { useProject } from "@/feature/project";
 import { ActivityTimeline, useTicketActivities } from "@/feature/activity";
@@ -35,14 +36,7 @@ const {
 	errorMessage: activityError,
 } = useTicketActivities(props.ticket.projectId, props.ticket.id);
 
-const TICKET_PRIORITIES: TicketPriorityName[] = ["LOWEST", "LOW", "NORMAL", "HIGH", "HIGHEST"];
-const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
-	LOWEST: "Niedrigste",
-	LOW: "Niedrig",
-	NORMAL: "Normal",
-	HIGH: "Hoch",
-	HIGHEST: "Höchste",
-};
+const TICKET_PRIORITIES = TICKET_PRIORITY_ORDER;
 const emit = defineEmits<{
 	(event: "selectTicket", ticketId: number): void;
 }>();

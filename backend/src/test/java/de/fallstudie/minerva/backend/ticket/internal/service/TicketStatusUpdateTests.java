@@ -222,10 +222,10 @@ class TicketStatusUpdateTests {
 		when(workflowStatusRepository.findByIdAndWorkflowId(targetStatusId, workflow.getId()))
 				.thenReturn(Optional.of(TestProjects.workflowStatus(targetStatusId,
 						workflow.getId(), "Target",
-						de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusCategory.IN_PROGRESS)));
+						de.fallstudie.minerva.backend.ticket.TicketStatusCategory.IN_PROGRESS)));
 		when(workflowStatusRepository.findByIdAndWorkflowId(ticket.getStatusId(), workflow.getId()))
 				.thenReturn(Optional.of(TestProjects.workflowStatus(ticket.getStatusId(),
 						workflow.getId(), "Current",
-						de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusCategory.OPEN)));
+						de.fallstudie.minerva.backend.ticket.TicketStatusCategory.OPEN)));
 	}
 }

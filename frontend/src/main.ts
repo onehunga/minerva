@@ -5,6 +5,7 @@ import { initializeUserSession, UserRepository, UserRepositoryKey } from "@/feat
 import { ProjectRepository, ProjectRepositoryKey } from "@/feature/project";
 import { TicketRepository, TicketRepositoryKey } from "@/feature/ticket";
 import { ActivityRepository, ActivityRepositoryKey } from "@/feature/activity";
+import { DashboardRepository, DashboardRepositoryKey } from "@/feature/dashboard";
 
 import App from "./App.vue";
 import router from "./router";
@@ -22,5 +23,6 @@ app.provide(ProjectRepositoryKey, new ProjectRepository());
 app.provide(TicketRepositoryKey, new TicketRepository());
 app.provide(ActivityRepositoryKey, new ActivityRepository());
 app.provide(UserRepositoryKey, new UserRepository());
+app.provide(DashboardRepositoryKey, new DashboardRepository());
 
 app.mount("#app");

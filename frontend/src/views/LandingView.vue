@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BaseModal from "@/components/BaseModal.vue";
 import { ActivityTimeline, useUserActivities, useUserActorActivities } from "@/feature/activity";
+import { DashboardOverview, useGlobalDashboard } from "@/feature/dashboard";
 import { CreateProjectForm, ProjectList } from "@/feature/project";
 import { useUser } from "@/feature/user";
 import { ref } from "vue";
@@ -16,6 +17,11 @@ const {
 	isLoading: isUserActorActivityLoading,
 	errorMessage: userActorActivityError,
 } = useUserActorActivities();
+const {
+	data: globalDashboard,
+	isLoading: isGlobalDashboardLoading,
+	errorMessage: globalDashboardError,
+} = useGlobalDashboard();
 
 const showCreateProjectForm = ref(false);
 </script>
@@ -33,6 +39,13 @@ const showCreateProjectForm = ref(false);
 	>
 		<CreateProjectForm />
 	</BaseModal>
+
+	<DashboardOverview
+		:data="globalDashboard"
+		:is-loading="isGlobalDashboardLoading"
+		:error-message="globalDashboardError"
+		:show-project-name="true"
+	/>
 
 	<ActivityTimeline
 		heading="Letzte Aktivitäten"

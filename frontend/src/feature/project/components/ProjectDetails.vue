@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useProject } from "..";
 import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
+import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketList } from "@/feature/ticket";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
@@ -15,6 +16,11 @@ const {
 	isLoading: isActivityLoading,
 	errorMessage: activityError,
 } = useProjectActivities(props.id);
+const {
+	data: projectDashboard,
+	isLoading: isProjectDashboardLoading,
+	errorMessage: projectDashboardError,
+} = useProjectDashboard(props.id);
 </script>
 
 <template>
@@ -22,6 +28,16 @@ const {
 		<section class="project-section">
 			<h1>{{ details.name }}</h1>
 			<p>{{ details.description }}</p>
+		</section>
+
+		<section class="project-section">
+			<h2>Dashboard</h2>
+			<DashboardOverview
+				:data="projectDashboard"
+				:is-loading="isProjectDashboardLoading"
+				:error-message="projectDashboardError"
+				:show-project-name="false"
+			/>
 		</section>
 
 		<section class="project-section">
