@@ -19,6 +19,13 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		details.value = projectDetails;
 	}
 
+	function updateProjectDetails(name: string, description: string): void {
+		if (details.value != null) {
+			details.value.name = name;
+			details.value.description = description;
+		}
+	}
+
 	function setProjectUsers(users: model.ProjectUser[]): void {
 		projectUsers.value = users;
 	}
@@ -87,6 +94,7 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		tickets,
 		setActiveProject,
 		setProjectDetails,
+		updateProjectDetails,
 		setProjectUsers,
 		setTicketTypes,
 		setTickets,

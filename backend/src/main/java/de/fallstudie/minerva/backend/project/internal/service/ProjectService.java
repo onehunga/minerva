@@ -26,6 +26,7 @@ import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
 import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
+import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectDetailsRequest;
 import de.fallstudie.minerva.backend.user.Identity;
 import de.fallstudie.minerva.backend.user.UserService;
 import jakarta.transaction.Transactional;
@@ -74,6 +75,18 @@ public class ProjectService {
 		project.setArchivedAt(Instant.now());
 		projectRepository.save(project);
 		projectRepository.flush();
+	}
+
+	@Transactional
+	public void updateProjectDetails(long projectId, UpdateProjectDetailsRequest request) {
+		validateUpdateProjectDetailsRequest(request);
+
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+		project.setName(request.name().trim());
+		project.setDescription(request.description() == null ? "" : request.description().trim());
+		projectRepository.save(project);
 	}
 
 	public ProjectUserListResponse getProjectUsers(Identity identity, long projectId) {
@@ -229,8 +242,23 @@ public class ProjectService {
 			throw new ValidationException("Projektbeschreibung darf maximal 500 Zeichen lang sein");
 		}
 
-		if (projectRepository.existsByName(command.name())) {
-			throw new DuplicateResourceException("Projektname ist bereits vergeben");
+	}
+
+	private void validateUpdateProjectDetailsRequest(UpdateProjectDetailsRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Projekt muss einen Namen haben");
+		}
+
+		if (request.name().length() > 255) {
+			throw new ValidationException("Projektname darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.description() != null && request.description().length() > 500) {
+			throw new ValidationException("Projektbeschreibung darf maximal 500 Zeichen lang sein");
 		}
 	}
 

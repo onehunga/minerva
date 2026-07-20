@@ -25,6 +25,8 @@ export type ProjectDetails = {
 	archived: boolean;
 };
 
+export type UpdateProjectDetailsRequest = Pick<ProjectDetails, "name" | "description">;
+
 export type ProjectUser = {
 	id: number;
 	username: string;

@@ -5,6 +5,7 @@ import type {
 	ProjectRecordListResponse,
 	ProjectRole,
 	ProjectUserListResponse,
+	UpdateProjectDetailsRequest,
 } from "./project.model";
 
 export async function getAllProjects(): Promise<ProjectRecordListResponse> {
@@ -21,6 +22,13 @@ export async function createProject(request: CreateProjectRequest): Promise<numb
 
 export async function archiveProject(id: number): Promise<void> {
 	return client.patch(`/v1/projects/${id}/archive`);
+}
+
+export async function updateProjectDetails(
+	id: number,
+	request: UpdateProjectDetailsRequest,
+): Promise<void> {
+	return client.patch(`/v1/projects/${id}/details`, request);
 }
 
 export async function getProjectUsers(id: number): Promise<ProjectUserListResponse> {

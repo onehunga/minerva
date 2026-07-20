@@ -21,3 +21,11 @@ databaseChangeLog:
               - column:
                   name: archived_at
                   type: TIMESTAMP
+  - changeSet:
+      id: 0006-allow-duplicate-project-names
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - dropUniqueConstraint:
+            tableName: projects
+            constraintName: uk_projects_name

@@ -41,6 +41,17 @@ public class ProjectController {
 		return projectService.getProjectById(identity, id);
 	}
 
+	@PatchMapping("/{id}/details")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void updateProjectDetails(@AuthenticationPrincipal Identity identity,
+			@PathVariable long id, @RequestBody UpdateProjectDetailsRequest request) {
+		log.info("User with ID {} is updating details for project with ID {}", identity.userId(),
+				id);
+
+		projectService.updateProjectDetails(id, request);
+	}
+
 	@PatchMapping("/{id}/archive")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")

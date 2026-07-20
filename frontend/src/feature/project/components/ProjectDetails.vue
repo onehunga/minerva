@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useProject, useProjectRepository } from "..";
 import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
@@ -7,10 +7,15 @@ import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketList } from "@/feature/ticket";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
-const { details } = useProject();
+const { details, updateProjectDetails } = useProject();
 const projectRepository = useProjectRepository();
 const router = useRouter();
 const isArchivingProject = ref(false);
+const isUpdatingDetails = ref(false);
+const editingField = ref<"name" | "description" | null>(null);
+const draftName = ref("");
+const draftDescription = ref("");
+const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER");
 
 const props = defineProps<{
 	id: number;
@@ -26,6 +31,63 @@ const {
 	isLoading: isProjectDashboardLoading,
 	errorMessage: projectDashboardError,
 } = useProjectDashboard(props.id);
+
+watch(
+	() => [details.value?.name, details.value?.description],
+	() => {
+		if (editingField.value == null) {
+			draftName.value = details.value?.name ?? "";
+			draftDescription.value = details.value?.description ?? "";
+		}
+	},
+	{ immediate: true },
+);
+
+function beginDetailsEdit(field: "name" | "description"): void {
+	if (!canUpdateDetails.value || isUpdatingDetails.value || details.value == null) {
+		return;
+	}
+
+	draftName.value = details.value.name;
+	draftDescription.value = details.value.description;
+	editingField.value = field;
+}
+
+function cancelDetailsEdit(): void {
+	draftName.value = details.value?.name ?? "";
+	draftDescription.value = details.value?.description ?? "";
+	editingField.value = null;
+}
+
+async function submitDetailsUpdate(): Promise<void> {
+	if (
+		isUpdatingDetails.value ||
+		!canUpdateDetails.value ||
+		details.value == null ||
+		!draftName.value.trim()
+	) {
+		return;
+	}
+
+	const name = draftName.value.trim();
+	const description = draftDescription.value.trim();
+
+	if (name === details.value.name && description === details.value.description) {
+		editingField.value = null;
+		return;
+	}
+
+	isUpdatingDetails.value = true;
+
+	try {
+		await updateProjectDetails(name, description);
+		editingField.value = null;
+	} catch {
+		alert("Die Projektdetails konnten nicht aktualisiert werden.");
+	} finally {
+		isUpdatingDetails.value = false;
+	}
+}
 
 async function submitArchiveProject(): Promise<void> {
 	if (isArchivingProject.value || !confirm("Projekt wirklich archivieren?")) {
@@ -48,8 +110,79 @@ async function submitArchiveProject(): Promise<void> {
 <template>
 	<div v-if="details != null" class="project-details">
 		<section class="project-section">
-			<h1>{{ details.name }}</h1>
-			<p>{{ details.description }}</p>
+			<div v-if="editingField === 'name'" class="project-details__inline-edit">
+				<input
+					v-model="draftName"
+					aria-label="Projektname"
+					:disabled="isUpdatingDetails"
+					@keyup.enter="submitDetailsUpdate"
+					@keyup.escape="cancelDetailsEdit"
+				/>
+				<button
+					type="button"
+					aria-label="Projektname speichern"
+					:disabled="isUpdatingDetails || !draftName.trim()"
+					@click="submitDetailsUpdate"
+				>
+					✓
+				</button>
+				<button
+					type="button"
+					aria-label="Projektname bearbeiten abbrechen"
+					:disabled="isUpdatingDetails"
+					@click="cancelDetailsEdit"
+				>
+					×
+				</button>
+			</div>
+			<h1 v-else>
+				<button
+					v-if="canUpdateDetails"
+					type="button"
+					class="project-details__editable"
+					@click="beginDetailsEdit('name')"
+				>
+					{{ details.name }}
+				</button>
+				<template v-else>{{ details.name }}</template>
+			</h1>
+			<div v-if="editingField === 'description'" class="project-details__inline-edit">
+				<textarea
+					v-model="draftDescription"
+					aria-label="Projektbeschreibung"
+					:disabled="isUpdatingDetails"
+					@keyup.escape="cancelDetailsEdit"
+				></textarea>
+				<button
+					type="button"
+					aria-label="Projektbeschreibung speichern"
+					:disabled="isUpdatingDetails || !draftName.trim()"
+					@click="submitDetailsUpdate"
+				>
+					✓
+				</button>
+				<button
+					type="button"
+					aria-label="Projektbeschreibung bearbeiten abbrechen"
+					:disabled="isUpdatingDetails"
+					@click="cancelDetailsEdit"
+				>
+					×
+				</button>
+			</div>
+			<p v-else>
+				<button
+					v-if="canUpdateDetails"
+					type="button"
+					class="project-details__editable"
+					@click="beginDetailsEdit('description')"
+				>
+					{{ details.description || "Keine Beschreibung hinterlegt." }}
+				</button>
+				<template v-else>
+					{{ details.description || "Keine Beschreibung hinterlegt." }}
+				</template>
+			</p>
 		</section>
 		<p v-if="details.archived" class="archive-banner" role="status">
 			Dieses Projekt ist archiviert.
@@ -118,6 +251,39 @@ async function submitArchiveProject(): Promise<void> {
 .project-section h1,
 .project-section p {
 	margin: 0;
+}
+
+.project-details__editable {
+	display: inline;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.project-details__inline-edit {
+	display: flex;
+	gap: 0.5rem;
+	align-items: start;
+}
+
+.project-details__inline-edit input,
+.project-details__inline-edit textarea {
+	flex: 1;
+	min-width: 0;
+	padding: 0.45rem 0.55rem;
+	border: 1px solid currentColor;
+	background: Canvas;
+	color: CanvasText;
+	font: inherit;
+}
+
+.project-details__inline-edit textarea {
+	min-height: 5rem;
+	resize: vertical;
 }
 
 .archive-banner {

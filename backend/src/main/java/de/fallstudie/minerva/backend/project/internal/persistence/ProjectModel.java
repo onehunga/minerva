@@ -26,7 +26,7 @@ public class ProjectModel {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "projects_id_seq")
 	private long id;
 
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false)
 	@Setter
 	private String name;
 

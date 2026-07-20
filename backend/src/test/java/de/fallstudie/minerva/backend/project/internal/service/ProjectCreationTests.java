@@ -16,7 +16,6 @@ import org.mockito.Mockito;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.ProjectCreationService;
 import de.fallstudie.minerva.backend.project.ProjectEvent;
@@ -55,7 +54,6 @@ class ProjectCreationTests {
 	void createProjectSavesProjectRolesAndOwnerMember() {
 		final var roleId = new AtomicLong(TestProjects.OWNER_ROLE_ID);
 		final var command = TestProjects.createProjectCommand();
-		when(projectRepository.existsByName("Minerva")).thenReturn(false);
 		when(projectRepository.save(any(ProjectModel.class))).thenAnswer(invocation -> {
 			final ProjectModel project = invocation.getArgument(0);
 			ReflectionTestUtils.setField(project, "id", TestProjects.PROJECT_ID);
@@ -108,18 +106,6 @@ class ProjectCreationTests {
 	@Test
 	void createProjectRejectsLongDescription() {
 		assertInvalidProject("Minerva", "a".repeat(501));
-	}
-
-	@Test
-	void createProjectRejectsDuplicateName() {
-		when(projectRepository.existsByName("Minerva")).thenReturn(true);
-
-		assertThrows(DuplicateResourceException.class, () -> projectCreationService
-				.createProject(TestProjects.OWNER, TestProjects.createProjectCommand()));
-
-		verify(projectRepository, never()).save(any());
-		verify(projectRoleRepository, never()).save(any());
-		verify(projectMemberRepository, never()).save(any());
 	}
 
 	private void assertInvalidProject(String name, String description) {

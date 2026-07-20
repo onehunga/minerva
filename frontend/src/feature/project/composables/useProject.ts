@@ -64,6 +64,14 @@ export function useProject(projectId?: string) {
 		return newTicket;
 	}
 
+	async function updateProjectDetails(name: string, description: string): Promise<void> {
+		await projectRepository.updateProjectDetails(Number(store.activeProject), {
+			name,
+			description,
+		});
+		store.updateProjectDetails(name, description);
+	}
+
 	async function deleteTicket(ticketId: number): Promise<void> {
 		await ticketRepository.deleteTicket(Number(store.activeProject), ticketId);
 		store.removeTicket(ticketId);
@@ -134,6 +142,7 @@ export function useProject(projectId?: string) {
 		tickets,
 		fetchTickets,
 		createTicket,
+		updateProjectDetails,
 		deleteTicket,
 		archiveTicket,
 		updateTicketStatus,
