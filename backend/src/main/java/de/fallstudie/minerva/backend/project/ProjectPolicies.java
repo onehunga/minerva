@@ -1,6 +1,7 @@
 package de.fallstudie.minerva.backend.project;
 
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
+import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
 import org.springframework.stereotype.Component;
 
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
@@ -15,6 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectPolicies {
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectRoleRepository projectRoleRepository;
+	private final ProjectRepository projectRepository;
+
+	public boolean isArchived(long projectId) {
+		return projectRepository.existsByIdAndArchivedAtIsNotNull(projectId);
+	}
 
 	public boolean canViewProject(Identity userId, long projectId) {
 		log.trace("Checking if user {} can view project {}", userId, projectId);

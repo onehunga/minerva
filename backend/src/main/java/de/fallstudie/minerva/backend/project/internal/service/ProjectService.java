@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.CreateProjectCommand;
@@ -91,6 +92,7 @@ public class ProjectService {
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
+		ensureProjectWritable(project);
 		final var newName = request.name().trim();
 		final var newDescription = request.description() == null
 				? ""
@@ -152,7 +154,7 @@ public class ProjectService {
 
 	@Transactional
 	public void addProjectUser(Identity identity, long projectId, AddProjectUserRequest request) {
-		validateProjectExists(projectId);
+		validateProjectWritable(projectId);
 		validateAddProjectUserRequest(request);
 
 		if (!userService.existsById(request.userId())) {
@@ -179,7 +181,7 @@ public class ProjectService {
 	@Transactional
 	public void updateProjectUserRole(Identity identity, long projectId, long userId,
 			UpdateProjectUserRoleRequest request) {
-		validateProjectExists(projectId);
+		validateProjectWritable(projectId);
 		validateUpdateProjectUserRoleRequest(request);
 
 		if (identity.userId() == userId) {
@@ -206,7 +208,7 @@ public class ProjectService {
 
 	@Transactional
 	public void removeProjectUser(Identity identity, long projectId, long userId) {
-		validateProjectExists(projectId);
+		validateProjectWritable(projectId);
 
 		if (identity.userId() == userId) {
 			throw new ValidationException(
@@ -283,6 +285,19 @@ public class ProjectService {
 	private void validateProjectExists(long projectId) {
 		if (!projectRepository.existsById(projectId)) {
 			throw new ResourceNotFoundException("Projekt mit ID " + projectId + " nicht gefunden");
+		}
+	}
+
+	private void validateProjectWritable(long projectId) {
+		validateProjectExists(projectId);
+		if (projectRepository.existsByIdAndArchivedAtIsNotNull(projectId)) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
+		}
+	}
+
+	private void ensureProjectWritable(ProjectModel project) {
+		if (project.getArchivedAt() != null) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
 		}
 	}
 

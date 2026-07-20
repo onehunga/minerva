@@ -10,6 +10,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
@@ -62,8 +63,12 @@ public class TicketService {
 
 	@Transactional
 	public void archiveTicket(Identity identity, long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
 		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		if (ticket.getArchivedAt() != null) {
+			return;
+		}
 
 		ticket.setArchivedAt(Instant.now());
 		ticketRepository.save(ticket);
@@ -115,6 +120,7 @@ public class TicketService {
 	public TicketResponse createTicket(Identity identity, long projectId,
 			CreateTicketRequest request) {
 		validateCreateTicketRequest(request);
+		ensureProjectWritable(projectId);
 
 		final var ticketType = ticketTypeRepository
 				.findByIdAndProjectId(request.ticketTypeId(), projectId)
@@ -132,6 +138,7 @@ public class TicketService {
 					.findByIdAndProjectId(request.parentTicketId(), projectId)
 					.orElseThrow(() -> new ValidationException(
 							"Parent-Ticket gehört nicht zum Projekt"));
+			ensureTicketWritable(parentTicket);
 
 			ticketChildRuleRepository
 					.findByParentTicketIdAndChildTicketId(parentTicket.getTicketTypeId(),
@@ -163,8 +170,7 @@ public class TicketService {
 
 	@Transactional
 	public void deleteTicket(Identity identity, long projectId, long ticketId) {
-		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
-				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var ticket = findWritableTicket(projectId, ticketId);
 
 		if (ticketRepository.existsByParentTicketId(ticket.getId())) {
 			throw new ValidationException("Ticket hat noch Kindtickets");
@@ -183,8 +189,7 @@ public class TicketService {
 			UpdateTicketStatusRequest request) {
 		validateUpdateTicketStatusRequest(request);
 
-		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
-				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var ticket = findWritableTicket(projectId, ticketId);
 		final var workflow = workflowRepository
 				.findByProjectIdAndTicketTypeId(projectId, ticket.getTicketTypeId())
 				.orElseThrow(() -> new ValidationException("Ticketart hat keinen Workflow"));
@@ -219,8 +224,7 @@ public class TicketService {
 			UpdateTicketDetailsRequest request) {
 		validateUpdateTicketDetailsRequest(request);
 
-		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
-				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var ticket = findWritableTicket(projectId, ticketId);
 		final var newName = request.name().trim();
 		final var newDescription = request.description() == null
 				? ""
@@ -242,8 +246,7 @@ public class TicketService {
 			UpdateTicketPriorityRequest request) {
 		validateUpdateTicketPriorityRequest(request);
 
-		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
-				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var ticket = findWritableTicket(projectId, ticketId);
 
 		final var previousPriority = ticket.getPriority();
 		ticket.setPriority(request.priority());
@@ -259,8 +262,7 @@ public class TicketService {
 			UpdateTicketAssigneeRequest request) {
 		validateUpdateTicketAssigneeRequest(request);
 
-		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
-				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		final var ticket = findWritableTicket(projectId, ticketId);
 		final var previousAssigneeId = ticket.getAssignedTo();
 
 		if (request.assignedTo() != null) {
@@ -284,6 +286,26 @@ public class TicketService {
 				ticket.getName(), ticket.getDescription(), ticket.getCreatedBy(),
 				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt(),
 				ticket.getArchivedAt() != null);
+	}
+
+	private TicketModel findWritableTicket(long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		ensureTicketWritable(ticket);
+		return ticket;
+	}
+
+	private void ensureTicketWritable(TicketModel ticket) {
+		if (ticket.getArchivedAt() != null) {
+			throw new ReadOnlyException("Archivierte Tickets sind schreibgeschützt");
+		}
+	}
+
+	private void ensureProjectWritable(long projectId) {
+		if (projectPolicies.isArchived(projectId)) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
+		}
 	}
 
 	private void validateCreateTicketRequest(CreateTicketRequest request) {

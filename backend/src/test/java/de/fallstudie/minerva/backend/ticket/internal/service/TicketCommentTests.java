@@ -23,7 +23,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
@@ -36,6 +38,7 @@ class TicketCommentTests {
 	private TicketCommentRepository ticketCommentRepository;
 	private UserService userService;
 	private ApplicationEventPublisher eventPublisher;
+	private ProjectPolicies projectPolicies;
 	private TicketCommentService ticketCommentService;
 
 	@BeforeEach
@@ -44,8 +47,9 @@ class TicketCommentTests {
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
 		userService = Mockito.mock(UserService.class);
 		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
+		projectPolicies = Mockito.mock(ProjectPolicies.class);
 		ticketCommentService = new TicketCommentService(ticketRepository, ticketCommentRepository,
-				userService, eventPublisher);
+				userService, eventPublisher, projectPolicies);
 	}
 
 	@Test
@@ -123,6 +127,24 @@ class TicketCommentTests {
 						new CreateTicketCommentRequest("Kommentar")));
 
 		verify(ticketCommentRepository, never()).save(any());
+	}
+
+	@Test
+	void createTicketCommentRejectsArchivedTicket() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		ticket.setArchivedAt(Instant.now());
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+
+		assertThrows(ReadOnlyException.class,
+				() -> ticketCommentService.createTicketComment(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, ticket.getId(),
+						new CreateTicketCommentRequest("Kommentar")));
+
+		verify(ticketCommentRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@ParameterizedTest

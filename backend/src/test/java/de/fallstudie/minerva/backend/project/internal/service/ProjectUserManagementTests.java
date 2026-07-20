@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
@@ -109,6 +110,20 @@ class ProjectUserManagementTests {
 				new AddProjectUserRequest(TestProjects.CONTRIBUTOR_USER_ID, "CONTRIBUTOR")));
 
 		verify(projectMemberRepository, never()).save(any());
+	}
+
+	@Test
+	void addProjectUserRejectsArchivedProject() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(projectRepository.existsByIdAndArchivedAtIsNotNull(TestProjects.PROJECT_ID))
+				.thenReturn(true);
+
+		assertThrows(ReadOnlyException.class, () -> projectService.addProjectUser(
+				TestProjects.OWNER, TestProjects.PROJECT_ID,
+				new AddProjectUserRequest(TestProjects.CONTRIBUTOR_USER_ID, "CONTRIBUTOR")));
+
+		verify(projectMemberRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@Test

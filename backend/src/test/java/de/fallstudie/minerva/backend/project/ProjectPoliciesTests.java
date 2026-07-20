@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
+import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.Identity;
 
@@ -26,7 +27,8 @@ class ProjectPoliciesTests {
 	void setUp() {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
-		projectPolicies = new ProjectPolicies(projectMemberRepository, projectRoleRepository);
+		projectPolicies = new ProjectPolicies(projectMemberRepository, projectRoleRepository,
+				Mockito.mock(ProjectRepository.class));
 	}
 
 	@Test

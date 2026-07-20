@@ -8,12 +8,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.time.Instant;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
@@ -77,5 +79,20 @@ class ProjectDetailsUpdateTests {
 						new UpdateProjectDetailsRequest("Minerva", "a".repeat(501))));
 
 		verify(projectRepository, never()).save(org.mockito.ArgumentMatchers.any());
+	}
+
+	@Test
+	void updateProjectDetailsRejectsArchivedProject() {
+		final var project = new ProjectModel();
+		project.setName("Minerva");
+		project.setArchivedAt(Instant.now());
+		when(projectRepository.findById(1L)).thenReturn(Optional.of(project));
+
+		assertThrows(ReadOnlyException.class,
+				() -> projectService.updateProjectDetails(TestProjects.OWNER, 1L,
+						new UpdateProjectDetailsRequest("Neu", "Beschreibung")));
+
+		verify(projectRepository, never()).save(org.mockito.ArgumentMatchers.any());
+		verify(eventPublisher, never()).publishEvent(org.mockito.ArgumentMatchers.any());
 	}
 }
