@@ -108,6 +108,7 @@ export type Ticket = {
 	assignedTo: number | null;
 	createdAt: string | null;
 	updatedAt: string | null;
+	archived: boolean;
 };
 
 export type TicketListResponse = {

@@ -9,6 +9,7 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 	const projectUsers = ref<model.ProjectUser[]>([]);
 	const ticketTypes = ref<TicketType[]>([]);
 	const tickets = ref<Ticket[]>([]);
+	const ticketsArchived = ref(false);
 
 	function setActiveProject(project: string | null): void {
 		activeProject.value = project;
@@ -26,12 +27,15 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		ticketTypes.value = projectTicketTypes;
 	}
 
-	function setTickets(projectTickets: Ticket[]): void {
+	function setTickets(projectTickets: Ticket[], archived: boolean = false): void {
 		tickets.value = projectTickets;
+		ticketsArchived.value = archived;
 	}
 
 	function addTicket(ticket: Ticket): void {
-		tickets.value.push(ticket);
+		if (!ticketsArchived.value) {
+			tickets.value.push(ticket);
+		}
 	}
 
 	function removeTicket(ticketId: number): void {

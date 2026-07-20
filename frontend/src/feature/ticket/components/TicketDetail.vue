@@ -24,6 +24,7 @@ const {
 	details: projectDetails,
 	projectUsers,
 	deleteTicket,
+	archiveTicket,
 	updateTicketStatus,
 	updateTicketPriority,
 	updateTicketDetails,
@@ -44,6 +45,7 @@ const emit = defineEmits<{
 const selectedTransition = ref<WorkflowTransition | null>(null);
 const selectedPriority = ref<TicketPriorityName | null>(null);
 const isDeletingTicket = ref(false);
+const isArchivingTicket = ref(false);
 const isUpdatingStatus = ref(false);
 const isUpdatingPriority = ref(false);
 const isUpdatingDetails = ref(false);
@@ -189,6 +191,27 @@ async function submitDeleteTicket(): Promise<void> {
 	}
 }
 
+async function submitArchiveTicket(): Promise<void> {
+	if (
+		isArchivingTicket.value ||
+		!canModifyTickets.value ||
+		props.ticket.archived ||
+		!confirm("Ticket wirklich archivieren?")
+	) {
+		return;
+	}
+
+	isArchivingTicket.value = true;
+
+	try {
+		await archiveTicket(props.ticket.id);
+	} catch {
+		alert("Das Ticket konnte nicht archiviert werden.");
+	} finally {
+		isArchivingTicket.value = false;
+	}
+}
+
 function beginDetailsEdit(field: "name" | "description"): void {
 	if (!canModifyTickets.value || isUpdatingDetails.value) {
 		return;
@@ -284,6 +307,9 @@ function formatDate(value: string | null): string {
 
 <template>
 	<article class="ticket-detail">
+		<p v-if="ticket.archived" class="ticket-detail__archive-banner" role="status">
+			Dieses Ticket ist archiviert.
+		</p>
 		<header class="ticket-detail__header">
 			<p class="ticket-detail__eyebrow">Ticket #{{ ticket.id }}</p>
 			<div v-if="editingField === 'name'" class="ticket-detail__inline-edit">
@@ -322,15 +348,19 @@ function formatDate(value: string | null): string {
 				</button>
 				<template v-else>{{ ticket.name }}</template>
 			</h3>
-			<button
-				v-if="canModifyTickets"
-				type="button"
-				class="ticket-detail__delete"
-				:disabled="isDeletingTicket"
-				@click="submitDeleteTicket"
-			>
-				Ticket löschen
-			</button>
+			<div v-if="canModifyTickets" class="ticket-detail__actions">
+				<button
+					v-if="!ticket.archived"
+					type="button"
+					:disabled="isArchivingTicket"
+					@click="submitArchiveTicket"
+				>
+					{{ isArchivingTicket ? "Wird archiviert..." : "Ticket archivieren" }}
+				</button>
+				<button type="button" :disabled="isDeletingTicket" @click="submitDeleteTicket">
+					Ticket löschen
+				</button>
+			</div>
 		</header>
 
 		<div v-if="editingField === 'description'" class="ticket-detail__inline-edit">
@@ -552,12 +582,26 @@ function formatDate(value: string | null): string {
 	font-size: 0.85rem;
 }
 
-.ticket-detail__delete {
+.ticket-detail__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 0.5rem;
+}
+
+.ticket-detail__actions button {
 	padding: 0.45rem 0.7rem;
 	border: 1px solid currentColor;
 	background: transparent;
 	color: inherit;
 	cursor: pointer;
+}
+
+.ticket-detail__archive-banner {
+	margin: 0;
+	padding: 0.75rem;
+	border: 2px solid currentColor;
+	font-weight: 700;
 }
 
 .ticket-detail__hint,

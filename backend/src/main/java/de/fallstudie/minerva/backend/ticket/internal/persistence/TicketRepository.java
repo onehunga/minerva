@@ -15,7 +15,9 @@ import de.fallstudie.minerva.backend.ticket.TicketStatisticsRecentTicket;
 import de.fallstudie.minerva.backend.ticket.TicketStatusCategory;
 
 public interface TicketRepository extends JpaRepository<TicketModel, Long> {
-	List<TicketModel> findAllByProjectIdOrderByNameAsc(long projectId);
+	List<TicketModel> findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(long projectId);
+
+	List<TicketModel> findAllByProjectIdAndArchivedAtIsNotNullOrderByNameAsc(long projectId);
 
 	Optional<TicketModel> findByIdAndProjectId(long id, long projectId);
 
@@ -29,6 +31,7 @@ public interface TicketRepository extends JpaRepository<TicketModel, Long> {
 				and wf.ticketTypeId = t.ticketTypeId
 			join WorkflowStatusModel ws on ws.id = t.statusId and ws.workflowId = wf.id
 			where t.projectId in :projectIds
+				and t.archivedAt is null
 				and t.priority = :priority
 				and ws.workflowStatusCategory = :category
 			""")
@@ -45,6 +48,7 @@ public interface TicketRepository extends JpaRepository<TicketModel, Long> {
 				and wf.ticketTypeId = t.ticketTypeId
 			join WorkflowStatusModel ws on ws.id = t.statusId and ws.workflowId = wf.id
 			where t.projectId in :projectIds
+				and t.archivedAt is null
 			order by t.createdAt desc, t.id desc
 			""")
 	List<TicketStatisticsRecentTicket> findRecentForStatistics(

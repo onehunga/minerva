@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -29,10 +30,11 @@ public class TicketController {
 
 	@GetMapping("/tickets")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
-	public TicketListResponse getTickets(@PathVariable long projectId) {
-		log.info("Requesting tickets for project with ID {}", projectId);
+	public TicketListResponse getTickets(@PathVariable long projectId,
+			@RequestParam(defaultValue = "false") boolean archived) {
+		log.info("Requesting tickets for project with ID {} (archived: {})", projectId, archived);
 
-		return ticketService.getTickets(projectId);
+		return ticketService.getTickets(projectId, archived);
 	}
 
 	@GetMapping("/ticket-types")
@@ -61,6 +63,15 @@ public class TicketController {
 		log.info("Deleting ticket with ID {} in project with ID {}", ticketId, projectId);
 
 		ticketService.deleteTicket(projectId, ticketId);
+	}
+
+	@PatchMapping("/tickets/{ticketId}/archive")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
+	public void archiveTicket(@PathVariable long projectId, @PathVariable long ticketId) {
+		log.info("Archiving ticket with ID {} in project with ID {}", ticketId, projectId);
+
+		ticketService.archiveTicket(projectId, ticketId);
 	}
 
 	@GetMapping("/tickets/{ticketId}/comments")

@@ -1,5 +1,6 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
@@ -50,11 +51,23 @@ public class TicketService {
 	private final TicketCommentRepository ticketCommentRepository;
 	private final ApplicationEventPublisher eventPublisher;
 
-	public TicketListResponse getTickets(long projectId) {
-		final var tickets = ticketRepository.findAllByProjectIdOrderByNameAsc(projectId).stream()
-				.map(this::toTicketResponse).toList();
+	public TicketListResponse getTickets(long projectId, boolean archived) {
+		final var ticketModels = archived
+				? ticketRepository.findAllByProjectIdAndArchivedAtIsNotNullOrderByNameAsc(projectId)
+				: ticketRepository.findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(projectId);
+		final var tickets = ticketModels.stream().map(this::toTicketResponse).toList();
 
 		return new TicketListResponse(tickets);
+	}
+
+	@Transactional
+	public void archiveTicket(long projectId, long ticketId) {
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		ticket.setArchivedAt(Instant.now());
+		ticketRepository.save(ticket);
+		ticketRepository.flush();
 	}
 
 	public TicketTypeListResponse getTicketTypes(long projectId) {
@@ -265,7 +278,8 @@ public class TicketService {
 		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
 				ticket.getStatusId(), ticket.getPriority(), ticket.getParentTicketId(),
 				ticket.getName(), ticket.getDescription(), ticket.getCreatedBy(),
-				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt());
+				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt(),
+				ticket.getArchivedAt() != null);
 	}
 
 	private void validateCreateTicketRequest(CreateTicketRequest request) {

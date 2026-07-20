@@ -10,3 +10,14 @@ databaseChangeLog:
               - column:
                   name: archived_at
                   type: TIMESTAMP
+  - changeSet:
+      id: 0006-ticket-archival
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: tickets
+            columns:
+              - column:
+                  name: archived_at
+                  type: TIMESTAMP
