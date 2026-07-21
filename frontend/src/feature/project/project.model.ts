@@ -21,8 +21,11 @@ export type ProjectDetails = {
 	id: number;
 	name: string;
 	description: string;
-	projectRole: ProjectRole;
+	projectRole: ProjectRole | null;
+	archived: boolean;
 };
+
+export type UpdateProjectDetailsRequest = Pick<ProjectDetails, "name" | "description">;
 
 export type ProjectUser = {
 	id: number;

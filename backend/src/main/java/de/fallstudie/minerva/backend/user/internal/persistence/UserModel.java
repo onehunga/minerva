@@ -1,5 +1,7 @@
 package de.fallstudie.minerva.backend.user.internal.persistence;
 
+import java.time.Instant;
+
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,7 +18,7 @@ public class UserModel {
 	private Long id;
 
 	@Setter
-	@Column(nullable = false, unique = true)
+	@Column(unique = true)
 	private String username;
 
 	@Setter
@@ -27,4 +29,8 @@ public class UserModel {
 	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "workspace_role_id")
 	private WorkspaceRoleModel workspaceRole;
+
+	@Setter
+	@Column(name = "deleted_at")
+	private Instant deletedAt;
 }

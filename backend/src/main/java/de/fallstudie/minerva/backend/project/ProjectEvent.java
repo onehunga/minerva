@@ -9,11 +9,21 @@ public sealed interface ProjectEvent {
 			String description) implements ProjectEvent {
 	}
 
+	record DetailsUpdated(long actorUserId, long projectId, String previousName, String newName,
+			String previousDescription, String newDescription) implements ProjectEvent {
+	}
+
+	record ProjectArchived(long actorUserId, long projectId, String name) implements ProjectEvent {
+	}
+
 	record UserAdded(long actorUserId, long projectId, long userId,
 			String role) implements ProjectEvent {
 	}
 
 	record UserRoleChanged(long actorUserId, long projectId, long userId, String oldRole,
 			String newRole) implements ProjectEvent {
+	}
+
+	record UserRemoved(long actorUserId, long projectId, long userId) implements ProjectEvent {
 	}
 }

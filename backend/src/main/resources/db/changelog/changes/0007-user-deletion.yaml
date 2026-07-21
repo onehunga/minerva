@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0007-user-deletion
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: deleted_at
+                  type: TIMESTAMP
+        - dropNotNullConstraint:
+            tableName: users
+            columnName: username
+            columnDataType: VARCHAR(255)

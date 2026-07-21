@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { getAuthorizationHeader, type TokenPair } from "@/api";
+import { clearTokens, getAuthorizationHeader, setTokens, type TokenPair } from "@/api";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, type Pinia } from "pinia";
 import { defineComponent } from "vue";
@@ -19,6 +19,7 @@ const userDetails: model.UserDetails = {
 
 class LoginUserRepository extends UserRepository {
 	loginCalls: { username: string; password: string }[] = [];
+	logoutCalls: string[] = [];
 
 	override async login(username: string, password: string): Promise<TokenPair> {
 		this.loginCalls.push({
@@ -31,6 +32,10 @@ class LoginUserRepository extends UserRepository {
 
 	override async details(): Promise<model.UserDetails> {
 		return userDetails;
+	}
+
+	override async logout(refreshToken: string): Promise<void> {
+		this.logoutCalls.push(refreshToken);
 	}
 }
 
@@ -45,8 +50,18 @@ const LoginHarness = defineComponent({
 	template: `<button type="button" @click="login('admin', 'secret')">Login</button>`,
 });
 
+const LogoutHarness = defineComponent({
+	setup() {
+		const { logout } = useUser();
+
+		return { logout };
+	},
+	template: `<button type="button" @click="logout">Logout</button>`,
+});
+
 describe("useUser", () => {
 	beforeEach(() => {
+		clearTokens();
 		sessionStorage.clear();
 	});
 
@@ -76,5 +91,29 @@ describe("useUser", () => {
 		expect(getAuthorizationHeader()).toBe("Bearer access-token");
 		expect(sessionStorage.getItem("minerva.refreshToken")).toBe("refresh-token");
 		expect(userStore.userDetails).toEqual(userDetails);
+	});
+
+	it("revokes the refresh token and clears the session", async () => {
+		const pinia: Pinia = createPinia();
+		const userRepository = new LoginUserRepository();
+		const userStore = useUserStore(pinia);
+		setTokens(tokens);
+		userStore.setUserDetails(userDetails);
+		const wrapper = mount(LogoutHarness, {
+			global: {
+				plugins: [pinia],
+				provide: {
+					[UserRepositoryKey]: userRepository,
+				},
+			},
+		});
+
+		await wrapper.get("button").trigger("click");
+		await flushPromises();
+
+		expect(userRepository.logoutCalls).toEqual(["refresh-token"]);
+		expect(getAuthorizationHeader()).toBeNull();
+		expect(sessionStorage.getItem("minerva.refreshToken")).toBeNull();
+		expect(userStore.userDetails).toBeNull();
 	});
 });

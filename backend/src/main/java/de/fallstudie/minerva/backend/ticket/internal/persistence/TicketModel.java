@@ -55,4 +55,7 @@ public class TicketModel {
 	@UpdateTimestamp
 	@Column(nullable = false)
 	private Instant updatedAt;
+
+	@Column(name = "archived_at")
+	private Instant archivedAt;
 }

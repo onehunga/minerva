@@ -44,8 +44,9 @@ export function useProject(projectId?: string) {
 		store.setProjectUsers(await projectRepository.getProjectUsers(Number(store.activeProject)));
 	}
 
-	async function fetchTickets() {
-		store.setTickets(await ticketRepository.getTickets(Number(store.activeProject)));
+	async function fetchTickets(archived: boolean = false): Promise<void> {
+		const tickets = await ticketRepository.getTickets(Number(store.activeProject), archived);
+		store.setTickets(tickets, archived);
 	}
 
 	async function fetchProjectData() {
@@ -63,8 +64,21 @@ export function useProject(projectId?: string) {
 		return newTicket;
 	}
 
+	async function updateProjectDetails(name: string, description: string): Promise<void> {
+		await projectRepository.updateProjectDetails(Number(store.activeProject), {
+			name,
+			description,
+		});
+		store.updateProjectDetails(name, description);
+	}
+
 	async function deleteTicket(ticketId: number): Promise<void> {
 		await ticketRepository.deleteTicket(Number(store.activeProject), ticketId);
+		store.removeTicket(ticketId);
+	}
+
+	async function archiveTicket(ticketId: number): Promise<void> {
+		await ticketRepository.archiveTicket(Number(store.activeProject), ticketId);
 		store.removeTicket(ticketId);
 	}
 
@@ -126,8 +140,11 @@ export function useProject(projectId?: string) {
 		projectUsers,
 		ticketTypes,
 		tickets,
+		fetchTickets,
 		createTicket,
+		updateProjectDetails,
 		deleteTicket,
+		archiveTicket,
 		updateTicketStatus,
 		updateTicketPriority,
 		updateTicketDetails,

@@ -18,8 +18,11 @@ const headingId = useId();
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_CREATED: "Projekt erstellt",
+	PROJECT_DETAILS_UPDATED: "Projektname oder Beschreibung geändert",
+	PROJECT_ARCHIVED: "Projekt archiviert",
 	PROJECT_USER_ADDED: "Nutzer hinzugefügt",
 	PROJECT_USER_ROLE_CHANGED: "Nutzerrolle geändert",
+	PROJECT_USER_REMOVED: "Nutzer entfernt",
 	TICKET_CREATED: "Ticket erstellt",
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
 	TICKET_STATUS_CHANGED: "Status geändert",
@@ -27,6 +30,8 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_PRIORITY_CHANGED: "Priorität geändert",
 	TICKET_ASSIGNEE_CHANGED: "Bearbeiter geändert",
 	TICKET_SUBTICKET_ADDED: "Subticket hinzugefügt",
+	TICKET_ARCHIVED: "Ticket archiviert",
+	TICKET_DELETED: "Ticket gelöscht",
 };
 
 function formatType(type: ActivityEventType): string {
@@ -56,7 +61,12 @@ function formatDate(value: string | null): string {
 			<li v-for="event in events" :key="event.id" class="activity-timeline__item">
 				<p class="activity-timeline__title">{{ formatType(event.type) }}</p>
 				<small>
-					{{ event.actorUsername ?? `#${event.actorUserId}` }} -
+					{{
+						event.actorDeleted
+							? "Gelöschter Nutzer"
+							: (event.actorUsername ?? `#${event.actorUserId}`)
+					}}
+					-
 					{{ formatDate(event.occurredAt) }}
 				</small>
 				<details class="activity-timeline__payload">

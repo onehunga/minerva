@@ -1,11 +1,14 @@
 package de.fallstudie.minerva.backend.project;
 
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
+import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
 import org.springframework.stereotype.Component;
 
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
 import de.fallstudie.minerva.backend.user.Identity;
+import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,11 +18,18 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectPolicies {
 	private final ProjectMemberRepository projectMemberRepository;
 	private final ProjectRoleRepository projectRoleRepository;
+	private final ProjectRepository projectRepository;
+	private final UserService userService;
+
+	public boolean isArchived(long projectId) {
+		return projectRepository.existsByIdAndArchivedAtIsNotNull(projectId);
+	}
 
 	public boolean canViewProject(Identity userId, long projectId) {
 		log.trace("Checking if user {} can view project {}", userId, projectId);
 
-		return projectMemberRepository.existsByProjectIdAndUserId(projectId, userId.userId());
+		return isAdmin(userId)
+				|| projectMemberRepository.existsByProjectIdAndUserId(projectId, userId.userId());
 	}
 
 	public boolean canManageProjectUsers(Identity identity, long projectId) {
@@ -39,6 +49,10 @@ public class ProjectPolicies {
 				.orElseThrow(() -> new IllegalStateException("Role with id " + roleId
 						+ " does not exist, but existence was checked before"));
 		return projectRole.getName() == ProjectRoleName.OWNER;
+	}
+
+	public boolean canUpdateProjectUserRole(Identity identity, long projectId) {
+		return isAdmin(identity) || canManageProjectUsers(identity, projectId);
 	}
 
 	public boolean canModifyTickets(Identity identity, long projectId) {
@@ -78,5 +92,10 @@ public class ProjectPolicies {
 
 		return projectRole.getName() == ProjectRoleName.OWNER
 				|| projectRole.getName() == ProjectRoleName.CONTRIBUTOR;
+	}
+
+	private boolean isAdmin(Identity identity) {
+		return userService.findActiveById(identity.userId())
+				.map(user -> user.workspaceRole() == WorkspaceRoleName.ADMIN).orElse(false);
 	}
 }

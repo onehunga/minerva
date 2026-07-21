@@ -1,8 +1,6 @@
 package de.fallstudie.minerva.backend.ticket;
 
-public sealed interface TicketEvent permits TicketEvent.TicketCreated, TicketEvent.CommentCreated,
-		TicketEvent.StatusChanged, TicketEvent.DetailsUpdated, TicketEvent.PriorityChanged,
-		TicketEvent.AssigneeChanged, TicketEvent.SubticketAdded {
+public sealed interface TicketEvent {
 	long actorUserId();
 
 	long projectId();
@@ -38,5 +36,13 @@ public sealed interface TicketEvent permits TicketEvent.TicketCreated, TicketEve
 
 	record SubticketAdded(long actorUserId, long projectId, long ticketId, long subticketId,
 			String subticketName) implements TicketEvent {
+	}
+
+	record TicketArchived(long actorUserId, long projectId, long ticketId,
+			String name) implements TicketEvent {
+	}
+
+	record TicketDeleted(long actorUserId, long projectId, long ticketId,
+			String name) implements TicketEvent {
 	}
 }

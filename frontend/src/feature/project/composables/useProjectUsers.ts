@@ -13,6 +13,7 @@ export function useProjectUsers(projectId: number) {
 	const isLoadingUsers = ref(false);
 	const isAddingUser = ref(false);
 	const updatingUserRoleId = ref<number | null>(null);
+	const removingUserId = ref<number | null>(null);
 	const errorMessage = ref("");
 	const successMessage = ref("");
 
@@ -65,15 +66,38 @@ export function useProjectUsers(projectId: number) {
 		}
 	}
 
+	async function removeProjectUser(userId: number): Promise<boolean> {
+		errorMessage.value = "";
+		successMessage.value = "";
+		removingUserId.value = userId;
+
+		try {
+			await projectRepository.removeProjectUser(projectId, userId);
+			for (const ticket of store.tickets.filter((ticket) => ticket.assignedTo === userId)) {
+				store.updateTicketAssignee(ticket.id, null);
+			}
+			await loadUsers();
+			successMessage.value = "Projektmitglied wurde entfernt.";
+			return true;
+		} catch {
+			errorMessage.value = "Projektmitglied konnte nicht entfernt werden.";
+			return false;
+		} finally {
+			removingUserId.value = null;
+		}
+	}
+
 	return {
 		users,
 		isLoadingUsers,
 		isAddingUser,
 		updatingUserRoleId,
+		removingUserId,
 		errorMessage,
 		successMessage,
 		loadUsers,
 		addProjectUser,
 		updateProjectUserRole,
+		removeProjectUser,
 	};
 }

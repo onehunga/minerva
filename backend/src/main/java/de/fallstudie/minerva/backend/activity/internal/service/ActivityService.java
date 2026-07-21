@@ -8,7 +8,6 @@ import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScope
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScopeRepository;
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventListResponse;
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventResponse;
-import de.fallstudie.minerva.backend.user.UserDTO;
 import de.fallstudie.minerva.backend.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -95,17 +94,13 @@ public class ActivityService {
 	}
 
 	private ActivityEventResponse toResponse(ActivityEventModel event) {
+		final var actor = event.getActorUserId() == null
+				? null
+				: userService.findById(event.getActorUserId()).orElse(null);
 		return new ActivityEventResponse(event.getId(), event.getType(), event.getSchemaVersion(),
-				event.getActorUserId(), actorUsername(event.getActorUserId()),
-				event.getOccurredAt(), toJsonNode(event.getPayloadJson()));
-	}
-
-	private String actorUsername(Long actorUserId) {
-		if (actorUserId == null) {
-			return null;
-		}
-
-		return userService.findById(actorUserId).map(UserDTO::username).orElse(null);
+				event.getActorUserId(), actor == null ? null : actor.username(),
+				actor != null && actor.deleted(), event.getOccurredAt(),
+				toJsonNode(event.getPayloadJson()));
 	}
 
 	private String toJson(Object payload) {

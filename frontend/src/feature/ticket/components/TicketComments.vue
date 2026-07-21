@@ -99,7 +99,10 @@ watch(
 		<ul v-else class="ticket-comments__list">
 			<li v-for="comment in comments" :key="comment.id" class="ticket-comments__item">
 				<p>{{ comment.content }}</p>
-				<small>{{ comment.authorUsername }} - {{ formatDate(comment.createdAt) }}</small>
+				<small>
+					{{ comment.authorDeleted ? "Gelöschter Nutzer" : comment.authorUsername }} -
+					{{ formatDate(comment.createdAt) }}
+				</small>
 			</li>
 		</ul>
 

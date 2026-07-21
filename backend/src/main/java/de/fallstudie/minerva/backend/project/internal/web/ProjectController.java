@@ -3,6 +3,7 @@ package de.fallstudie.minerva.backend.project.internal.web;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +41,26 @@ public class ProjectController {
 		return projectService.getProjectById(identity, id);
 	}
 
+	@PatchMapping("/{id}/details")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void updateProjectDetails(@AuthenticationPrincipal Identity identity,
+			@PathVariable long id, @RequestBody UpdateProjectDetailsRequest request) {
+		log.info("User with ID {} is updating details for project with ID {}", identity.userId(),
+				id);
+
+		projectService.updateProjectDetails(identity, id, request);
+	}
+
+	@PatchMapping("/{id}/archive")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void archiveProject(@AuthenticationPrincipal Identity identity, @PathVariable long id) {
+		log.info("User with ID {} is archiving project with ID {}", identity.userId(), id);
+
+		projectService.archiveProject(identity, id);
+	}
+
 	@GetMapping("/{id}/users")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #id)")
 	public ProjectUserListResponse getProjectUsers(@AuthenticationPrincipal Identity identity,
@@ -63,7 +84,7 @@ public class ProjectController {
 
 	@PatchMapping("/{id}/users/{userId}/role")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	@PreAuthorize("@projectPolicy.canUpdateProjectUserRole(principal, #id)")
 	public void updateProjectUserRole(@AuthenticationPrincipal Identity identity,
 			@PathVariable long id, @PathVariable long userId,
 			@RequestBody UpdateProjectUserRoleRequest request) {
@@ -71,5 +92,16 @@ public class ProjectController {
 				identity.userId(), userId, id);
 
 		projectService.updateProjectUserRole(identity, id, userId, request);
+	}
+
+	@DeleteMapping("/{id}/users/{userId}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void removeProjectUser(@AuthenticationPrincipal Identity identity, @PathVariable long id,
+			@PathVariable long userId) {
+		log.info("User with ID {} is removing user {} from project with ID {}", identity.userId(),
+				userId, id);
+
+		projectService.removeProjectUser(identity, id, userId);
 	}
 }

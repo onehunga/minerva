@@ -6,6 +6,7 @@ export const UserRepositoryKey = Symbol();
 
 export interface IUserRepository {
 	login(username: string, password: string): Promise<TokenPair>;
+	logout(refreshToken: string): Promise<void>;
 	details(): Promise<UserDetails>;
 	createUser(username: string, password: string, role: UserRole): Promise<void>;
 	getAllUsers(): Promise<UserRecordList>;
@@ -21,6 +22,10 @@ export interface IUserRepository {
 export class UserRepository implements IUserRepository {
 	async login(username: string, password: string): Promise<TokenPair> {
 		return api.login(username, password);
+	}
+
+	async logout(refreshToken: string): Promise<void> {
+		return api.logout(refreshToken);
 	}
 
 	async details(): Promise<UserDetails> {

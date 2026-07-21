@@ -50,6 +50,7 @@ function closeEditModal(): void {
 							...
 						</button>
 						<button
+							v-if="user.role === 'USER'"
 							type="button"
 							:disabled="deletingUserId !== null"
 							@click="deleteUser(user)"

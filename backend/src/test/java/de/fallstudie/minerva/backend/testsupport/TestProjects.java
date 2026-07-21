@@ -123,7 +123,7 @@ public final class TestProjects {
 	}
 
 	public static UserDTO user(long id, String username) {
-		return new UserDTO(id, username, "hash", WorkspaceRoleName.USER);
+		return new UserDTO(id, username, "hash", WorkspaceRoleName.USER, false);
 	}
 
 	public static TicketTypeModel ticketType(long id, String name) {

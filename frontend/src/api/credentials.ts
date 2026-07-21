@@ -5,7 +5,12 @@ export type TokenPair = {
 	refreshToken: string;
 };
 
-const authPaths: Set<string> = new Set(["/v1/auth/login", "/v1/auth/register", "/v1/auth/refresh"]);
+const authPaths: Set<string> = new Set([
+	"/v1/auth/login",
+	"/v1/auth/register",
+	"/v1/auth/refresh",
+	"/v1/auth/logout",
+]);
 
 const refreshTokenStorage: Storage = sessionStorage;
 const refreshTokenStorageKey: string = "minerva.refreshToken";
@@ -43,6 +48,10 @@ export function getAuthorizationHeader(): string | null {
 	}
 
 	return `Bearer ${tokens.value.accessToken}`;
+}
+
+export function getRefreshToken(): string | null {
+	return tokens.value?.refreshToken ?? null;
 }
 
 let refreshPromise: Promise<TokenPair> | null = null;

@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 class AuthServiceTests {
 	private static final long USER_ID = 42L;
 	private static final UserDTO USER = new UserDTO(USER_ID, "jane", "password-hash",
-			WorkspaceRoleName.USER);
+			WorkspaceRoleName.USER, false);
 
 	private UserService userService;
 	private RefreshTokenRepository refreshTokenRepository;
@@ -87,7 +87,7 @@ class AuthServiceTests {
 
 		when(refreshTokenRepository.findByTokenHash(refreshTokenHash))
 				.thenReturn(Optional.of(storedToken));
-		when(userService.findById(USER_ID)).thenReturn(Optional.of(USER));
+		when(userService.findActiveById(USER_ID)).thenReturn(Optional.of(USER));
 		when(jwtService.generateToken(USER_ID)).thenReturn("access-token");
 
 		final var response = authService.refresh(new RefreshTokenRequest(refreshToken));
@@ -96,7 +96,14 @@ class AuthServiceTests {
 		assertFalse(response.refreshToken().isBlank());
 		verify(refreshTokenRepository).deleteByTokenHash(refreshTokenHash);
 		verify(refreshTokenRepository).flush();
-		verify(userService).findById(USER_ID);
+		verify(userService).findActiveById(USER_ID);
+	}
+
+	@Test
+	void logoutRevokesRefreshToken() {
+		authService.logout(new RefreshTokenRequest("refresh-token"));
+
+		verify(refreshTokenRepository).deleteByTokenHash(hash("refresh-token"));
 	}
 
 	private static String hash(String value) {

@@ -12,8 +12,13 @@ import type {
 	UpdateTicketDetailsRequest,
 } from "./ticket.model";
 
-export async function getTickets(projectId: number): Promise<TicketListResponse> {
-	return client.get(`/v1/projects/${projectId}/tickets`).then((res) => res.data);
+export async function getTickets(
+	projectId: number,
+	archived: boolean = false,
+): Promise<TicketListResponse> {
+	return client
+		.get(`/v1/projects/${projectId}/tickets`, { params: { archived } })
+		.then((res) => res.data);
 }
 
 export async function getTicketTypes(projectId: number): Promise<TicketTypeListResponse> {
@@ -29,6 +34,10 @@ export async function createTicket(
 
 export async function deleteTicket(projectId: number, ticketId: number): Promise<void> {
 	return client.delete(`/v1/projects/${projectId}/tickets/${ticketId}`);
+}
+
+export async function archiveTicket(projectId: number, ticketId: number): Promise<void> {
+	return client.patch(`/v1/projects/${projectId}/tickets/${ticketId}/archive`);
 }
 
 export async function updateTicketStatus(

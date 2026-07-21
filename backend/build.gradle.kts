@@ -61,6 +61,7 @@ spotless {
             org.eclipse.jdt.core.formatter.tabulation.size=4
             org.eclipse.jdt.core.formatter.indentation.size=4
             org.eclipse.jdt.core.formatter.lineSplit=100
+            org.eclipse.jdt.core.formatter.alignment_for_enum_constants=49
             """.trimIndent(),
         )
 

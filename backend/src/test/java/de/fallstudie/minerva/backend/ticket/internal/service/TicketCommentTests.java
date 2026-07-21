@@ -1,6 +1,8 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -23,19 +25,24 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketCommentRequest;
 import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.UserDTO;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 
 class TicketCommentTests {
 	private TicketRepository ticketRepository;
 	private TicketCommentRepository ticketCommentRepository;
 	private UserService userService;
 	private ApplicationEventPublisher eventPublisher;
+	private ProjectPolicies projectPolicies;
 	private TicketCommentService ticketCommentService;
 
 	@BeforeEach
@@ -44,8 +51,9 @@ class TicketCommentTests {
 		ticketCommentRepository = Mockito.mock(TicketCommentRepository.class);
 		userService = Mockito.mock(UserService.class);
 		eventPublisher = Mockito.mock(ApplicationEventPublisher.class);
+		projectPolicies = Mockito.mock(ProjectPolicies.class);
 		ticketCommentService = new TicketCommentService(ticketRepository, ticketCommentRepository,
-				userService, eventPublisher);
+				userService, eventPublisher, projectPolicies);
 	}
 
 	@Test
@@ -71,6 +79,28 @@ class TicketCommentTests {
 		assertEquals(TestProjects.OWNER_USER_ID, response.comments().getFirst().authorId());
 		assertEquals("owner", response.comments().getFirst().authorUsername());
 		assertEquals("Erster Kommentar", response.comments().getFirst().content());
+	}
+
+	@Test
+	void getTicketCommentsMarksDeletedAuthorWithoutAUsername() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		final var comment = ticketComment(1L, ticket.getId(), TestProjects.OWNER_USER_ID,
+				"Historischer Kommentar");
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+		when(ticketCommentRepository.findAllByTicketIdOrderByCreatedAtAscIdAsc(ticket.getId()))
+				.thenReturn(List.of(comment));
+		when(userService.findById(TestProjects.OWNER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OWNER_USER_ID, null, "deleted",
+						WorkspaceRoleName.USER, true)));
+
+		final var response = ticketCommentService
+				.getTicketComments(TestProjects.PROJECT_ID, ticket.getId()).comments().getFirst();
+
+		assertNull(response.authorUsername());
+		assertTrue(response.authorDeleted());
 	}
 
 	@Test
@@ -123,6 +153,24 @@ class TicketCommentTests {
 						new CreateTicketCommentRequest("Kommentar")));
 
 		verify(ticketCommentRepository, never()).save(any());
+	}
+
+	@Test
+	void createTicketCommentRejectsArchivedTicket() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		ticket.setArchivedAt(Instant.now());
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+
+		assertThrows(ReadOnlyException.class,
+				() -> ticketCommentService.createTicketComment(TestProjects.OWNER,
+						TestProjects.PROJECT_ID, ticket.getId(),
+						new CreateTicketCommentRequest("Kommentar")));
+
+		verify(ticketCommentRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@ParameterizedTest

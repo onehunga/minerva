@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.time.Instant;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
@@ -106,6 +108,21 @@ class TicketDetailsUpdateTests {
 						new UpdateTicketDetailsRequest("Neuer Name", "Beschreibung")));
 
 		verify(ticketRepository, never()).save(any());
+	}
+
+	@Test
+	void updateTicketDetailsRejectsArchivedTicket() {
+		final var ticket = ticket();
+		ticket.setArchivedAt(Instant.now());
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+
+		assertThrows(ReadOnlyException.class,
+				() -> ticketService.updateTicketDetails(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						ticket.getId(), new UpdateTicketDetailsRequest("Neu", "Beschreibung")));
+
+		verify(ticketRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@ParameterizedTest

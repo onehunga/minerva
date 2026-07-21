@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.ticket.internal.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.time.Instant;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,17 @@ class TicketRepositoryStatisticsTests {
 		ticket.setPriority(TicketPriorityName.HIGH);
 		ticketRepository.saveAndFlush(ticket);
 
+		final var archivedTicket = new TicketModel();
+		archivedTicket.setProjectId(PROJECT_ID);
+		archivedTicket.setTicketTypeId(TICKET_TYPE_ID);
+		archivedTicket.setStatusId(status.getId());
+		archivedTicket.setName("Archiviertes Ticket");
+		archivedTicket.setDescription("Beschreibung");
+		archivedTicket.setCreatedBy(1L);
+		archivedTicket.setPriority(TicketPriorityName.HIGH);
+		archivedTicket.setArchivedAt(Instant.now());
+		ticketRepository.saveAndFlush(archivedTicket);
+
 		final var count = ticketRepository.countForStatistics(List.of(PROJECT_ID),
 				TicketPriorityName.HIGH, TicketStatusCategory.OPEN);
 		final var recent = ticketRepository.findRecentForStatistics(List.of(PROJECT_ID),
@@ -62,5 +74,9 @@ class TicketRepositoryStatisticsTests {
 		assertEquals(1, recent.size());
 		assertEquals(ticket.getId(), recent.getFirst().id());
 		assertEquals("Offen", recent.getFirst().statusName());
+		assertEquals(List.of(ticket),
+				ticketRepository.findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(PROJECT_ID));
+		assertEquals(List.of(archivedTicket), ticketRepository
+				.findAllByProjectIdAndArchivedAtIsNotNullOrderByNameAsc(PROJECT_ID));
 	}
 }

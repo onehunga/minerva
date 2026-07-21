@@ -26,7 +26,7 @@ public class ProjectModel {
 	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "projects_id_seq")
 	private long id;
 
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false)
 	@Setter
 	private String name;
 
@@ -44,4 +44,8 @@ public class ProjectModel {
 	@UpdateTimestamp
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt = Instant.now();
+
+	@Column(name = "archived_at")
+	@Setter
+	private Instant archivedAt;
 }

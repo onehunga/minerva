@@ -4,7 +4,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
@@ -26,6 +28,7 @@ public class TicketCommentService {
 	private final TicketCommentRepository ticketCommentRepository;
 	private final UserService userService;
 	private final ApplicationEventPublisher eventPublisher;
+	private final ProjectPolicies projectPolicies;
 
 	public TicketCommentListResponse getTicketComments(long projectId, long ticketId) {
 		ensureTicketExists(projectId, ticketId);
@@ -41,7 +44,7 @@ public class TicketCommentService {
 	public TicketCommentResponse createTicketComment(Identity identity, long projectId,
 			long ticketId, CreateTicketCommentRequest request) {
 		final var content = validateCreateTicketCommentRequest(request);
-		ensureTicketExists(projectId, ticketId);
+		ensureTicketWritable(projectId, ticketId);
 
 		final var comment = new TicketCommentModel();
 		comment.setTicketId(ticketId);
@@ -60,12 +63,23 @@ public class TicketCommentService {
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
 	}
 
+	private void ensureTicketWritable(long projectId, long ticketId) {
+		if (projectPolicies.isArchived(projectId)) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
+		}
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		if (ticket.getArchivedAt() != null) {
+			throw new ReadOnlyException("Archivierte Tickets sind schreibgeschützt");
+		}
+	}
+
 	private TicketCommentResponse toTicketCommentResponse(TicketCommentModel comment) {
 		final var author = userService.findById(comment.getAuthorId())
 				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 
 		return new TicketCommentResponse(comment.getId(), comment.getTicketId(),
-				comment.getAuthorId(), author.username(), comment.getContent(),
+				comment.getAuthorId(), author.username(), author.deleted(), comment.getContent(),
 				comment.getCreatedAt(), comment.getUpdatedAt());
 	}
 

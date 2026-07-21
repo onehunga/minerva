@@ -3,9 +3,11 @@ import { computed, ref, watch } from "vue";
 import TicketDetail from "./TicketDetail.vue";
 import { useProject } from "@/feature/project";
 
-const { details: projectDetails, ticketTypes, tickets } = useProject();
+const { details: projectDetails, ticketTypes, tickets, fetchTickets } = useProject();
 
 const selectedTicketId = ref<number | null>(null);
+const showArchived = ref(false);
+const isLoadingTickets = ref(false);
 
 const selectedTicket = computed(() =>
 	tickets.value.find((ticket) => ticket.id === selectedTicketId.value),
@@ -32,13 +34,37 @@ watch(
 	},
 	{ immediate: true },
 );
+
+watch(showArchived, async (archived) => {
+	isLoadingTickets.value = true;
+
+	try {
+		await fetchTickets(archived);
+	} catch {
+		alert("Die Tickets konnten nicht geladen werden.");
+	} finally {
+		isLoadingTickets.value = false;
+	}
+});
 </script>
 
 <template>
 	<div class="ticket-list">
+		<label class="ticket-list__filter">
+			Ticketansicht
+			<select v-model="showArchived" :disabled="isLoadingTickets">
+				<option :value="false">Aktive Tickets</option>
+				<option :value="true">Archivierte Tickets</option>
+			</select>
+		</label>
 		<p v-if="projectDetails == null">Tickets werden geladen...</p>
+		<p v-else-if="isLoadingTickets" class="ticket-list__message">Tickets werden geladen...</p>
 		<p v-else-if="tickets.length === 0" class="ticket-list__message">
-			Für dieses Projekt sind noch keine Tickets angelegt.
+			{{
+				showArchived
+					? "Für dieses Projekt sind keine archivierten Tickets vorhanden."
+					: "Für dieses Projekt sind noch keine aktiven Tickets angelegt."
+			}}
 		</p>
 		<div v-else class="ticket-list__content">
 			<aside class="ticket-list__panel" aria-label="Tickets">
@@ -82,6 +108,19 @@ watch(
 	grid-template-columns: minmax(12rem, 18rem) minmax(0, 1fr);
 	gap: 1rem;
 	align-items: stretch;
+}
+
+.ticket-list__filter {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.ticket-list__filter select {
+	padding: 0.45rem 0.6rem;
+	background: Canvas;
+	color: CanvasText;
+	font: inherit;
 }
 
 .ticket-list__panel {

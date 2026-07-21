@@ -108,6 +108,7 @@ export type Ticket = {
 	assignedTo: number | null;
 	createdAt: string | null;
 	updatedAt: string | null;
+	archived: boolean;
 };
 
 export type TicketListResponse = {
@@ -118,7 +119,8 @@ export type TicketComment = {
 	id: number;
 	ticketId: number;
 	authorId: number;
-	authorUsername: string;
+	authorUsername: string | null;
+	authorDeleted: boolean;
 	content: string;
 	createdAt: string | null;
 	updatedAt: string | null;

@@ -22,4 +22,9 @@ public class AuthController {
 	public TokenResponse refresh(@RequestBody RefreshTokenRequest request) {
 		return authService.refresh(request);
 	}
+
+	@PostMapping("/logout")
+	public void logout(@RequestBody RefreshTokenRequest request) {
+		authService.logout(request);
+	}
 }

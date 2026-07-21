@@ -5,19 +5,22 @@ import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 import de.fallstudie.minerva.backend.user.WorkspaceRoleService;
+import de.fallstudie.minerva.backend.user.UserEvent;
 import de.fallstudie.minerva.backend.user.internal.persistence.UserModel;
 import de.fallstudie.minerva.backend.user.internal.persistence.UserRepository;
 import de.fallstudie.minerva.backend.user.internal.web.UserRecordListResponse;
 import de.fallstudie.minerva.backend.user.internal.web.UserRecordResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
 public class ManageUsersService {
-	private static final String ADMIN_USERNAME = "admin";
 	private static final int MIN_USERNAME_LENGTH = 3;
 	private static final int MAX_USERNAME_LENGTH = 50;
 	private static final int MIN_PASSWORD_LENGTH = 8;
@@ -26,6 +29,7 @@ public class ManageUsersService {
 	private final PasswordEncoder passwordEncoder;
 	private final WorkspaceRoleService workspaceRoleService;
 	private final UserRepository userRepository;
+	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
 	public void createUser(String username, String password, String workspaceRole) {
@@ -33,7 +37,7 @@ public class ManageUsersService {
 		validatePassword(password);
 		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
 
-		if (userRepository.existsByUsername(validatedUsername)) {
+		if (userRepository.existsByUsernameAndDeletedAtIsNull(validatedUsername)) {
 			throw new DuplicateResourceException("Benutzername ist bereits vergeben");
 		}
 
@@ -53,8 +57,7 @@ public class ManageUsersService {
 	@Transactional
 	public void updateUserRole(long userId, String workspaceRole) {
 		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
-		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
+		final var user = findActiveUser(userId);
 
 		final var currentRoleName = user.getWorkspaceRole().getName();
 
@@ -78,14 +81,13 @@ public class ManageUsersService {
 	@Transactional
 	public void updateUsername(long userId, String username) {
 		final var validatedUsername = validateUsername(username);
-		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
+		final var user = findActiveUser(userId);
 
 		if (user.getUsername().equals(validatedUsername)) {
 			return;
 		}
 
-		if (userRepository.existsByUsername(validatedUsername)) {
+		if (userRepository.existsByUsernameAndDeletedAtIsNull(validatedUsername)) {
 			throw new DuplicateResourceException("Benutzername ist bereits vergeben");
 		}
 
@@ -97,8 +99,7 @@ public class ManageUsersService {
 	@Transactional
 	public void updatePassword(long userId, String password) {
 		validatePassword(password);
-		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
+		final var user = findActiveUser(userId);
 
 		user.setPassword(passwordEncoder.encode(password));
 		userRepository.save(user);
@@ -106,7 +107,7 @@ public class ManageUsersService {
 	}
 
 	public UserRecordListResponse getAllUsers() {
-		final var users = userRepository.findAll().stream()
+		final var users = userRepository.findAllByDeletedAtIsNull().stream()
 				.map(user -> new UserRecordResponse(user.getId(), user.getUsername(),
 						user.getWorkspaceRole().getName()))
 				.toList();
@@ -115,23 +116,32 @@ public class ManageUsersService {
 	}
 
 	@Transactional
-	public void deleteUser(long userId) {
-		final var user = userRepository.findById(userId)
-				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
+	public void deleteUser(long actorUserId, long userId) {
+		final var user = findActiveUser(userId);
 
-		userRepository.delete(user);
+		if (user.getWorkspaceRole().getName() == WorkspaceRoleName.ADMIN) {
+			throw new ValidationException(
+					"Admin-Benutzer müssen vor dem Löschen herabgestuft werden");
+		}
+
+		user.setUsername(null);
+		user.setPassword("deleted");
+		user.setDeletedAt(Instant.now());
+		userRepository.save(user);
 		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.Deleted(actorUserId, userId));
 	}
 
 	private void validateAdminCanBeDemoted(UserModel user) {
-		if (ADMIN_USERNAME.equals(user.getUsername())) {
-			throw new ValidationException(
-					"Der initiale Admin-Benutzer darf nicht herabgestuft werden");
-		}
-
-		if (userRepository.countByWorkspaceRole_Name(WorkspaceRoleName.ADMIN) <= 1) {
+		if (userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN)
+				.size() <= 1) {
 			throw new ValidationException("Mindestens ein Admin-Benutzer muss erhalten bleiben");
 		}
+	}
+
+	private UserModel findActiveUser(long userId) {
+		return userRepository.findById(userId).filter(user -> user.getDeletedAt() == null)
+				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 	}
 
 	private String validateUsername(String username) {

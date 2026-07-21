@@ -1,7 +1,12 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -13,6 +18,7 @@ import org.mockito.Mockito;
 import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
@@ -26,6 +32,7 @@ class ProjectQueryTests {
 	private ProjectRepository projectRepository;
 	private ProjectRoleRepository projectRoleRepository;
 	private ProjectService projectService;
+	private ApplicationEventPublisher eventPublisher;
 
 	@BeforeEach
 	void setUp() {
@@ -33,8 +40,9 @@ class ProjectQueryTests {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRepository = Mockito.mock(ProjectRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
+		eventPublisher = mock(ApplicationEventPublisher.class);
 		projectService = new ProjectService(projectMemberRepository, projectRepository,
-				projectRoleRepository, userService, Mockito.mock(ApplicationEventPublisher.class));
+				projectRoleRepository, userService, eventPublisher);
 	}
 
 	@Test
@@ -70,6 +78,7 @@ class ProjectQueryTests {
 		assertEquals("Minerva", response.name());
 		assertEquals("Ticket project", response.description());
 		assertEquals(ProjectRoleName.OWNER, response.projectRole());
+		assertFalse(response.archived());
 	}
 
 	@Test
@@ -104,5 +113,43 @@ class ProjectQueryTests {
 
 		assertThrows(ResourceNotFoundException.class,
 				() -> projectService.getProjectById(TestProjects.OWNER, TestProjects.PROJECT_ID));
+	}
+
+	@Test
+	void archiveProjectArchivesExistingProject() {
+		final var project = TestProjects.project(TestProjects.PROJECT_ID);
+		when(projectRepository.findById(TestProjects.PROJECT_ID)).thenReturn(Optional.of(project));
+
+		projectService.archiveProject(TestProjects.OWNER, TestProjects.PROJECT_ID);
+
+		assertNotNull(project.getArchivedAt());
+		verify(projectRepository).save(project);
+		verify(projectRepository).flush();
+		verify(eventPublisher).publishEvent(new ProjectEvent.ProjectArchived(
+				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID, "Minerva"));
+	}
+
+	@Test
+	void archiveProjectDoesNotPublishAnotherEventForArchivedProject() {
+		final var project = TestProjects.project(TestProjects.PROJECT_ID);
+		project.setArchivedAt(java.time.Instant.now());
+		when(projectRepository.findById(TestProjects.PROJECT_ID)).thenReturn(Optional.of(project));
+
+		projectService.archiveProject(TestProjects.OWNER, TestProjects.PROJECT_ID);
+
+		verify(projectRepository, never()).save(Mockito.any());
+		verify(projectRepository, never()).flush();
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
+	}
+
+	@Test
+	void archiveProjectRejectsUnknownProject() {
+		when(projectRepository.findById(TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> projectService.archiveProject(TestProjects.OWNER, TestProjects.PROJECT_ID));
+		verify(projectRepository, never()).save(Mockito.any());
+		verify(projectRepository, never()).flush();
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
 	}
 }

@@ -1,10 +1,12 @@
 package de.fallstudie.minerva.backend.user.internal.web;
 
 import de.fallstudie.minerva.backend.user.internal.service.ManageUsersService;
+import de.fallstudie.minerva.backend.user.Identity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -67,9 +69,9 @@ public class ManageUserController {
 	@DeleteMapping("/{userId}")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void delete(@PathVariable long userId) {
+	public void delete(@AuthenticationPrincipal Identity identity, @PathVariable long userId) {
 		log.trace("Deleting user with id {}", userId);
 
-		userService.deleteUser(userId);
+		userService.deleteUser(identity.userId(), userId);
 	}
 }

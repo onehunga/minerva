@@ -1,5 +1,7 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
+import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -7,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.CreateProjectCommand;
@@ -25,8 +28,10 @@ import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
 import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
 import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
+import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectDetailsRequest;
 import de.fallstudie.minerva.backend.user.Identity;
 import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +47,10 @@ public class ProjectService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	public ProjectRecordListResponse getAllProjects(Identity identity) {
-		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
+		final var projectModels = isAdmin(identity)
+				? projectRepository.findAllByArchivedAtIsNull()
+				: projectRepository.findAllByUserId(identity.userId());
+		final var projects = projectModels.stream()
 				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
 				.toList();
 
@@ -53,15 +61,61 @@ public class ProjectService {
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
-		final var member = projectMemberRepository
-				.findByProjectIdAndUserId(projectId, identity.userId())
-				.orElseThrow(() -> new ResourceNotFoundException(
-						"Projekt mit ID " + projectId + " nicht gefunden"));
-		final var projectRole = projectRoleRepository.findById(member.getRoleId())
-				.orElseThrow(() -> new ResourceNotFoundException("Projektrolle nicht gefunden"));
+		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId,
+				identity.userId());
+		if (member.isEmpty() && !isAdmin(identity)) {
+			throw new ResourceNotFoundException("Projekt mit ID " + projectId + " nicht gefunden");
+		}
+		final var projectRole = member
+				.map(projectMember -> projectRoleRepository.findById(projectMember.getRoleId())
+						.orElseThrow(
+								() -> new ResourceNotFoundException("Projektrolle nicht gefunden"))
+						.getName())
+				.orElse(null);
 
 		return new ProjectDetailsResponse(project.getId(), project.getName(),
-				project.getDescription(), projectRole.getName());
+				project.getDescription(), projectRole, project.getArchivedAt() != null);
+	}
+
+	@Transactional
+	public void archiveProject(Identity identity, long projectId) {
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+		if (project.getArchivedAt() != null) {
+			return;
+		}
+
+		project.setArchivedAt(Instant.now());
+		projectRepository.save(project);
+		projectRepository.flush();
+		eventPublisher.publishEvent(
+				new ProjectEvent.ProjectArchived(identity.userId(), projectId, project.getName()));
+	}
+
+	@Transactional
+	public void updateProjectDetails(Identity identity, long projectId,
+			UpdateProjectDetailsRequest request) {
+		validateUpdateProjectDetailsRequest(request);
+
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+		ensureProjectWritable(project);
+		final var newName = request.name().trim();
+		final var newDescription = request.description() == null
+				? ""
+				: request.description().trim();
+		final var previousName = project.getName();
+		final var previousDescription = project.getDescription();
+
+		project.setName(newName);
+		project.setDescription(newDescription);
+		projectRepository.save(project);
+		if (!previousName.equals(newName) || !Objects.equals(previousDescription, newDescription)) {
+			eventPublisher.publishEvent(new ProjectEvent.DetailsUpdated(identity.userId(),
+					projectId, previousName, newName, previousDescription, newDescription));
+		}
 	}
 
 	public ProjectUserListResponse getProjectUsers(Identity identity, long projectId) {
@@ -109,7 +163,7 @@ public class ProjectService {
 
 	@Transactional
 	public void addProjectUser(Identity identity, long projectId, AddProjectUserRequest request) {
-		validateProjectExists(projectId);
+		validateProjectWritable(projectId);
 		validateAddProjectUserRequest(request);
 
 		if (!userService.existsById(request.userId())) {
@@ -136,8 +190,13 @@ public class ProjectService {
 	@Transactional
 	public void updateProjectUserRole(Identity identity, long projectId, long userId,
 			UpdateProjectUserRoleRequest request) {
-		validateProjectExists(projectId);
+		validateProjectWritable(projectId);
 		validateUpdateProjectUserRoleRequest(request);
+		final var projectRoleName = validateProjectRole(request.role());
+
+		if (isAdmin(identity) && projectRoleName != ProjectRoleName.OWNER) {
+			throw new ValidationException("Admins dürfen Projektmitglieder nur zu Ownern ernennen");
+		}
 
 		if (identity.userId() == userId) {
 			throw new ValidationException("Ein Owner kann seine eigene Rolle nicht aktualisieren");
@@ -145,7 +204,6 @@ public class ProjectService {
 
 		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
 				.orElseThrow(() -> new ResourceNotFoundException("Projektmitglied nicht gefunden"));
-		final var projectRoleName = validateProjectRole(request.role());
 		final var role = projectRoleRepository.findByProjectIdAndName(projectId, projectRoleName)
 				.orElseThrow(() -> new ValidationException("Projektrolle existiert nicht"));
 
@@ -159,6 +217,22 @@ public class ProjectService {
 		projectMemberRepository.save(member);
 		eventPublisher.publishEvent(new ProjectEvent.UserRoleChanged(identity.userId(), projectId,
 				userId, previousRole.getName().name(), projectRoleName.name()));
+	}
+
+	@Transactional
+	public void removeProjectUser(Identity identity, long projectId, long userId) {
+		validateProjectWritable(projectId);
+
+		if (identity.userId() == userId) {
+			throw new ValidationException(
+					"Ein Owner kann sich nicht selbst aus dem Projekt entfernen");
+		}
+
+		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
+				.orElseThrow(() -> new ResourceNotFoundException("Projektmitglied nicht gefunden"));
+		projectMemberRepository.delete(member);
+		eventPublisher
+				.publishEvent(new ProjectEvent.UserRemoved(identity.userId(), projectId, userId));
 	}
 
 	private ProjectRoleModel[] createProjectRoles(ProjectModel project) {
@@ -201,14 +275,42 @@ public class ProjectService {
 			throw new ValidationException("Projektbeschreibung darf maximal 500 Zeichen lang sein");
 		}
 
-		if (projectRepository.existsByName(command.name())) {
-			throw new DuplicateResourceException("Projektname ist bereits vergeben");
+	}
+
+	private void validateUpdateProjectDetailsRequest(UpdateProjectDetailsRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Projekt muss einen Namen haben");
+		}
+
+		if (request.name().length() > 255) {
+			throw new ValidationException("Projektname darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.description() != null && request.description().length() > 500) {
+			throw new ValidationException("Projektbeschreibung darf maximal 500 Zeichen lang sein");
 		}
 	}
 
 	private void validateProjectExists(long projectId) {
 		if (!projectRepository.existsById(projectId)) {
 			throw new ResourceNotFoundException("Projekt mit ID " + projectId + " nicht gefunden");
+		}
+	}
+
+	private void validateProjectWritable(long projectId) {
+		validateProjectExists(projectId);
+		if (projectRepository.existsByIdAndArchivedAtIsNotNull(projectId)) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
+		}
+	}
+
+	private void ensureProjectWritable(ProjectModel project) {
+		if (project.getArchivedAt() != null) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
 		}
 	}
 
@@ -242,5 +344,10 @@ public class ProjectService {
 		} catch (IllegalArgumentException exception) {
 			throw new ValidationException("Rolle muss OWNER, CONTRIBUTOR oder VIEWER sein");
 		}
+	}
+
+	private boolean isAdmin(Identity identity) {
+		return userService.findActiveById(identity.userId())
+				.map(user -> user.workspaceRole() == WorkspaceRoleName.ADMIN).orElse(false);
 	}
 }

@@ -5,6 +5,7 @@ import type {
 	ProjectRecord,
 	ProjectRole,
 	ProjectUser,
+	UpdateProjectDetailsRequest,
 } from "./project.model";
 
 export const ProjectRepositoryKey = Symbol("ProjectRepository");
@@ -13,9 +14,12 @@ export interface IProjectRepository {
 	getAllProjects(): Promise<Array<ProjectRecord>>;
 	getProjectDetails(id: number): Promise<ProjectDetails>;
 	createProject(request: CreateProjectRequest): Promise<number>;
+	archiveProject(id: number): Promise<void>;
+	updateProjectDetails(id: number, request: UpdateProjectDetailsRequest): Promise<void>;
 	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
 	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
 	updateProjectUserRole(projectId: number, userId: number, role: ProjectRole): Promise<void>;
+	removeProjectUser(projectId: number, userId: number): Promise<void>;
 }
 
 export class ProjectRepository implements IProjectRepository {
@@ -31,6 +35,14 @@ export class ProjectRepository implements IProjectRepository {
 
 	async createProject(request: CreateProjectRequest): Promise<number> {
 		return api.createProject(request);
+	}
+
+	async archiveProject(id: number): Promise<void> {
+		return api.archiveProject(id);
+	}
+
+	async updateProjectDetails(id: number, request: UpdateProjectDetailsRequest): Promise<void> {
+		return api.updateProjectDetails(id, request);
 	}
 
 	async getProjectUsers(id: number): Promise<Array<ProjectUser>> {
@@ -49,5 +61,9 @@ export class ProjectRepository implements IProjectRepository {
 		role: ProjectRole,
 	): Promise<void> {
 		return api.updateProjectUserRole(projectId, userId, role);
+	}
+
+	async removeProjectUser(projectId: number, userId: number): Promise<void> {
+		return api.removeProjectUser(projectId, userId);
 	}
 }

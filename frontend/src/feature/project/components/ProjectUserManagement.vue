@@ -12,6 +12,8 @@ const {
 	isAddingUser,
 	isLoadingUsers,
 	loadUsers,
+	removeProjectUser,
+	removingUserId,
 	successMessage,
 	updateProjectUserRole,
 	updatingUserRoleId,
@@ -23,6 +25,7 @@ const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
 const roleChanges = ref<Record<number, model.ProjectRole>>({});
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
+const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const memberUsers = computed(() => users.value.filter((user) => user.member));
 const availableUsers = computed(() => users.value.filter((user) => !user.member));
 
@@ -74,6 +77,10 @@ function canUpdateProjectRole(user: model.ProjectUser): boolean {
 	);
 }
 
+function canAssignOwner(user: model.ProjectUser): boolean {
+	return isAdmin.value && user.member && user.projectRole !== "OWNER";
+}
+
 function hasRoleChanged(user: model.ProjectUser): boolean {
 	return user.projectRole !== null && roleChanges.value[user.id] !== user.projectRole;
 }
@@ -88,6 +95,20 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 	const wasUpdated = await updateProjectUserRole(user.id, role);
 
 	if (wasUpdated) {
+		syncRoleChanges();
+	}
+}
+
+async function assignOwner(user: model.ProjectUser): Promise<void> {
+	await updateProjectUserRole(user.id, "OWNER");
+}
+
+async function removeUser(user: model.ProjectUser): Promise<void> {
+	if (!confirm(`Projektmitglied ${user.username} wirklich entfernen?`)) {
+		return;
+	}
+
+	if (await removeProjectUser(user.id)) {
 		syncRoleChanges();
 	}
 }
@@ -123,7 +144,7 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 								v-if="canUpdateProjectRole(user)"
 								v-model="roleChanges[user.id]"
 								:aria-label="`Projektrolle für ${user.username}`"
-								:disabled="updatingUserRoleId !== null"
+								:disabled="updatingUserRoleId !== null || removingUserId !== null"
 							>
 								<option value="OWNER">OWNER</option>
 								<option value="CONTRIBUTOR">CONTRIBUTOR</option>
@@ -133,9 +154,25 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 						</td>
 						<td>
 							<button
+								v-if="canAssignOwner(user)"
+								type="button"
+								:disabled="updatingUserRoleId !== null"
+								@click="assignOwner(user)"
+							>
+								{{
+									updatingUserRoleId === user.id
+										? "Wird gespeichert..."
+										: "Zum Owner ernennen"
+								}}
+							</button>
+							<button
 								v-if="canUpdateProjectRole(user)"
 								type="button"
-								:disabled="!hasRoleChanged(user) || updatingUserRoleId !== null"
+								:disabled="
+									!hasRoleChanged(user) ||
+									updatingUserRoleId !== null ||
+									removingUserId !== null
+								"
 								@click="submitProjectUserRole(user)"
 							>
 								{{
@@ -143,6 +180,14 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 										? "Wird gespeichert..."
 										: "Speichern"
 								}}
+							</button>
+							<button
+								v-if="canUpdateProjectRole(user)"
+								type="button"
+								:disabled="updatingUserRoleId !== null || removingUserId !== null"
+								@click="removeUser(user)"
+							>
+								{{ removingUserId === user.id ? "Wird entfernt..." : "Entfernen" }}
 							</button>
 						</td>
 					</tr>

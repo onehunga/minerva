@@ -24,10 +24,14 @@ public class TicketActivityListener {
 			case TicketEvent.PriorityChanged _ -> ActivityEventType.TICKET_PRIORITY_CHANGED;
 			case TicketEvent.AssigneeChanged _ -> ActivityEventType.TICKET_ASSIGNEE_CHANGED;
 			case TicketEvent.SubticketAdded _ -> ActivityEventType.TICKET_SUBTICKET_ADDED;
+			case TicketEvent.TicketArchived _ -> ActivityEventType.TICKET_ARCHIVED;
+			case TicketEvent.TicketDeleted _ -> ActivityEventType.TICKET_DELETED;
 		};
 
-		var scopes = List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT, event.projectId()),
-				new ActivityScopeCommand(ActivityScopeType.TICKET, event.ticketId()));
+		var scopes = event instanceof TicketEvent.TicketDeleted
+				? List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT, event.projectId()))
+				: List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT, event.projectId()),
+						new ActivityScopeCommand(ActivityScopeType.TICKET, event.ticketId()));
 
 		activityService.append(activity, event.actorUserId(), event, scopes);
 	}

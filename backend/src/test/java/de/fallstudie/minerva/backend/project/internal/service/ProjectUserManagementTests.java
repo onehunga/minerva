@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
@@ -28,6 +29,9 @@ import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleR
 import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.UserDTO;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
+import de.fallstudie.minerva.backend.user.Identity;
 
 class ProjectUserManagementTests {
 	private UserService userService;
@@ -112,6 +116,20 @@ class ProjectUserManagementTests {
 	}
 
 	@Test
+	void addProjectUserRejectsArchivedProject() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(projectRepository.existsByIdAndArchivedAtIsNotNull(TestProjects.PROJECT_ID))
+				.thenReturn(true);
+
+		assertThrows(ReadOnlyException.class, () -> projectService.addProjectUser(
+				TestProjects.OWNER, TestProjects.PROJECT_ID,
+				new AddProjectUserRequest(TestProjects.CONTRIBUTOR_USER_ID, "CONTRIBUTOR")));
+
+		verify(projectMemberRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
+	}
+
+	@Test
 	void addProjectUserRejectsUnknownUser() {
 		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
 		when(userService.existsById(TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(false);
@@ -144,6 +162,48 @@ class ProjectUserManagementTests {
 		assertThrows(ValidationException.class,
 				() -> projectService.addProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						new AddProjectUserRequest(TestProjects.CONTRIBUTOR_USER_ID, "ADMIN")));
+
+		verify(projectMemberRepository, never()).save(any());
+	}
+
+	@Test
+	void adminCanPromoteExistingMemberToOwner() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.CONTRIBUTOR_ROLE_ID);
+		final var ownerRole = TestProjects.projectRole(TestProjects.OWNER_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.OWNER);
+		final var contributorRole = TestProjects.projectRole(TestProjects.CONTRIBUTOR_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.CONTRIBUTOR);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.of(member));
+		when(projectRoleRepository.findByProjectIdAndName(TestProjects.PROJECT_ID,
+				ProjectRoleName.OWNER)).thenReturn(Optional.of(ownerRole));
+		when(projectRoleRepository.findById(TestProjects.CONTRIBUTOR_ROLE_ID))
+				.thenReturn(Optional.of(contributorRole));
+
+		projectService.updateProjectUserRole(admin, TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, new UpdateProjectUserRoleRequest("OWNER"));
+
+		assertEquals(TestProjects.OWNER_ROLE_ID, member.getRoleId());
+	}
+
+	@Test
+	void adminCannotAssignNonOwnerProjectRole() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+
+		assertThrows(ValidationException.class,
+				() -> projectService.updateProjectUserRole(admin, TestProjects.PROJECT_ID,
+						TestProjects.CONTRIBUTOR_USER_ID,
+						new UpdateProjectUserRoleRequest("VIEWER")));
 
 		verify(projectMemberRepository, never()).save(any());
 	}
@@ -218,5 +278,56 @@ class ProjectUserManagementTests {
 						new UpdateProjectUserRoleRequest("VIEWER")));
 
 		verify(projectMemberRepository, never()).save(any());
+	}
+
+	@Test
+	void removeProjectUserDeletesMemberAndPublishesEvent() {
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.CONTRIBUTOR_ROLE_ID);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.of(member));
+
+		projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID);
+
+		verify(projectMemberRepository).delete(member);
+		verify(eventPublisher).publishEvent(new ProjectEvent.UserRemoved(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CONTRIBUTOR_USER_ID));
+	}
+
+	@Test
+	void removeProjectUserRejectsSelfRemoval() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+
+		assertThrows(ValidationException.class,
+				() -> projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.OWNER_USER_ID));
+
+		verify(projectMemberRepository, never()).delete(any());
+	}
+
+	@Test
+	void removeProjectUserRejectsUnknownMember() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CONTRIBUTOR_USER_ID));
+
+		verify(projectMemberRepository, never()).delete(any());
+	}
+
+	@Test
+	void removeProjectUserRejectsUnknownProject() {
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(false);
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> projectService.removeProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CONTRIBUTOR_USER_ID));
+
+		verify(projectMemberRepository, never()).delete(any());
 	}
 }

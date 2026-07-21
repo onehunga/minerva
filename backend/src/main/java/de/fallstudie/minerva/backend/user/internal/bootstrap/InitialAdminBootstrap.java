@@ -33,7 +33,7 @@ public class InitialAdminBootstrap implements ApplicationRunner {
 			return;
 		}
 
-		if (userRepository.existsByUsername(ADMIN_USERNAME)) {
+		if (userRepository.existsByUsernameAndDeletedAtIsNull(ADMIN_USERNAME)) {
 			return;
 		}
 

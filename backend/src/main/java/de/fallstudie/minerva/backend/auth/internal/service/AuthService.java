@@ -69,7 +69,7 @@ public class AuthService {
 			throw new AuthenticationFailedException("Refresh-Token ist abgelaufen");
 		}
 
-		UserDTO user = userService.findById(storedToken.getUserId())
+		UserDTO user = userService.findActiveById(storedToken.getUserId())
 				.orElseThrow(() -> new AuthenticationFailedException("Refresh-Token ist ungültig"));
 		refreshTokenRepository.deleteByTokenHash(tokenHash);
 		refreshTokenRepository.flush();
@@ -80,6 +80,15 @@ public class AuthService {
 	@Transactional
 	public void deleteExpiredRefreshTokens() {
 		refreshTokenRepository.deleteByExpiresAtBefore(Instant.now());
+	}
+
+	/// Widerruft nur die durch den übergebenen Refresh-Token identifizierte Sitzung. Andere
+	/// Sitzungen bleiben aktiv.
+	@Transactional
+	public void logout(RefreshTokenRequest request) {
+		String refreshToken = RequestUtils.requireValue(request.refreshToken(),
+				"Refresh-Token ist erforderlich");
+		refreshTokenRepository.deleteByTokenHash(hash(refreshToken));
 	}
 
 	private TokenResponse createAuthResponse(UserDTO user) {

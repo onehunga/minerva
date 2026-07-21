@@ -13,10 +13,11 @@ import type {
 export const TicketRepositoryKey = Symbol("TicketRepository");
 
 export interface ITicketRepository {
-	getTickets(projectId: number): Promise<Ticket[]>;
+	getTickets(projectId: number, archived?: boolean): Promise<Ticket[]>;
 	getTicketTypes(projectId: number): Promise<TicketType[]>;
 	createTicket(projectId: number, request: CreateTicketRequest): Promise<Ticket>;
 	deleteTicket(projectId: number, ticketId: number): Promise<void>;
+	archiveTicket(projectId: number, ticketId: number): Promise<void>;
 	updateTicketStatus(projectId: number, ticketId: number, transitionId: number): Promise<void>;
 	updateTicketPriority(
 		projectId: number,
@@ -42,8 +43,8 @@ export interface ITicketRepository {
 }
 
 export class TicketRepository implements ITicketRepository {
-	async getTickets(projectId: number): Promise<Ticket[]> {
-		const response = await api.getTickets(projectId);
+	async getTickets(projectId: number, archived: boolean = false): Promise<Ticket[]> {
+		const response = await api.getTickets(projectId, archived);
 
 		return response.tickets;
 	}
@@ -60,6 +61,10 @@ export class TicketRepository implements ITicketRepository {
 
 	async deleteTicket(projectId: number, ticketId: number): Promise<void> {
 		return api.deleteTicket(projectId, ticketId);
+	}
+
+	async archiveTicket(projectId: number, ticketId: number): Promise<void> {
+		return api.archiveTicket(projectId, ticketId);
 	}
 
 	async updateTicketStatus(

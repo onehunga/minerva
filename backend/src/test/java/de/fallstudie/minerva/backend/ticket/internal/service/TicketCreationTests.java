@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Optional;
+import java.time.Instant;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
 
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
@@ -98,6 +100,46 @@ class TicketCreationTests {
 		verify(eventPublisher).publishEvent(
 				new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
 						savedTicket.getId(), ticketType.getId(), status.getId(), "Root ticket"));
+	}
+
+	@Test
+	void createTicketRejectsArchivedProject() {
+		when(projectPolicies.isArchived(TestProjects.PROJECT_ID)).thenReturn(true);
+
+		assertThrows(ReadOnlyException.class,
+				() -> ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						new CreateTicketRequest("Ticket", "Beschreibung",
+								TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID,
+								null)));
+
+		verify(ticketRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
+	}
+
+	@Test
+	void createTicketRejectsArchivedParentTicket() {
+		final var parentTicket = TestProjects.ticket(TestProjects.PARENT_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.PARENT_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		parentTicket.setArchivedAt(Instant.now());
+		final var childTicketType = TestProjects.ticketType(TestProjects.CHILD_TICKET_TYPE_ID,
+				"Task");
+		final var workflow = TestProjects.workflow(TestProjects.WORKFLOW_ID,
+				TestProjects.PROJECT_ID, childTicketType.getId());
+		stubValidTypeWorkflowAndStatus(childTicketType, workflow);
+		when(workflowStatusRepository.findByIdAndWorkflowId(TestProjects.OPEN_STATUS_ID,
+				workflow.getId()))
+				.thenReturn(Optional.of(TestProjects.openStatus(workflow.getId())));
+		when(ticketRepository.findByIdAndProjectId(parentTicket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(parentTicket));
+
+		assertThrows(ReadOnlyException.class,
+				() -> ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						new CreateTicketRequest("Kind", "Beschreibung", childTicketType.getId(),
+								TestProjects.OPEN_STATUS_ID, parentTicket.getId())));
+
+		verify(ticketRepository, never()).save(any());
+		verify(eventPublisher, never()).publishEvent(any());
 	}
 
 	@Test
