@@ -10,6 +10,10 @@ export async function login(username: string, password: string): Promise<TokenPa
 		.then((res) => res.data);
 }
 
+export async function logout(refreshToken: string): Promise<void> {
+	return client.post("/v1/auth/logout", { refreshToken });
+}
+
 export async function details(): Promise<model.UserDetails> {
 	return client.get("/v1/users/me").then((res) => res.data);
 }

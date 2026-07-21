@@ -82,6 +82,15 @@ public class AuthService {
 		refreshTokenRepository.deleteByExpiresAtBefore(Instant.now());
 	}
 
+	/// Widerruft nur die durch den übergebenen Refresh-Token identifizierte Sitzung. Andere
+	/// Sitzungen bleiben aktiv.
+	@Transactional
+	public void logout(RefreshTokenRequest request) {
+		String refreshToken = RequestUtils.requireValue(request.refreshToken(),
+				"Refresh-Token ist erforderlich");
+		refreshTokenRepository.deleteByTokenHash(hash(refreshToken));
+	}
+
 	private TokenResponse createAuthResponse(UserDTO user) {
 		String accessToken = jwtService.generateToken(user.id());
 		String refreshToken = generateRefreshToken();

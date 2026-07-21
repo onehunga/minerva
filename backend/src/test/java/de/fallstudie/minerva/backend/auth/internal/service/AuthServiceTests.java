@@ -99,6 +99,13 @@ class AuthServiceTests {
 		verify(userService).findById(USER_ID);
 	}
 
+	@Test
+	void logoutRevokesRefreshToken() {
+		authService.logout(new RefreshTokenRequest("refresh-token"));
+
+		verify(refreshTokenRepository).deleteByTokenHash(hash("refresh-token"));
+	}
+
 	private static String hash(String value) {
 		try {
 			byte[] bytes = MessageDigest.getInstance("SHA-256")
