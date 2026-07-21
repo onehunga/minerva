@@ -1,6 +1,8 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -32,6 +34,8 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRe
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketCommentRequest;
 import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.UserDTO;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 
 class TicketCommentTests {
 	private TicketRepository ticketRepository;
@@ -75,6 +79,28 @@ class TicketCommentTests {
 		assertEquals(TestProjects.OWNER_USER_ID, response.comments().getFirst().authorId());
 		assertEquals("owner", response.comments().getFirst().authorUsername());
 		assertEquals("Erster Kommentar", response.comments().getFirst().content());
+	}
+
+	@Test
+	void getTicketCommentsMarksDeletedAuthorWithoutAUsername() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		final var comment = ticketComment(1L, ticket.getId(), TestProjects.OWNER_USER_ID,
+				"Historischer Kommentar");
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+		when(ticketCommentRepository.findAllByTicketIdOrderByCreatedAtAscIdAsc(ticket.getId()))
+				.thenReturn(List.of(comment));
+		when(userService.findById(TestProjects.OWNER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OWNER_USER_ID, null, "deleted",
+						WorkspaceRoleName.USER, true)));
+
+		final var response = ticketCommentService
+				.getTicketComments(TestProjects.PROJECT_ID, ticket.getId()).comments().getFirst();
+
+		assertNull(response.authorUsername());
+		assertTrue(response.authorDeleted());
 	}
 
 	@Test

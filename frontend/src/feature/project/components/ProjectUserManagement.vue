@@ -25,6 +25,7 @@ const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
 const roleChanges = ref<Record<number, model.ProjectRole>>({});
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
+const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const memberUsers = computed(() => users.value.filter((user) => user.member));
 const availableUsers = computed(() => users.value.filter((user) => !user.member));
 
@@ -76,6 +77,10 @@ function canUpdateProjectRole(user: model.ProjectUser): boolean {
 	);
 }
 
+function canAssignOwner(user: model.ProjectUser): boolean {
+	return isAdmin.value && user.member && user.projectRole !== "OWNER";
+}
+
 function hasRoleChanged(user: model.ProjectUser): boolean {
 	return user.projectRole !== null && roleChanges.value[user.id] !== user.projectRole;
 }
@@ -92,6 +97,10 @@ async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
 	if (wasUpdated) {
 		syncRoleChanges();
 	}
+}
+
+async function assignOwner(user: model.ProjectUser): Promise<void> {
+	await updateProjectUserRole(user.id, "OWNER");
 }
 
 async function removeUser(user: model.ProjectUser): Promise<void> {
@@ -144,6 +153,18 @@ async function removeUser(user: model.ProjectUser): Promise<void> {
 							<span v-else>{{ formatProjectRole(user.projectRole) }}</span>
 						</td>
 						<td>
+							<button
+								v-if="canAssignOwner(user)"
+								type="button"
+								:disabled="updatingUserRoleId !== null"
+								@click="assignOwner(user)"
+							>
+								{{
+									updatingUserRoleId === user.id
+										? "Wird gespeichert..."
+										: "Zum Owner ernennen"
+								}}
+							</button>
 							<button
 								v-if="canUpdateProjectRole(user)"
 								type="button"

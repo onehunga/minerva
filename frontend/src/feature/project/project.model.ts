@@ -21,7 +21,7 @@ export type ProjectDetails = {
 	id: number;
 	name: string;
 	description: string;
-	projectRole: ProjectRole;
+	projectRole: ProjectRole | null;
 	archived: boolean;
 };
 

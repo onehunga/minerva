@@ -9,6 +9,8 @@ import org.springframework.data.repository.query.Param;
 public interface ProjectRepository extends JpaRepository<ProjectModel, Long> {
 	boolean existsByIdAndArchivedAtIsNotNull(long id);
 
+	List<ProjectModel> findAllByArchivedAtIsNull();
+
 	@Query("""
 				SELECT p
 				FROM ProjectModel p

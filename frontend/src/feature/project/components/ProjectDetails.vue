@@ -5,17 +5,20 @@ import { useProject, useProjectRepository } from "..";
 import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketList } from "@/feature/ticket";
+import { useUserStore } from "@/feature/user";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 
 const { details, updateProjectDetails } = useProject();
 const projectRepository = useProjectRepository();
 const router = useRouter();
+const userStore = useUserStore();
 const isArchivingProject = ref(false);
 const isUpdatingDetails = ref(false);
 const editingField = ref<"name" | "description" | null>(null);
 const draftName = ref("");
 const draftDescription = ref("");
 const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER");
+const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 
 const props = defineProps<{
 	id: number;
@@ -198,7 +201,7 @@ async function submitArchiveProject(): Promise<void> {
 			/>
 		</section>
 
-		<section class="project-section">
+		<section v-if="details.projectRole !== null" class="project-section">
 			<h2>Tickets</h2>
 			<TicketList />
 			<p v-if="details.projectRole === 'VIEWER'">
@@ -213,7 +216,7 @@ async function submitArchiveProject(): Promise<void> {
 			:error-message="activityError"
 		/>
 
-		<section v-if="details.projectRole === 'OWNER'" class="project-section">
+		<section v-if="details.projectRole === 'OWNER' || isAdmin" class="project-section">
 			<ProjectUserManagement />
 		</section>
 

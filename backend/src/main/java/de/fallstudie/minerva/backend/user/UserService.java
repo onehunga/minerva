@@ -18,19 +18,24 @@ public class UserService {
 	}
 
 	public Optional<UserDTO> findByUsername(String username) {
-		return userRepository.findByUsername(username).map(this::toSnapshot);
+		return userRepository.findByUsernameAndDeletedAtIsNull(username).map(this::toSnapshot);
+	}
+
+	public Optional<UserDTO> findActiveById(long id) {
+		return userRepository.findById(id).filter(user -> user.getDeletedAt() == null)
+				.map(this::toSnapshot);
 	}
 
 	public List<UserDTO> findAll() {
-		return userRepository.findAll().stream().map(this::toSnapshot).toList();
+		return userRepository.findAllByDeletedAtIsNull().stream().map(this::toSnapshot).toList();
 	}
 
 	public boolean existsById(long id) {
-		return userRepository.existsById(id);
+		return userRepository.existsByIdAndDeletedAtIsNull(id);
 	}
 
 	private UserDTO toSnapshot(UserModel user) {
 		return new UserDTO(user.getId(), user.getUsername(), user.getPassword(),
-				user.getWorkspaceRole().getName());
+				user.getWorkspaceRole().getName(), user.getDeletedAt() != null);
 	}
 }

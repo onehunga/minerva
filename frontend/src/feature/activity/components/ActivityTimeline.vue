@@ -61,7 +61,12 @@ function formatDate(value: string | null): string {
 			<li v-for="event in events" :key="event.id" class="activity-timeline__item">
 				<p class="activity-timeline__title">{{ formatType(event.type) }}</p>
 				<small>
-					{{ event.actorUsername ?? `#${event.actorUserId}` }} -
+					{{
+						event.actorDeleted
+							? "Gelöschter Nutzer"
+							: (event.actorUsername ?? `#${event.actorUserId}`)
+					}}
+					-
 					{{ formatDate(event.occurredAt) }}
 				</small>
 				<details class="activity-timeline__payload">

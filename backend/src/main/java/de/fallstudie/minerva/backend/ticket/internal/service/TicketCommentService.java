@@ -79,7 +79,7 @@ public class TicketCommentService {
 				.orElseThrow(() -> new ResourceNotFoundException("Benutzer nicht gefunden"));
 
 		return new TicketCommentResponse(comment.getId(), comment.getTicketId(),
-				comment.getAuthorId(), author.username(), comment.getContent(),
+				comment.getAuthorId(), author.username(), author.deleted(), comment.getContent(),
 				comment.getCreatedAt(), comment.getUpdatedAt());
 	}
 

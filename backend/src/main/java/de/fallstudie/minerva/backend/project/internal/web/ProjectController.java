@@ -84,7 +84,7 @@ public class ProjectController {
 
 	@PatchMapping("/{id}/users/{userId}/role")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	@PreAuthorize("@projectPolicy.canUpdateProjectUserRole(principal, #id)")
 	public void updateProjectUserRole(@AuthenticationPrincipal Identity identity,
 			@PathVariable long id, @PathVariable long userId,
 			@RequestBody UpdateProjectUserRoleRequest request) {

@@ -17,18 +17,23 @@ import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRep
 import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.Identity;
+import de.fallstudie.minerva.backend.user.UserDTO;
+import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 
 class ProjectPoliciesTests {
 	private ProjectMemberRepository projectMemberRepository;
 	private ProjectRoleRepository projectRoleRepository;
 	private ProjectPolicies projectPolicies;
+	private UserService userService;
 
 	@BeforeEach
 	void setUp() {
 		projectMemberRepository = Mockito.mock(ProjectMemberRepository.class);
 		projectRoleRepository = Mockito.mock(ProjectRoleRepository.class);
+		userService = Mockito.mock(UserService.class);
 		projectPolicies = new ProjectPolicies(projectMemberRepository, projectRoleRepository,
-				Mockito.mock(ProjectRepository.class));
+				Mockito.mock(ProjectRepository.class), userService);
 	}
 
 	@Test
@@ -41,6 +46,26 @@ class ProjectPoliciesTests {
 		assertTrue(projectPolicies.canViewProject(TestProjects.OWNER, TestProjects.PROJECT_ID));
 		assertFalse(projectPolicies.canViewProject(new Identity(TestProjects.OUTSIDER_USER_ID),
 				TestProjects.PROJECT_ID));
+	}
+
+	@Test
+	void canViewProjectAllowsAdminWithoutMembership() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+
+		assertTrue(projectPolicies.canViewProject(admin, TestProjects.PROJECT_ID));
+	}
+
+	@Test
+	void canUpdateProjectUserRoleAllowsAdminWithoutMembership() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+
+		assertTrue(projectPolicies.canUpdateProjectUserRole(admin, TestProjects.PROJECT_ID));
 	}
 
 	@ParameterizedTest

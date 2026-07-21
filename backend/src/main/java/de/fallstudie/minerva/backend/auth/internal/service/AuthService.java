@@ -69,7 +69,7 @@ public class AuthService {
 			throw new AuthenticationFailedException("Refresh-Token ist abgelaufen");
 		}
 
-		UserDTO user = userService.findById(storedToken.getUserId())
+		UserDTO user = userService.findActiveById(storedToken.getUserId())
 				.orElseThrow(() -> new AuthenticationFailedException("Refresh-Token ist ungültig"));
 		refreshTokenRepository.deleteByTokenHash(tokenHash);
 		refreshTokenRepository.flush();

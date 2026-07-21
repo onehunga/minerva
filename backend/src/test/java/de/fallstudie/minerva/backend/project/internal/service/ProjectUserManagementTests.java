@@ -29,6 +29,9 @@ import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleR
 import de.fallstudie.minerva.backend.project.ProjectEvent;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.UserDTO;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
+import de.fallstudie.minerva.backend.user.Identity;
 
 class ProjectUserManagementTests {
 	private UserService userService;
@@ -159,6 +162,48 @@ class ProjectUserManagementTests {
 		assertThrows(ValidationException.class,
 				() -> projectService.addProjectUser(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						new AddProjectUserRequest(TestProjects.CONTRIBUTOR_USER_ID, "ADMIN")));
+
+		verify(projectMemberRepository, never()).save(any());
+	}
+
+	@Test
+	void adminCanPromoteExistingMemberToOwner() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.CONTRIBUTOR_ROLE_ID);
+		final var ownerRole = TestProjects.projectRole(TestProjects.OWNER_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.OWNER);
+		final var contributorRole = TestProjects.projectRole(TestProjects.CONTRIBUTOR_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.CONTRIBUTOR);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.of(member));
+		when(projectRoleRepository.findByProjectIdAndName(TestProjects.PROJECT_ID,
+				ProjectRoleName.OWNER)).thenReturn(Optional.of(ownerRole));
+		when(projectRoleRepository.findById(TestProjects.CONTRIBUTOR_ROLE_ID))
+				.thenReturn(Optional.of(contributorRole));
+
+		projectService.updateProjectUserRole(admin, TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, new UpdateProjectUserRoleRequest("OWNER"));
+
+		assertEquals(TestProjects.OWNER_ROLE_ID, member.getRoleId());
+	}
+
+	@Test
+	void adminCannotAssignNonOwnerProjectRole() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+
+		assertThrows(ValidationException.class,
+				() -> projectService.updateProjectUserRole(admin, TestProjects.PROJECT_ID,
+						TestProjects.CONTRIBUTOR_USER_ID,
+						new UpdateProjectUserRoleRequest("VIEWER")));
 
 		verify(projectMemberRepository, never()).save(any());
 	}

@@ -31,6 +31,7 @@ import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleR
 import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectDetailsRequest;
 import de.fallstudie.minerva.backend.user.Identity;
 import de.fallstudie.minerva.backend.user.UserService;
+import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +47,10 @@ public class ProjectService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	public ProjectRecordListResponse getAllProjects(Identity identity) {
-		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
+		final var projectModels = isAdmin(identity)
+				? projectRepository.findAllByArchivedAtIsNull()
+				: projectRepository.findAllByUserId(identity.userId());
+		final var projects = projectModels.stream()
 				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
 				.toList();
 
@@ -57,15 +61,20 @@ public class ProjectService {
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
 						"Projekt mit ID " + projectId + " nicht gefunden"));
-		final var member = projectMemberRepository
-				.findByProjectIdAndUserId(projectId, identity.userId())
-				.orElseThrow(() -> new ResourceNotFoundException(
-						"Projekt mit ID " + projectId + " nicht gefunden"));
-		final var projectRole = projectRoleRepository.findById(member.getRoleId())
-				.orElseThrow(() -> new ResourceNotFoundException("Projektrolle nicht gefunden"));
+		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId,
+				identity.userId());
+		if (member.isEmpty() && !isAdmin(identity)) {
+			throw new ResourceNotFoundException("Projekt mit ID " + projectId + " nicht gefunden");
+		}
+		final var projectRole = member
+				.map(projectMember -> projectRoleRepository.findById(projectMember.getRoleId())
+						.orElseThrow(
+								() -> new ResourceNotFoundException("Projektrolle nicht gefunden"))
+						.getName())
+				.orElse(null);
 
 		return new ProjectDetailsResponse(project.getId(), project.getName(),
-				project.getDescription(), projectRole.getName(), project.getArchivedAt() != null);
+				project.getDescription(), projectRole, project.getArchivedAt() != null);
 	}
 
 	@Transactional
@@ -183,6 +192,11 @@ public class ProjectService {
 			UpdateProjectUserRoleRequest request) {
 		validateProjectWritable(projectId);
 		validateUpdateProjectUserRoleRequest(request);
+		final var projectRoleName = validateProjectRole(request.role());
+
+		if (isAdmin(identity) && projectRoleName != ProjectRoleName.OWNER) {
+			throw new ValidationException("Admins dürfen Projektmitglieder nur zu Ownern ernennen");
+		}
 
 		if (identity.userId() == userId) {
 			throw new ValidationException("Ein Owner kann seine eigene Rolle nicht aktualisieren");
@@ -190,7 +204,6 @@ public class ProjectService {
 
 		final var member = projectMemberRepository.findByProjectIdAndUserId(projectId, userId)
 				.orElseThrow(() -> new ResourceNotFoundException("Projektmitglied nicht gefunden"));
-		final var projectRoleName = validateProjectRole(request.role());
 		final var role = projectRoleRepository.findByProjectIdAndName(projectId, projectRoleName)
 				.orElseThrow(() -> new ValidationException("Projektrolle existiert nicht"));
 
@@ -331,5 +344,10 @@ public class ProjectService {
 		} catch (IllegalArgumentException exception) {
 			throw new ValidationException("Rolle muss OWNER, CONTRIBUTOR oder VIEWER sein");
 		}
+	}
+
+	private boolean isAdmin(Identity identity) {
+		return userService.findActiveById(identity.userId())
+				.map(user -> user.workspaceRole() == WorkspaceRoleName.ADMIN).orElse(false);
 	}
 }
