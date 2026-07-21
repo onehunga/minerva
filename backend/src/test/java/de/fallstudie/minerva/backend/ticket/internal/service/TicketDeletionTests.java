@@ -5,6 +5,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -71,6 +72,22 @@ class TicketDeletionTests {
 		verify(eventPublisher)
 				.publishEvent(new TicketEvent.TicketDeleted(TestProjects.OWNER_USER_ID,
 						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
+	}
+
+	@Test
+	void deleteTicketDeletesArchivedTicket() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		ticket.setArchivedAt(Instant.now());
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+		when(ticketRepository.existsByParentTicketId(ticket.getId())).thenReturn(false);
+
+		ticketService.deleteTicket(TestProjects.OWNER, TestProjects.PROJECT_ID, ticket.getId());
+
+		verify(ticketCommentRepository).deleteAllByTicketId(ticket.getId());
+		verify(ticketRepository).delete(ticket);
 	}
 
 	@Test

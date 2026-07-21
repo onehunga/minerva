@@ -170,7 +170,9 @@ public class TicketService {
 
 	@Transactional
 	public void deleteTicket(Identity identity, long projectId, long ticketId) {
-		final var ticket = findWritableTicket(projectId, ticketId);
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
 
 		if (ticketRepository.existsByParentTicketId(ticket.getId())) {
 			throw new ValidationException("Ticket hat noch Kindtickets");
