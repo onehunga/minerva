@@ -3,11 +3,11 @@ name: End-to-end tests
 on:
   pull_request:
     branches:
-      - develop
+      - development
       - master
   push:
     branches:
-      - develop
+      - development
       - master
 
 jobs:
