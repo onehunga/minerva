@@ -2,6 +2,10 @@
 import { ref, type Ref } from "vue";
 import { useRouter, type Router } from "vue-router";
 import { useUser } from "@/feature/user/composables/useUser";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 const router: Router = useRouter();
 
@@ -22,19 +26,35 @@ async function handleLogin(): Promise<void> {
 </script>
 
 <template>
-	<form @submit.prevent="handleLogin">
-		<label for="username">Username</label>
-		<input id="username" v-model="username" name="username" autocomplete="username" />
-
-		<label for="password">Password</label>
-		<input
-			id="password"
-			v-model="password"
-			name="password"
-			type="password"
-			autocomplete="current-password"
-		/>
-
-		<button type="submit">Login</button>
-	</form>
+	<div class="flex min-h-screen items-center justify-center">
+		<Card class="w-full max-w-sm">
+			<CardHeader>
+				<CardTitle>Login</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<form @submit.prevent="handleLogin" class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<Label for="username">Username</Label>
+						<Input
+							id="username"
+							v-model="username"
+							name="username"
+							autocomplete="username"
+						/>
+					</div>
+					<div class="flex flex-col gap-2">
+						<Label for="password">Password</Label>
+						<Input
+							id="password"
+							v-model="password"
+							name="password"
+							type="password"
+							autocomplete="current-password"
+						/>
+					</div>
+					<Button type="submit" class="w-full">Login</Button>
+				</form>
+			</CardContent>
+		</Card>
+	</div>
 </template>

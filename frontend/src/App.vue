@@ -4,9 +4,13 @@ import { useUser } from "@/feature/user";
 import { useRouter } from "vue-router";
 import AppSidebar from "./components/AppSidebar.vue";
 import { SidebarInset, SidebarProvider } from "./components/ui/sidebar";
+import { useColorMode } from "@vueuse/core";
 
 const router = useRouter();
 const { logout } = useUser();
+
+const mode = useColorMode();
+mode.value = "auto";
 
 async function submitLogout(): Promise<void> {
 	try {
