@@ -9,6 +9,7 @@ import { DashboardRepository, DashboardRepositoryKey } from "@/feature/dashboard
 
 import App from "./App.vue";
 import router from "./router";
+import "./style.css";
 
 const app: VueApp<Element> = createApp(App);
 const pinia: Pinia = createPinia();

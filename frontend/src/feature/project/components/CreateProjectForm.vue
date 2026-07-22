@@ -7,6 +7,7 @@ import {
 	type CreateTicketType,
 	type WorkflowConfiguration,
 } from "@/feature/ticket";
+import { useProjects } from "../composables/useProjects";
 
 const DEFAULT_TICKETS: CreateTicketType[] = [
 	{
@@ -27,6 +28,7 @@ const DEFAULT_TICKETS: CreateTicketType[] = [
 ];
 
 const repository = useProjectRepository();
+const { refreshProjects } = useProjects();
 
 const name = ref("");
 const description = ref("");
@@ -71,6 +73,8 @@ async function createProject() {
 
 	name.value = "";
 	description.value = "";
+
+	refreshProjects();
 }
 </script>
 
