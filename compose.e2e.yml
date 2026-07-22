@@ -1,0 +1,54 @@
+services:
+  frontend:
+    build: ./frontend
+    network_mode: host
+    extra_hosts:
+      - "backend:127.0.0.1"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    network_mode: host
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:15432/minerva-e2e
+      SPRING_DATASOURCE_USERNAME: minerva-e2e
+      SPRING_DATASOURCE_PASSWORD: e2e-password
+      SPRING_SECURITY_JWT_SECRET: e2e-secret-key-that-is-long-enough-for-hmac
+      INITIAL_ADMIN_PASSWORD: e2e-password
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    network_mode: host
+    command: postgres -p 15432
+    environment:
+      POSTGRES_DB: minerva-e2e
+      POSTGRES_USER: minerva-e2e
+      POSTGRES_PASSWORD: e2e-password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p 15432 -U minerva-e2e -d minerva-e2e"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  playwright:
+    build: ./e2e
+    user: "${E2E_UID:-1000}:${E2E_GID:-1000}"
+    init: true
+    ipc: host
+    network_mode: host
+    environment:
+      HOME: /tmp
+      E2E_BASE_URL: http://localhost
+      DATABASE_URL: postgresql://minerva-e2e:e2e-password@localhost:15432/minerva-e2e
+    volumes:
+      - ./e2e:/work
+      - /work/node_modules
+    depends_on:
+      - frontend
+    command: bun x playwright test --ui --ui-host=0.0.0.0 --ui-port=9323
