@@ -41,6 +41,14 @@ const router: Router = createRouter({
 			},
 			props: true,
 		},
+		{
+			path: "/create-project",
+			name: "create-project",
+			component: () => import("@/views/CreateProjectView.vue"),
+			meta: {
+				requiresAuth: true,
+			},
+		},
 	],
 });
 

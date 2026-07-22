@@ -3,7 +3,7 @@ import { ref } from "vue";
 import type { model } from ".";
 import type { Ticket, TicketPriorityName, TicketType } from "../ticket/ticket.model";
 
-export const useActiveProjectStore = defineStore("activeUsers", () => {
+export const useActiveProjectStore = defineStore("active.project", () => {
 	const activeProject = ref<null | string>(null);
 	const details = ref<null | model.ProjectDetails>(null);
 	const projectUsers = ref<model.ProjectUser[]>([]);
@@ -104,5 +104,18 @@ export const useActiveProjectStore = defineStore("activeUsers", () => {
 		updateTicketPriority,
 		updateTicketDetails,
 		updateTicketAssignee,
+	};
+});
+
+export const useProjectsStore = defineStore("projects", () => {
+	const projects = ref<model.ProjectRecord[]>([]);
+
+	function setProjects(projectRecords: model.ProjectRecord[]): void {
+		projects.value = projectRecords;
+	}
+
+	return {
+		projects,
+		setProjects,
 	};
 });
