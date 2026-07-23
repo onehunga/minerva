@@ -196,7 +196,6 @@ async function submitArchiveProject(): Promise<void> {
 					</Card>
 
 					<Card class="project-page__ticket-detail-card">
-						<CardHeader><CardTitle>Ticketdetails</CardTitle></CardHeader>
 						<CardContent>
 							<TicketDetail
 								v-if="selectedTicket"
