@@ -175,6 +175,11 @@ async function submitArchiveProject(): Promise<void> {
 				value="tickets"
 				class="project-page__tab-content"
 			>
+				<CreateTicketForm
+					v-if="details.projectRole !== 'VIEWER'"
+					:parent-ticket-id="null"
+				/>
+				<p v-else>Als Viewer kannst du keine Tickets erstellen.</p>
 				<label class="project-page__ticket-filter">
 					Ticketansicht
 					<select v-model="showArchived" :disabled="isLoadingTickets">
@@ -208,11 +213,6 @@ async function submitArchiveProject(): Promise<void> {
 						</CardContent>
 					</Card>
 				</div>
-
-				<p v-if="details.projectRole === 'VIEWER'">
-					Als Viewer kannst du keine Tickets erstellen.
-				</p>
-				<CreateTicketForm v-else :parent-ticket-id="null" />
 			</TabsContent>
 
 			<TabsContent value="activities" class="project-page__tab-content">

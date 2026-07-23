@@ -377,9 +377,7 @@ function formatDate(value: string | null): string {
 					<section
 						v-if="projectDetails?.projectRole !== 'VIEWER'"
 						class="ticket-detail__section"
-						aria-labelledby="create-child-ticket-heading"
 					>
-						<h4 id="create-child-ticket-heading">Kindticket erstellen</h4>
 						<CreateTicketForm
 							:parent-ticket-id="ticket.id"
 							:parent-ticket-type-id="ticket.ticketTypeId"

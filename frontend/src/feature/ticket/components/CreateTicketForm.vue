@@ -1,34 +1,53 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, useId, watch } from "vue";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+	SheetTrigger,
+} from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/feature/project";
-
-const { details: projectDetails, ticketTypes, tickets, createTicket } = useProject();
 
 const props = defineProps<{
 	parentTicketId: number | null;
 	parentTicketTypeId?: number | null;
 }>();
 
+const { details: projectDetails, ticketTypes, tickets, createTicket } = useProject();
+const formId = useId();
+const isOpen = ref(false);
 const name = ref("");
 const description = ref("");
 const selectedTicketTypeId = ref<number | null>(null);
 const selectedStatusId = ref<number | null>(null);
 const isCreating = ref(false);
 const errorMessage = ref("");
-const successMessage = ref("");
 
 const parentTicketTypeId = computed(() => {
 	if (props.parentTicketId == null) {
 		return null;
 	}
 
-	if (props.parentTicketTypeId != null) {
-		return props.parentTicketTypeId;
-	}
-
-	return tickets.value.find((ticket) => ticket.id === props.parentTicketId)?.ticketTypeId ?? null;
+	return (
+		props.parentTicketTypeId ??
+		tickets.value.find((ticket) => ticket.id === props.parentTicketId)?.ticketTypeId ??
+		null
+	);
 });
-
 const availableTicketTypes = computed(() => {
 	if (props.parentTicketId == null) {
 		return ticketTypes.value;
@@ -37,19 +56,17 @@ const availableTicketTypes = computed(() => {
 	const parentType = ticketTypes.value.find(
 		(ticketType) => ticketType.id === parentTicketTypeId.value,
 	);
-
-	if (parentType == null) {
-		return [];
-	}
-
-	return ticketTypes.value.filter((ticketType) => parentType.children.includes(ticketType.id));
+	return parentType == null
+		? []
+		: ticketTypes.value.filter((ticketType) => parentType.children.includes(ticketType.id));
 });
-
 const selectedTicketType = computed(() =>
 	availableTicketTypes.value.find((ticketType) => ticketType.id === selectedTicketTypeId.value),
 );
-
 const availableStates = computed(() => selectedTicketType.value?.states ?? []);
+const title = computed(() =>
+	props.parentTicketId == null ? "Ticket erstellen" : "Kindticket erstellen",
+);
 
 function selectDefaultTicketType(): void {
 	if (
@@ -67,6 +84,14 @@ function selectDefaultTicketType(): void {
 function selectDefaultStatus(): void {
 	const openState = availableStates.value.find((state) => state.category === "OPEN");
 	selectedStatusId.value = openState?.id ?? availableStates.value[0]?.id ?? null;
+}
+
+function selectTicketType(value: unknown): void {
+	selectedTicketTypeId.value = Number(value);
+}
+
+function selectStatus(value: unknown): void {
+	selectedStatusId.value = Number(value);
 }
 
 function resetTicketFields(): void {
@@ -88,19 +113,16 @@ async function create(): Promise<void> {
 
 	isCreating.value = true;
 	errorMessage.value = "";
-	successMessage.value = "";
-
 	try {
-		const ticket = await createTicket({
-			name: name.value,
-			description: description.value,
+		await createTicket({
+			name: name.value.trim(),
+			description: description.value.trim(),
 			ticketTypeId: selectedTicketTypeId.value,
 			statusId: selectedStatusId.value,
 			parentTicketId: props.parentTicketId,
 		});
-
-		successMessage.value = `Ticket "${ticket.name}" wurde erstellt.`;
 		resetTicketFields();
+		isOpen.value = false;
 	} catch {
 		errorMessage.value = "Ticket konnte nicht erstellt werden.";
 	} finally {
@@ -116,105 +138,167 @@ watch(
 	},
 	{ immediate: true },
 );
-
-watch(selectedTicketTypeId, () => {
-	selectDefaultStatus();
-});
+watch(selectedTicketTypeId, selectDefaultStatus);
 </script>
 
 <template>
-	<form class="create-ticket-form" @submit.prevent="create">
-		<p v-if="projectDetails == null">Ticketarten werden geladen...</p>
-		<p v-else-if="availableTicketTypes.length === 0 && parentTicketId != null">
-			Für dieses Kindticket sind keine Ticketarten freigegeben.
-		</p>
-		<p v-else-if="availableTicketTypes.length === 0">
-			Für dieses Projekt sind keine Ticketarten angelegt.
-		</p>
+	<Sheet v-model:open="isOpen">
+		<SheetTrigger as-child>
+			<Button>{{ title }}</Button>
+		</SheetTrigger>
+		<SheetContent side="right" class="sm:max-w-lg">
+			<SheetHeader>
+				<SheetTitle>{{ title }}</SheetTitle>
+				<SheetDescription>
+					Trage die Ticketdetails ein und wähle Ticketart und Startzustand.
+				</SheetDescription>
+			</SheetHeader>
 
-		<template v-else>
-			<input
-				v-model="name"
-				required
-				aria-label="Name"
-				placeholder="Name"
-				:disabled="isCreating"
-			/>
-			<textarea
-				v-model="description"
-				aria-label="Beschreibung"
-				placeholder="Beschreibung"
-				:disabled="isCreating"
-			></textarea>
+			<form class="create-ticket-form" @submit.prevent="create">
+				<div class="create-ticket-form__fields">
+					<p v-if="projectDetails == null">Ticketarten werden geladen...</p>
+					<p v-else-if="availableTicketTypes.length === 0 && parentTicketId != null">
+						Für dieses Kindticket sind keine Ticketarten freigegeben.
+					</p>
+					<p v-else-if="availableTicketTypes.length === 0">
+						Für dieses Projekt sind keine Ticketarten angelegt.
+					</p>
 
-			<select
-				v-model.number="selectedTicketTypeId"
-				required
-				aria-label="Ticketart"
-				:disabled="isCreating"
-			>
-				<option
-					v-for="ticketType in availableTicketTypes"
-					:key="ticketType.id"
-					:value="ticketType.id"
-				>
-					{{ ticketType.name }}
-				</option>
-			</select>
+					<template v-else>
+						<div class="create-ticket-form__field">
+							<Label :for="`${formId}-name`">Titel</Label>
+							<Input
+								:id="`${formId}-name`"
+								v-model="name"
+								required
+								placeholder="Titel"
+								:disabled="isCreating"
+							/>
+						</div>
 
-			<select
-				v-model.number="selectedStatusId"
-				required
-				aria-label="Startstatus"
-				:disabled="isCreating || availableStates.length === 0"
-			>
-				<option v-for="state in availableStates" :key="state.id" :value="state.id">
-					{{ state.name }}
-				</option>
-			</select>
+						<div class="create-ticket-form__field">
+							<Label :for="`${formId}-description`">Beschreibung</Label>
+							<Textarea
+								:id="`${formId}-description`"
+								v-model="description"
+								placeholder="Beschreibung"
+								:disabled="isCreating"
+							/>
+						</div>
 
-			<button
-				type="submit"
-				:disabled="
-					isCreating ||
-					!name.trim() ||
-					selectedTicketTypeId == null ||
-					selectedStatusId == null
-				"
-			>
-				{{ isCreating ? "Ticket wird erstellt..." : "Ticket erstellen" }}
-			</button>
-		</template>
+						<div class="create-ticket-form__selects">
+							<div class="create-ticket-form__field">
+								<Label :for="`${formId}-type`">Ticketart</Label>
+								<Select
+									:model-value="
+										selectedTicketTypeId == null
+											? undefined
+											: String(selectedTicketTypeId)
+									"
+									:disabled="isCreating"
+									@update:model-value="selectTicketType"
+								>
+									<SelectTrigger :id="`${formId}-type`" class="w-full">
+										<SelectValue placeholder="Ticketart wählen" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem
+											v-for="ticketType in availableTicketTypes"
+											:key="ticketType.id"
+											:value="String(ticketType.id)"
+										>
+											{{ ticketType.name }}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
 
-		<p v-if="errorMessage" class="form-message">{{ errorMessage }}</p>
-		<p v-if="successMessage" class="form-message">{{ successMessage }}</p>
-	</form>
+							<div class="create-ticket-form__field">
+								<Label :for="`${formId}-status`">Startzustand</Label>
+								<Select
+									:model-value="
+										selectedStatusId == null
+											? undefined
+											: String(selectedStatusId)
+									"
+									:disabled="isCreating || availableStates.length === 0"
+									@update:model-value="selectStatus"
+								>
+									<SelectTrigger :id="`${formId}-status`" class="w-full">
+										<SelectValue placeholder="Zustand wählen" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem
+											v-for="state in availableStates"
+											:key="state.id"
+											:value="String(state.id)"
+										>
+											{{ state.name }}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						</div>
+					</template>
+
+					<p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
+				</div>
+
+				<SheetFooter v-if="availableTicketTypes.length > 0">
+					<Button
+						type="submit"
+						:disabled="
+							isCreating ||
+							!name.trim() ||
+							selectedTicketTypeId == null ||
+							selectedStatusId == null
+						"
+					>
+						{{ isCreating ? "Ticket wird erstellt..." : title }}
+					</Button>
+				</SheetFooter>
+			</form>
+		</SheetContent>
+	</Sheet>
 </template>
 
 <style scoped>
 .create-ticket-form {
 	display: flex;
+	flex: 1;
+	min-height: 0;
 	flex-direction: column;
+}
+
+.create-ticket-form__fields,
+.create-ticket-form__field {
+	display: flex;
+	flex-direction: column;
+}
+
+.create-ticket-form__fields {
+	gap: 1rem;
+	overflow-y: auto;
+	padding: 0 1rem;
+}
+
+.create-ticket-form__field {
+	gap: 0.5rem;
+}
+
+.create-ticket-form__selects {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 0.75rem;
-	max-width: 32rem;
 }
 
-.create-ticket-form input,
-.create-ticket-form select,
-.create-ticket-form textarea {
-	padding: 0.45rem 0.55rem;
-	border: 1px solid currentColor;
-	background: Canvas;
-	color: CanvasText;
-}
-
-.create-ticket-form textarea {
-	min-height: 5rem;
-	resize: vertical;
-}
-
-.create-ticket-form p,
-.form-message {
+.create-ticket-form p {
 	margin: 0;
+}
+
+@media (max-width: 30rem) {
+	.create-ticket-form__selects {
+		grid-template-columns: 1fr;
+	}
 }
 </style>
