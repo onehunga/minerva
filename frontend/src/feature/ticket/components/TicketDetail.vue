@@ -20,6 +20,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ActivityTimeline, useTicketActivities } from "@/feature/activity";
 import { useProject } from "@/feature/project";
@@ -82,6 +83,7 @@ const availableTransitions = computed<WorkflowTransition[]>(
 					transition.fromStateId === props.ticket.statusId),
 		) ?? [],
 );
+const canHaveChildTickets = computed(() => (props.ticketType?.children.length ?? 0) > 0);
 const ticketTypeName = computed(
 	() => props.ticketType?.name ?? `Ticketart #${props.ticket.ticketTypeId}`,
 );
@@ -350,48 +352,62 @@ function formatDate(value: string | null): string {
 					</template>
 				</p>
 
-				<Separator />
-				<TicketComments
-					:project-id="ticket.projectId"
-					:ticket-id="ticket.id"
-					:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
-				/>
-				<Separator />
-				<ActivityTimeline
-					:events="activityEvents"
-					:is-loading="isActivityLoading"
-					:error-message="activityError"
-				/>
-				<Separator />
+				<template v-if="canHaveChildTickets">
+					<Separator />
+					<section
+						class="ticket-detail__section"
+						aria-labelledby="ticket-children-heading"
+					>
+						<h4 id="ticket-children-heading">Kindtickets</h4>
+						<p v-if="childTickets.length === 0">Keine Kindtickets vorhanden.</p>
+						<ul v-else class="ticket-detail__children-list">
+							<li v-for="childTicket in childTickets" :key="childTicket.id">
+								<Button
+									variant="outline"
+									class="ticket-detail__child"
+									@click="emit('selectTicket', childTicket.id)"
+								>
+									<span>{{ childTicket.name }}</span>
+									<small>#{{ childTicket.id }}</small>
+								</Button>
+							</li>
+						</ul>
+					</section>
 
-				<section class="ticket-detail__section" aria-labelledby="ticket-children-heading">
-					<h4 id="ticket-children-heading">Kindtickets</h4>
-					<p v-if="childTickets.length === 0">Keine Kindtickets vorhanden.</p>
-					<ul v-else class="ticket-detail__children-list">
-						<li v-for="childTicket in childTickets" :key="childTicket.id">
-							<Button
-								variant="outline"
-								class="ticket-detail__child"
-								@click="emit('selectTicket', childTicket.id)"
-							>
-								<span>{{ childTicket.name }}</span>
-								<small>#{{ childTicket.id }}</small>
-							</Button>
-						</li>
-					</ul>
-				</section>
+					<section
+						v-if="projectDetails?.projectRole !== 'VIEWER'"
+						class="ticket-detail__section"
+						aria-labelledby="create-child-ticket-heading"
+					>
+						<h4 id="create-child-ticket-heading">Kindticket erstellen</h4>
+						<CreateTicketForm
+							:parent-ticket-id="ticket.id"
+							:parent-ticket-type-id="ticket.ticketTypeId"
+						/>
+					</section>
+				</template>
 
-				<section
-					v-if="projectDetails?.projectRole !== 'VIEWER'"
-					class="ticket-detail__section"
-					aria-labelledby="create-child-ticket-heading"
-				>
-					<h4 id="create-child-ticket-heading">Kindticket erstellen</h4>
-					<CreateTicketForm
-						:parent-ticket-id="ticket.id"
-						:parent-ticket-type-id="ticket.ticketTypeId"
-					/>
-				</section>
+				<Separator />
+				<Tabs default-value="comments">
+					<TabsList>
+						<TabsTrigger value="comments">Kommentare</TabsTrigger>
+						<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
+					</TabsList>
+					<TabsContent value="comments" class="ticket-detail__tab-content">
+						<TicketComments
+							:project-id="ticket.projectId"
+							:ticket-id="ticket.id"
+							:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
+						/>
+					</TabsContent>
+					<TabsContent value="activities" class="ticket-detail__tab-content">
+						<ActivityTimeline
+							:events="activityEvents"
+							:is-loading="isActivityLoading"
+							:error-message="activityError"
+						/>
+					</TabsContent>
+				</Tabs>
 			</div>
 
 			<Separator orientation="vertical" class="ticket-detail__separator--desktop" />
@@ -604,6 +620,10 @@ function formatDate(value: string | null): string {
 .ticket-detail__child {
 	width: 100%;
 	justify-content: space-between;
+}
+
+.ticket-detail__tab-content {
+	padding-top: 0.75rem;
 }
 
 .ticket-detail__meta dt {

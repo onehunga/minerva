@@ -56,12 +56,16 @@ const ticketType: TicketType = {
 };
 
 describe("TicketDetail", () => {
-	it("separates ticket content from actions and metadata", () => {
+	it("separates ticket content from actions and metadata", async () => {
 		const wrapper = shallowMount(TicketDetail, {
 			props: { ticket, ticketType, childTickets: [] },
 			global: {
 				stubs: {
 					Button: { template: "<button><slot /></button>" },
+					Tabs: { template: "<div><slot /></div>" },
+					TabsList: { template: "<div><slot /></div>" },
+					TabsTrigger: { template: "<button><slot /></button>" },
+					TabsContent: { template: "<div><slot /></div>" },
 					TicketComments: { template: "<div>Kommentare</div>" },
 					ActivityTimeline: { template: "<div>Eventlog</div>" },
 					CreateTicketForm: { template: "<div>Kindticketformular</div>" },
@@ -72,8 +76,16 @@ describe("TicketDetail", () => {
 		expect(wrapper.text()).toContain("Ticket #7");
 		expect(wrapper.text()).toContain("Anmeldung reparieren");
 		expect(wrapper.text()).toContain("Kommentare");
+		expect(wrapper.text()).toContain("Aktivitäten");
+		expect(wrapper.find("#ticket-children-heading").exists()).toBe(false);
 		expect(wrapper.get("#ticket-actions-heading").text()).toBe("Aktionen");
 		expect(wrapper.get("#ticket-meta-heading").text()).toBe("Eckdaten");
 		expect(wrapper.text()).not.toContain("Ticketdetails");
+
+		await wrapper.setProps({ ticketType: { ...ticketType, children: [3] } });
+
+		expect(wrapper.text().indexOf("Kindtickets")).toBeLessThan(
+			wrapper.text().indexOf("Kommentare"),
+		);
 	});
 });
