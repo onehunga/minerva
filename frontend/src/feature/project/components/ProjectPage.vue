@@ -157,17 +157,12 @@ async function submitArchiveProject(): Promise<void> {
 					</CardContent>
 				</Card>
 
-				<Card>
-					<CardHeader><CardTitle>Dashboard</CardTitle></CardHeader>
-					<CardContent>
-						<DashboardOverview
-							:data="projectDashboard"
-							:is-loading="isProjectDashboardLoading"
-							:error-message="projectDashboardError"
-							:show-project-name="false"
-						/>
-					</CardContent>
-				</Card>
+				<DashboardOverview
+					:data="projectDashboard"
+					:is-loading="isProjectDashboardLoading"
+					:error-message="projectDashboardError"
+					:show-project-name="false"
+				/>
 			</TabsContent>
 
 			<TabsContent
