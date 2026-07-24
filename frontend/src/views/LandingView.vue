@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { DashboardOverview, useGlobalDashboard } from "@/feature/dashboard";
-import { useUser } from "@/feature/user";
 
-const { userDetails } = useUser();
 const {
 	data: globalDashboard,
 	isLoading: isGlobalDashboardLoading,
@@ -11,9 +9,6 @@ const {
 </script>
 
 <template>
-	<p v-if="!userDetails">Loading...</p>
-	<p v-else>{{ userDetails!.username }}</p>
-
 	<DashboardOverview
 		:data="globalDashboard"
 		:is-loading="isGlobalDashboardLoading"
