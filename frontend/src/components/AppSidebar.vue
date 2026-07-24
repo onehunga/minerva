@@ -11,9 +11,21 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
+	SidebarRail,
 } from "@/components/ui/sidebar";
 import { HugeiconsIcon } from "@hugeicons/vue";
-import { Plus, Sun, Moon, Computer, User, Logout } from "@hugeicons/core-free-icons";
+import {
+	Activity,
+	Computer,
+	Folder,
+	Home,
+	Logout,
+	Moon,
+	Paint,
+	Plus,
+	Sun,
+	User,
+} from "@hugeicons/core-free-icons";
 import { useProjects } from "@/feature/project/composables/useProjects";
 import { useUser } from "@/feature/user";
 import { useColorMode } from "@vueuse/core";
@@ -42,13 +54,17 @@ async function submitLogout(): Promise<void> {
 </script>
 
 <template>
-	<Sidebar class="bg-sidebar">
+	<Sidebar variant="floating" collapsible="icon">
 		<SidebarHeader>
-			<SidebarMenu>
-				<SidebarMenuItem>
-					<SidebarMenuButton @click="$router.push('/')" size="lg">
-						Minerva
+			<SidebarMenu class="flex-row items-center">
+				<SidebarMenuItem class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+					<SidebarMenuButton tooltip="Minerva" @click="$router.push('/')">
+						<HugeiconsIcon :icon="Home" />
+						<span>Minerva</span>
 					</SidebarMenuButton>
+				</SidebarMenuItem>
+				<SidebarMenuItem class="shrink-0 group-data-[collapsible=icon]:mx-auto">
+					<SidebarTrigger class="size-8" />
 				</SidebarMenuItem>
 			</SidebarMenu>
 		</SidebarHeader>
@@ -59,25 +75,32 @@ async function submitLogout(): Promise<void> {
 					<SidebarMenu>
 						<SidebarMenuItem>
 							<SidebarMenuButton
+								tooltip="Übersicht"
 								:is-active="route.name === 'landing'"
 								@click="$router.push('/')"
-								>Übersicht</SidebarMenuButton
 							>
-						</SidebarMenuItem>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								:is-active="route.name === 'projects'"
-								@click="$router.push({ name: 'projects' })"
-							>
-								Projekte
+								<HugeiconsIcon :icon="Home" />
+								<span>Übersicht</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
 							<SidebarMenuButton
+								tooltip="Projekte"
+								:is-active="route.name === 'projects'"
+								@click="$router.push({ name: 'projects' })"
+							>
+								<HugeiconsIcon :icon="Folder" />
+								<span>Projekte</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								tooltip="Aktivitäten"
 								:is-active="route.name === 'activities'"
 								@click="$router.push({ name: 'activities' })"
 							>
-								Aktivitäten
+								<HugeiconsIcon :icon="Activity" />
+								<span>Aktivitäten</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
@@ -90,21 +113,22 @@ async function submitLogout(): Promise<void> {
 					<SidebarMenu>
 						<SidebarMenuItem class="m-1" v-for="project in projects" :key="project.id">
 							<SidebarMenuButton
+								:tooltip="project.name"
 								@click="
 									$router.push({ name: 'project', params: { id: project.id } })
 								"
 							>
-								{{ project.name }}
+								<HugeiconsIcon :icon="Folder" />
+								<span>{{ project.name }}</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
-							<SidebarMenuButton @click="$router.push('/create-project')">
-								<div
-									class="flex items-center justify-center w-6 h-6 rounded-full bg-sidebar-primary text-sidebar-primary-foreground"
-								>
+							<SidebarMenuButton
+								tooltip="Projekt Erstellen"
+								@click="$router.push('/create-project')"
+							>
+								<div class="flex flex-row items-center gap-2">
 									<HugeiconsIcon :icon="Plus" class="" />
-								</div>
-								<div>
 									<p>Projekt erstellen</p>
 								</div>
 							</SidebarMenuButton>
@@ -118,9 +142,10 @@ async function submitLogout(): Promise<void> {
 				<SidebarGroupContent>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton @click="$router.push('/admin')"
-								>Benutzer</SidebarMenuButton
-							>
+							<SidebarMenuButton tooltip="Benutzer" @click="$router.push('/admin')">
+								<HugeiconsIcon :icon="User" />
+								<span>Benutzer</span>
+							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarGroupContent>
@@ -131,14 +156,17 @@ async function submitLogout(): Promise<void> {
 				<SidebarMenuItem>
 					<DropdownMenu>
 						<DropdownMenuTrigger as-child>
-							<SidebarMenuButton>
-								{{
+							<SidebarMenuButton tooltip="Farbmodus">
+								<HugeiconsIcon
+									:icon="mode === 'dark' ? Moon : mode === 'light' ? Sun : Paint"
+								/>
+								<span>{{
 									mode === "dark"
-										? "Dark Mode"
+										? "Dunkler Modus"
 										: mode == "light"
-											? "Light Mode"
+											? "Heller Modus"
 											: "System"
-								}}
+								}}</span>
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent>
@@ -162,7 +190,7 @@ async function submitLogout(): Promise<void> {
 				<SidebarMenuItem>
 					<DropdownMenu>
 						<DropdownMenuTrigger as-child>
-							<SidebarMenuButton size="lg">
+							<SidebarMenuButton :tooltip="userDetails?.username">
 								<HugeiconsIcon :icon="User" />
 								<span>{{ userDetails?.username }}</span>
 							</SidebarMenuButton>
@@ -177,6 +205,6 @@ async function submitLogout(): Promise<void> {
 				</SidebarMenuItem>
 			</SidebarMenu>
 		</SidebarFooter>
+		<SidebarRail />
 	</Sidebar>
-	<SidebarTrigger></SidebarTrigger>
 </template>
