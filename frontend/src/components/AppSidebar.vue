@@ -17,6 +17,7 @@ import { Plus, Sun, Moon, Computer } from "@hugeicons/core-free-icons";
 import { useProjects } from "@/feature/project/composables/useProjects";
 import { useUser } from "@/feature/user";
 import { useColorMode } from "@vueuse/core";
+import { useRoute } from "vue-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -28,6 +29,7 @@ import {
 
 const { projects } = useProjects();
 const { userDetails } = useUser();
+const route = useRoute();
 
 const mode = useColorMode();
 mode.value = "dark";
@@ -50,12 +52,27 @@ mode.value = "dark";
 				<SidebarGroupContent>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton @click="$router.push('/')"
+							<SidebarMenuButton
+								:is-active="route.name === 'landing'"
+								@click="$router.push('/')"
 								>Übersicht</SidebarMenuButton
 							>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
-							<SidebarMenuButton>Projekte</SidebarMenuButton>
+							<SidebarMenuButton
+								:is-active="route.name === 'projects'"
+								@click="$router.push({ name: 'projects' })"
+							>
+								Projekte
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								:is-active="route.name === 'activities'"
+								@click="$router.push({ name: 'activities' })"
+							>
+								Aktivitäten
+							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarGroupContent>
