@@ -37,8 +37,3 @@ export type ProjectUser = {
 export type ProjectUserListResponse = {
 	users: ProjectUser[];
 };
-
-export type TicketTypeDetails = {
-	name: string;
-	description: string;
-};

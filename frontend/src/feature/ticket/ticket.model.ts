@@ -25,10 +25,10 @@ export type CreateTicketTransition = {
 };
 
 export type WorkflowConfiguration = {
-	tickets: CreateTicketTypeRequest[];
+	tickets: TicketWorkflow[];
 };
 
-export type CreateTicketTypeRequest = {
+export type TicketWorkflow = {
 	name: string;
 	description: string;
 	states: CreateWorkflowStateRequest[];
