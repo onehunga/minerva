@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { CreateProjectForm } from "@/feature/project";
+import { CreateProjectWizard } from "@/feature/project";
 </script>
 
 <template>
-	<CreateProjectForm />
+	<!-- <CreateProjectForm /> -->
+	<CreateProjectWizard />
 </template>
