@@ -177,14 +177,6 @@ function describe(event: ActivityEvent): string {
 	margin: 0;
 }
 
-.activity-timeline__item {
-	display: flex;
-	flex-direction: column;
-	gap: 0.3rem;
-	padding: 0.6rem 0.8rem;
-	border: 1px solid currentColor;
-}
-
 .activity-timeline__title {
 	font-weight: 700;
 }
