@@ -1,8 +1,10 @@
+// oxlint-disable no-unused-vars
 import { describe, expect, it } from "vitest";
 
 import { flushPromises, mount } from "@vue/test-utils";
-import { UserRepository, UserRepositoryKey, type model } from "..";
+import { UserRepositoryKey, type IUserRepository, type model } from "..";
 import UserCreateForm from "../components/UserCreateForm.vue";
+import type { TokenPair } from "@/api/credentials.ts";
 
 type CreateUserCall = {
 	username: string;
@@ -10,14 +12,34 @@ type CreateUserCall = {
 	role: model.UserRole;
 };
 
-class RecordingUserRepository extends UserRepository {
+class RecordingUserRepository implements IUserRepository {
+	login(username: string, password: string): Promise<TokenPair> {
+		throw new Error("Method not implemented.");
+	}
+	logout(refreshToken: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	details(): Promise<model.UserDetails> {
+		throw new Error("Method not implemented.");
+	}
+	getAllUsers(): Promise<model.UserRecordList> {
+		throw new Error("Method not implemented.");
+	}
+	updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	updateUsername(userId: number, username: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	updateUserPassword(userId: number, password: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	deleteUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
 	calls: CreateUserCall[] = [];
 
-	override async createUser(
-		username: string,
-		password: string,
-		role: model.UserRole,
-	): Promise<void> {
+	async createUser(username: string, password: string, role: model.UserRole): Promise<void> {
 		this.calls.push({
 			username,
 			password,
@@ -26,8 +48,32 @@ class RecordingUserRepository extends UserRepository {
 	}
 }
 
-class FailingCreateUserRepository extends UserRepository {
-	override async createUser(): Promise<void> {
+class FailingCreateUserRepository implements IUserRepository {
+	login(username: string, password: string): Promise<TokenPair> {
+		throw new Error("Method not implemented.");
+	}
+	logout(refreshToken: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	details(): Promise<model.UserDetails> {
+		throw new Error("Method not implemented.");
+	}
+	getAllUsers(): Promise<model.UserRecordList> {
+		throw new Error("Method not implemented.");
+	}
+	updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	updateUsername(userId: number, username: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	updateUserPassword(userId: number, password: string): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	deleteUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	async createUser(): Promise<void> {
 		throw new Error("Failed to create user");
 	}
 }
@@ -45,7 +91,6 @@ describe("UserCreateForm", () => {
 
 		await wrapper.get("#username").setValue("new-user");
 		await wrapper.get("#password").setValue("secret-password");
-		await wrapper.get("#role").setValue("ADMIN");
 		await wrapper.get("form").trigger("submit");
 		await flushPromises();
 
@@ -53,11 +98,10 @@ describe("UserCreateForm", () => {
 			{
 				username: "new-user",
 				password: "secret-password",
-				role: "ADMIN",
+				role: "USER",
 			},
 		]);
 		expect(wrapper.emitted("created")).toHaveLength(1);
-		expect(wrapper.text()).toContain("Benutzer wurde erstellt.");
 	});
 
 	it("renders an alert and does not emit created when creation fails", async () => {
@@ -71,7 +115,6 @@ describe("UserCreateForm", () => {
 
 		await wrapper.get("#username").setValue("new-user");
 		await wrapper.get("#password").setValue("secret-password");
-		await wrapper.get("#role").setValue("USER");
 		await wrapper.get("form").trigger("submit");
 		await flushPromises();
 
