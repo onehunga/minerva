@@ -1,4 +1,4 @@
-import { shallowMount } from "@vue/test-utils";
+import { mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import type { DashboardResponse } from "../dashboard.model";
 import DashboardOverview from "../components/DashboardOverview.vue";
@@ -43,7 +43,7 @@ const dashboard: DashboardResponse = {
 
 describe("DashboardOverview", () => {
 	it("passes dashboard data to both charts and keeps recent tickets", () => {
-		const wrapper = shallowMount(DashboardOverview, {
+		const wrapper = mount(DashboardOverview, {
 			props: {
 				data: dashboard,
 				isLoading: false,
@@ -59,6 +59,34 @@ describe("DashboardOverview", () => {
 			dashboard.priorities,
 		);
 		expect(wrapper.text()).toContain("Dashboard bauen");
+		expect(wrapper.text()).toContain("#5");
 		expect(wrapper.text()).toContain("Minerva");
+	});
+
+	it("hides the project name in a project dashboard", () => {
+		const wrapper = mount(DashboardOverview, {
+			props: {
+				data: dashboard,
+				isLoading: false,
+				errorMessage: "",
+				showProjectName: false,
+			},
+		});
+
+		expect(wrapper.text()).not.toContain("Projekt");
+		expect(wrapper.text()).not.toContain("Minerva");
+	});
+
+	it("shows an empty table state without recent tickets", () => {
+		const wrapper = mount(DashboardOverview, {
+			props: {
+				data: { ...dashboard, recentTickets: [] },
+				isLoading: false,
+				errorMessage: "",
+				showProjectName: true,
+			},
+		});
+
+		expect(wrapper.text()).toContain("Keine Tickets vorhanden.");
 	});
 });

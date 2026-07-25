@@ -1,4 +1,14 @@
 <script setup lang="ts">
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableEmpty,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import type { DashboardRecentTicket, DashboardResponse } from "../dashboard.model";
 import TicketPriorityDistributionChart from "./TicketPriorityDistributionChart.vue";
 import TicketStatusDistributionChart from "./TicketStatusDistributionChart.vue";
@@ -45,28 +55,49 @@ function formatDate(value: string | null): string {
 				<TicketPriorityDistributionChart :priorities="data.priorities" />
 			</div>
 
-			<h4>Zuletzt erstellte Tickets</h4>
-			<p v-if="recent().length === 0">Keine Tickets vorhanden.</p>
-			<table v-else>
-				<thead>
-					<tr>
-						<th v-if="showProjectName">Projekt</th>
-						<th>Ticket</th>
-						<th>Status</th>
-						<th>Priorität</th>
-						<th>Erstellt</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="ticket in recent()" :key="ticket.id">
-						<td v-if="showProjectName">{{ ticket.projectName ?? "-" }}</td>
-						<td>{{ ticket.name }}</td>
-						<td>{{ ticket.statusName }}</td>
-						<td>{{ priorityLabel(ticket.priority) }}</td>
-						<td>{{ formatDate(ticket.createdAt) }}</td>
-					</tr>
-				</tbody>
-			</table>
+			<Card>
+				<CardHeader>
+					<CardTitle>Zuletzt erstellte Tickets</CardTitle>
+					<CardDescription>Die fünf neuesten Tickets im Überblick</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead v-if="showProjectName">Projekt</TableHead>
+								<TableHead>Ticket</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead>Priorität</TableHead>
+								<TableHead>Erstellt</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							<TableEmpty
+								v-if="recent().length === 0"
+								:colspan="showProjectName ? 5 : 4"
+							>
+								Keine Tickets vorhanden.
+							</TableEmpty>
+							<TableRow v-for="ticket in recent()" v-else :key="ticket.id">
+								<TableCell v-if="showProjectName">
+									{{ ticket.projectName ?? "-" }}
+								</TableCell>
+								<TableCell>
+									<div class="flex flex-col">
+										<span class="font-medium">{{ ticket.name }}</span>
+										<small class="text-muted-foreground"
+											>#{{ ticket.id }}</small
+										>
+									</div>
+								</TableCell>
+								<TableCell>{{ ticket.statusName }}</TableCell>
+								<TableCell>{{ priorityLabel(ticket.priority) }}</TableCell>
+								<TableCell>{{ formatDate(ticket.createdAt) }}</TableCell>
+							</TableRow>
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
 		</template>
 	</section>
 </template>
@@ -82,17 +113,6 @@ function formatDate(value: string | null): string {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 1rem;
-}
-
-.dashboard-overview table {
-	border-collapse: collapse;
-}
-
-.dashboard-overview th,
-.dashboard-overview td {
-	border: 1px solid currentColor;
-	padding: 0.4rem 0.6rem;
-	text-align: left;
 }
 
 @media (max-width: 64rem) {
