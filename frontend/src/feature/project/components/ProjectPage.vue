@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProject, useProjectRepository } from "..";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
+import { Textarea } from "@/components/ui/textarea";
 
 const props = defineProps<{
 	id: number;
@@ -135,7 +136,7 @@ async function submitArchiveProject(): Promise<void> {
 			Dieses Projekt ist archiviert.
 		</p>
 
-		<Tabs default-value="overview" class="min-h-0 flex-1">
+		<Tabs default-value="overview" class="min-h-0 flex-1 overflow-hidden">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
 					<TabsTrigger value="overview">Übersicht</TabsTrigger>
@@ -149,7 +150,10 @@ async function submitArchiveProject(): Promise<void> {
 				</TabsList>
 			</div>
 
-			<TabsContent value="overview" class="project-page__tab-content">
+			<TabsContent
+				value="overview"
+				class="project-page__tab-content project-page__tab-content--scroll"
+			>
 				<Card>
 					<CardContent>
 						<h1>{{ details.name }}</h1>
@@ -168,7 +172,7 @@ async function submitArchiveProject(): Promise<void> {
 			<TabsContent
 				v-if="details.projectRole !== null"
 				value="tickets"
-				class="project-page__tab-content"
+				class="project-page__tab-content overflow-hidden"
 			>
 				<CreateTicketForm
 					v-if="details.projectRole !== 'VIEWER'"
@@ -184,9 +188,11 @@ async function submitArchiveProject(): Promise<void> {
 				</label>
 				<p v-if="isLoadingTickets">Tickets werden geladen...</p>
 				<div v-else class="project-page__tickets">
-					<Card>
-						<CardHeader><CardTitle>Tickets</CardTitle></CardHeader>
-						<CardContent>
+					<Card class="min-h-0">
+						<CardHeader>
+							<CardTitle>Tickets</CardTitle>
+						</CardHeader>
+						<CardContent class="min-h-0 flex-1 overflow-y-auto">
 							<TicketList
 								:tickets="tickets"
 								:selected-ticket-id="selectedTicketId"
@@ -195,8 +201,8 @@ async function submitArchiveProject(): Promise<void> {
 						</CardContent>
 					</Card>
 
-					<Card class="project-page__ticket-detail-card">
-						<CardContent>
+					<Card class="project-page__ticket-detail-card min-h-0">
+						<CardContent class="min-h-0 flex-1 overflow-y-auto">
 							<TicketDetail
 								v-if="selectedTicket"
 								:ticket="selectedTicket"
@@ -210,7 +216,7 @@ async function submitArchiveProject(): Promise<void> {
 				</div>
 			</TabsContent>
 
-			<TabsContent value="activities" class="project-page__tab-content min-h-0">
+			<TabsContent value="activities" class="project-page__tab-content overflow-hidden">
 				<Card class="min-h-0 flex-1">
 					<CardContent class="flex min-h-0 flex-1">
 						<ActivityTimeline
@@ -224,9 +230,15 @@ async function submitArchiveProject(): Promise<void> {
 				</Card>
 			</TabsContent>
 
-			<TabsContent v-if="canOpenSettings" value="settings" class="project-page__tab-content">
+			<TabsContent
+				v-if="canOpenSettings"
+				value="settings"
+				class="project-page__tab-content project-page__tab-content--scroll"
+			>
 				<Card v-if="canUpdateDetails">
-					<CardHeader><CardTitle>Projektdetails</CardTitle></CardHeader>
+					<CardHeader>
+						<CardTitle>Projektdetails</CardTitle>
+					</CardHeader>
 					<CardContent>
 						<form
 							class="project-page__details-form"
@@ -238,10 +250,10 @@ async function submitArchiveProject(): Promise<void> {
 							</label>
 							<label>
 								Beschreibung
-								<textarea
+								<Textarea
 									v-model="draftDescription"
 									:disabled="isUpdatingDetails"
-								></textarea>
+								></Textarea>
 							</label>
 							<Button
 								type="submit"
@@ -257,10 +269,14 @@ async function submitArchiveProject(): Promise<void> {
 					</CardContent>
 				</Card>
 				<Card>
-					<CardContent><ProjectUserManagement /></CardContent>
+					<CardContent>
+						<ProjectUserManagement />
+					</CardContent>
 				</Card>
 				<Card v-if="details.projectRole === 'OWNER' && !details.archived">
-					<CardHeader><CardTitle>Projektverwaltung</CardTitle></CardHeader>
+					<CardHeader>
+						<CardTitle>Projektverwaltung</CardTitle>
+					</CardHeader>
 					<CardContent>
 						<Button
 							type="button"
@@ -295,13 +311,20 @@ async function submitArchiveProject(): Promise<void> {
 
 .project-page__tab-content {
 	display: flex;
+	min-height: 0;
 	flex-direction: column;
 	gap: 1rem;
 	padding-top: 1rem;
 }
 
+.project-page__tab-content--scroll {
+	overflow-y: auto;
+}
+
 .project-page__tickets {
 	display: grid;
+	min-height: 0;
+	flex: 1;
 	grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 2fr);
 	gap: 1rem;
 	align-items: stretch;
@@ -375,6 +398,7 @@ async function submitArchiveProject(): Promise<void> {
 
 	.project-page__tickets {
 		grid-template-columns: 1fr;
+		grid-template-rows: repeat(2, minmax(0, 1fr));
 	}
 }
 </style>
