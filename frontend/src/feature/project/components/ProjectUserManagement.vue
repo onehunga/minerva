@@ -1,10 +1,67 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { type model, useProject, useProjectUsers } from "..";
+import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetFooter,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableEmpty,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { useUserStore } from "@/feature/user";
+import { type model, useProject, useProjectUsers } from "..";
+
+const projectRoles: model.ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
+const projectRoleLabels: Record<model.ProjectRole, string> = {
+	OWNER: "Owner",
+	CONTRIBUTOR: "Mitwirkender",
+	VIEWER: "Betrachter",
+};
 
 const { details: projectDetails } = useProject();
-
 const userStore = useUserStore();
 const {
 	addProjectUser,
@@ -22,50 +79,27 @@ const {
 
 const selectedUserId = ref<number | null>(null);
 const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
-const roleChanges = ref<Record<number, model.ProjectRole>>({});
+const roleCandidate = ref<model.ProjectUser | null>(null);
+const deleteCandidate = ref<model.ProjectUser | null>(null);
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const memberUsers = computed(() => users.value.filter((user) => user.member));
 const availableUsers = computed(() => users.value.filter((user) => !user.member));
+const isRoleEditOpen = computed(() => roleCandidate.value !== null);
+const availableProjectRoles = computed(() =>
+	isOwner.value ? projectRoles : projectRoles.filter((role) => role === "OWNER"),
+);
+const hasSelectedRoleChanged = computed(
+	() =>
+		roleCandidate.value?.projectRole !== null &&
+		selectedRole.value !== roleCandidate.value?.projectRole,
+);
 
-onMounted(loadProjectUsers);
-
-async function loadProjectUsers(): Promise<void> {
-	await loadUsers();
-	syncRoleChanges();
-}
-
-function syncRoleChanges(): void {
-	roleChanges.value = users.value.reduce<Record<number, model.ProjectRole>>((roles, user) => {
-		if (user.projectRole !== null) {
-			roles[user.id] = user.projectRole;
-		}
-
-		return roles;
-	}, {});
-}
+onMounted(loadUsers);
 
 function formatProjectRole(role: model.ProjectRole | null): string {
-	if (role === null) {
-		return "Kein Mitglied";
-	}
-
-	return role;
-}
-
-async function submitProjectUser(): Promise<void> {
-	if (selectedUserId.value === null) {
-		return;
-	}
-
-	const wasAdded = await addProjectUser(selectedUserId.value, selectedRole.value);
-
-	if (wasAdded) {
-		selectedUserId.value = null;
-		selectedRole.value = "CONTRIBUTOR";
-		syncRoleChanges();
-	}
+	return role === null ? "Kein Mitglied" : projectRoleLabels[role];
 }
 
 function canUpdateProjectRole(user: model.ProjectUser): boolean {
@@ -81,198 +115,341 @@ function canAssignOwner(user: model.ProjectUser): boolean {
 	return isAdmin.value && user.member && user.projectRole !== "OWNER";
 }
 
-function hasRoleChanged(user: model.ProjectUser): boolean {
-	return user.projectRole !== null && roleChanges.value[user.id] !== user.projectRole;
+function canManageUser(user: model.ProjectUser): boolean {
+	return canUpdateProjectRole(user) || canAssignOwner(user);
 }
 
-async function submitProjectUserRole(user: model.ProjectUser): Promise<void> {
-	const role = roleChanges.value[user.id];
+function selectUser(value: unknown): void {
+	selectedUserId.value = Number(value);
+}
 
-	if (role === undefined) {
+function selectRole(value: unknown): void {
+	selectedRole.value = String(value) as model.ProjectRole;
+}
+
+async function submitProjectUser(): Promise<void> {
+	if (selectedUserId.value === null) {
 		return;
 	}
 
-	const wasUpdated = await updateProjectUserRole(user.id, role);
-
-	if (wasUpdated) {
-		syncRoleChanges();
+	if (await addProjectUser(selectedUserId.value, selectedRole.value)) {
+		selectedUserId.value = null;
+		selectedRole.value = "CONTRIBUTOR";
 	}
 }
 
-async function assignOwner(user: model.ProjectUser): Promise<void> {
-	await updateProjectUserRole(user.id, "OWNER");
-}
-
-async function removeUser(user: model.ProjectUser): Promise<void> {
-	if (!confirm(`Projektmitglied ${user.username} wirklich entfernen?`)) {
+function openRoleEdit(user: model.ProjectUser): void {
+	if (!canManageUser(user)) {
 		return;
 	}
 
-	if (await removeProjectUser(user.id)) {
-		syncRoleChanges();
+	errorMessage.value = "";
+	roleCandidate.value = user;
+	selectedRole.value = canUpdateProjectRole(user) ? user.projectRole! : "OWNER";
+}
+
+function updateRoleEditOpen(open: boolean): void {
+	if (!open && updatingUserRoleId.value === null) {
+		roleCandidate.value = null;
+	}
+}
+
+async function submitProjectUserRole(): Promise<void> {
+	if (roleCandidate.value === null || !hasSelectedRoleChanged.value) {
+		return;
+	}
+
+	if (await updateProjectUserRole(roleCandidate.value.id, selectedRole.value)) {
+		roleCandidate.value = null;
+	}
+}
+
+function openDeleteDialog(user: model.ProjectUser): void {
+	if (!canUpdateProjectRole(user)) {
+		return;
+	}
+
+	errorMessage.value = "";
+	deleteCandidate.value = user;
+}
+
+function updateDeleteOpen(open: boolean): void {
+	if (!open && removingUserId.value === null) {
+		deleteCandidate.value = null;
+	}
+}
+
+async function confirmRemove(): Promise<void> {
+	if (deleteCandidate.value === null) {
+		return;
+	}
+
+	if (await removeProjectUser(deleteCandidate.value.id)) {
+		deleteCandidate.value = null;
 	}
 }
 </script>
 
 <template>
-	<section class="project-user-management">
-		<h2>Projektbenutzer</h2>
+	<section class="flex min-h-0 flex-1 flex-col gap-3">
+		<h2 class="m-0 text-lg font-semibold">Projektbenutzer</h2>
 
-		<p v-if="isLoadingUsers">Projektbenutzer werden geladen...</p>
-		<p v-else-if="errorMessage && users.length === 0" role="alert">
+		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
 			{{ errorMessage }}
 		</p>
-		<p v-else-if="memberUsers.length === 0">Es sind keine Projektmitglieder vorhanden.</p>
+		<p v-if="successMessage" class="m-0 text-sm text-muted-foreground" role="status">
+			{{ successMessage }}
+		</p>
+		<p v-if="isLoadingUsers" class="m-0">Projektbenutzer werden geladen...</p>
 
-		<template v-else>
-			<p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
-			<p v-if="successMessage">{{ successMessage }}</p>
+		<div v-else class="min-h-0 flex-1 overflow-auto">
+			<Table class="min-w-lg">
+				<TableHeader class="bg-card sticky top-0 z-10">
+					<TableRow>
+						<TableHead>Benutzername</TableHead>
+						<TableHead>Projektrolle</TableHead>
+						<TableHead class="w-12">
+							<span class="sr-only">Aktionen</span>
+						</TableHead>
+					</TableRow>
+				</TableHeader>
 
-			<table class="project-user-list">
-				<thead>
-					<tr>
-						<th scope="col">Benutzername</th>
-						<th scope="col">Projektrolle</th>
-						<th scope="col">Aktionen</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="user in memberUsers" :key="user.id">
-						<td>{{ user.username }}</td>
-						<td>
-							<select
-								v-if="canUpdateProjectRole(user)"
-								v-model="roleChanges[user.id]"
-								:aria-label="`Projektrolle für ${user.username}`"
-								:disabled="updatingUserRoleId !== null || removingUserId !== null"
-							>
-								<option value="OWNER">OWNER</option>
-								<option value="CONTRIBUTOR">CONTRIBUTOR</option>
-								<option value="VIEWER">VIEWER</option>
-							</select>
-							<span v-else>{{ formatProjectRole(user.projectRole) }}</span>
-						</td>
-						<td>
-							<button
-								v-if="canAssignOwner(user)"
-								type="button"
-								:disabled="updatingUserRoleId !== null"
-								@click="assignOwner(user)"
-							>
-								{{
-									updatingUserRoleId === user.id
-										? "Wird gespeichert..."
-										: "Zum Owner ernennen"
-								}}
-							</button>
-							<button
-								v-if="canUpdateProjectRole(user)"
-								type="button"
-								:disabled="
-									!hasRoleChanged(user) ||
-									updatingUserRoleId !== null ||
-									removingUserId !== null
-								"
-								@click="submitProjectUserRole(user)"
-							>
-								{{
-									updatingUserRoleId === user.id
-										? "Wird gespeichert..."
-										: "Speichern"
-								}}
-							</button>
-							<button
-								v-if="canUpdateProjectRole(user)"
-								type="button"
-								:disabled="updatingUserRoleId !== null || removingUserId !== null"
-								@click="removeUser(user)"
-							>
-								{{ removingUserId === user.id ? "Wird entfernt..." : "Entfernen" }}
-							</button>
-						</td>
-					</tr>
-				</tbody>
-			</table>
+				<TableBody>
+					<TableEmpty v-if="memberUsers.length === 0" :colspan="3">
+						Es sind keine Projektmitglieder vorhanden.
+					</TableEmpty>
 
-			<form v-if="isOwner" class="project-user-form" @submit.prevent="submitProjectUser">
-				<div class="form-field">
-					<label for="project-user">Benutzer</label>
-					<select
-						id="project-user"
-						v-model.number="selectedUserId"
-						name="project-user"
-						:disabled="availableUsers.length === 0 || isAddingUser"
-						required
+					<ContextMenu v-for="user in memberUsers" :key="user.id">
+						<ContextMenuTrigger as-child :disabled="!canManageUser(user)">
+							<TableRow>
+								<TableCell class="font-medium">{{ user.username }}</TableCell>
+								<TableCell>{{ formatProjectRole(user.projectRole) }}</TableCell>
+								<TableCell class="text-right">
+									<DropdownMenu v-if="canManageUser(user)">
+										<DropdownMenuTrigger as-child>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												:aria-label="`Aktionen für ${user.username}`"
+												@click.stop
+											>
+												<EllipsisIcon />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem
+												data-action="edit-role"
+												@select="openRoleEdit(user)"
+											>
+												<PencilIcon />
+												Projektrolle ändern
+											</DropdownMenuItem>
+											<DropdownMenuSeparator
+												v-if="canUpdateProjectRole(user)"
+											/>
+											<DropdownMenuItem
+												v-if="canUpdateProjectRole(user)"
+												data-action="remove"
+												variant="destructive"
+												@select="openDeleteDialog(user)"
+											>
+												<Trash2Icon />
+												Aus Projekt entfernen
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</TableCell>
+							</TableRow>
+						</ContextMenuTrigger>
+
+						<ContextMenuContent>
+							<ContextMenuItem data-action="edit-role" @select="openRoleEdit(user)">
+								<PencilIcon />
+								Projektrolle ändern
+							</ContextMenuItem>
+							<ContextMenuSeparator v-if="canUpdateProjectRole(user)" />
+							<ContextMenuItem
+								v-if="canUpdateProjectRole(user)"
+								data-action="remove"
+								variant="destructive"
+								@select="openDeleteDialog(user)"
+							>
+								<Trash2Icon />
+								Aus Projekt entfernen
+							</ContextMenuItem>
+						</ContextMenuContent>
+					</ContextMenu>
+				</TableBody>
+
+				<TableFooter v-if="isOwner" class="bg-card sticky bottom-0 z-10">
+					<TableRow>
+						<TableCell colspan="3">
+							<form
+								class="flex flex-wrap items-end gap-3"
+								@submit.prevent="submitProjectUser"
+							>
+								<div class="flex min-w-48 flex-1 flex-col gap-2">
+									<Label for="project-user">Benutzer</Label>
+									<Select
+										:model-value="
+											selectedUserId === null
+												? undefined
+												: String(selectedUserId)
+										"
+										:disabled="availableUsers.length === 0 || isAddingUser"
+										@update:model-value="selectUser"
+									>
+										<SelectTrigger id="project-user" class="w-full">
+											<SelectValue
+												:placeholder="
+													availableUsers.length === 0
+														? 'Keine Benutzer verfügbar'
+														: 'Benutzer auswählen'
+												"
+											/>
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem
+												v-for="user in availableUsers"
+												:key="user.id"
+												:value="String(user.id)"
+											>
+												{{ user.username }}
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+
+								<div class="flex min-w-48 flex-1 flex-col gap-2">
+									<Label for="project-role">Projektrolle</Label>
+									<Select
+										:model-value="selectedRole"
+										:disabled="availableUsers.length === 0 || isAddingUser"
+										@update:model-value="selectRole"
+									>
+										<SelectTrigger id="project-role" class="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem
+												v-for="role in projectRoles"
+												:key="role"
+												:value="role"
+											>
+												{{ formatProjectRole(role) }}
+											</SelectItem>
+										</SelectContent>
+									</Select>
+								</div>
+
+								<Button
+									type="submit"
+									:disabled="
+										selectedUserId === null ||
+										availableUsers.length === 0 ||
+										isAddingUser
+									"
+								>
+									<UserPlusIcon />
+									{{ isAddingUser ? "Wird hinzugefügt..." : "Hinzufügen" }}
+								</Button>
+							</form>
+						</TableCell>
+					</TableRow>
+				</TableFooter>
+			</Table>
+		</div>
+
+		<Sheet :open="isRoleEditOpen" @update:open="updateRoleEditOpen">
+			<SheetContent side="right" class="sm:max-w-md">
+				<SheetHeader>
+					<SheetTitle>Projektrolle ändern</SheetTitle>
+					<SheetDescription>
+						Ändere die Projektrolle von „{{ roleCandidate?.username }}“.
+					</SheetDescription>
+				</SheetHeader>
+
+				<form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitProjectUserRole">
+					<div class="flex flex-col gap-2 px-4">
+						<Label for="edit-project-role">Projektrolle</Label>
+						<Select
+							:model-value="selectedRole"
+							:disabled="updatingUserRoleId !== null"
+							@update:model-value="selectRole"
+						>
+							<SelectTrigger id="edit-project-role" class="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem
+									v-for="role in availableProjectRoles"
+									:key="role"
+									:value="role"
+								>
+									{{ formatProjectRole(role) }}
+								</SelectItem>
+							</SelectContent>
+						</Select>
+
+						<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+							{{ errorMessage }}
+						</p>
+					</div>
+
+					<SheetFooter class="sm:flex-row sm:justify-end">
+						<Button
+							type="button"
+							variant="outline"
+							:disabled="updatingUserRoleId !== null"
+							@click="roleCandidate = null"
+						>
+							Abbrechen
+						</Button>
+						<Button
+							type="submit"
+							:disabled="updatingUserRoleId !== null || !hasSelectedRoleChanged"
+						>
+							{{
+								updatingUserRoleId === null
+									? "Rolle speichern"
+									: "Wird gespeichert..."
+							}}
+						</Button>
+					</SheetFooter>
+				</form>
+			</SheetContent>
+		</Sheet>
+
+		<AlertDialog :open="deleteCandidate !== null" @update:open="updateDeleteOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Projektmitglied entfernen?</AlertDialogTitle>
+					<AlertDialogDescription>
+						„{{ deleteCandidate?.username }}“ verliert den Zugriff auf dieses Projekt.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="removingUserId !== null">
+						Abbrechen
+					</AlertDialogCancel>
+					<Button
+						variant="destructive"
+						:disabled="removingUserId !== null"
+						@click="confirmRemove"
 					>
-						<option :value="null" disabled>Benutzer auswählen</option>
-						<option v-for="user in availableUsers" :key="user.id" :value="user.id">
-							{{ user.username }}
-						</option>
-					</select>
-				</div>
-
-				<div class="form-field">
-					<label for="project-role">Projektrolle</label>
-					<select
-						id="project-role"
-						v-model="selectedRole"
-						name="project-role"
-						:disabled="availableUsers.length === 0 || isAddingUser"
-					>
-						<option value="OWNER">OWNER</option>
-						<option value="CONTRIBUTOR">CONTRIBUTOR</option>
-						<option value="VIEWER">VIEWER</option>
-					</select>
-				</div>
-
-				<button
-					type="submit"
-					:disabled="
-						selectedUserId === null || availableUsers.length === 0 || isAddingUser
-					"
-				>
-					{{ isAddingUser ? "Wird hinzugefügt..." : "Hinzufügen" }}
-				</button>
-			</form>
-		</template>
+						{{ removingUserId === null ? "Aus Projekt entfernen" : "Wird entfernt..." }}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	</section>
 </template>
 
 <style scoped>
-.project-user-management {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-.project-user-management h2,
-.project-user-management p {
-	margin: 0;
-}
-
-.project-user-list {
-	width: 100%;
-	border-collapse: collapse;
-}
-
-.project-user-list th,
-.project-user-list td {
-	padding: 0.5rem;
-	text-align: left;
-	border-bottom: 1px solid currentColor;
-}
-
-.project-user-form {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 1rem;
-	align-items: flex-end;
-}
-
-.form-field {
-	display: flex;
-	flex: 1 1 12rem;
-	flex-direction: column;
-	gap: 0.25rem;
+:deep([data-slot="table-container"]) {
+	overflow: visible;
 }
 </style>

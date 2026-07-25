@@ -8,6 +8,14 @@ import { useUserStore } from "@/feature/user";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProject, useProjectRepository } from "..";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
@@ -83,6 +91,10 @@ watch(showArchived, async (archived) => {
 		isLoadingTickets.value = false;
 	}
 });
+
+function selectTicketView(value: unknown): void {
+	showArchived.value = value === "archived";
+}
 
 async function submitDetailsUpdate(): Promise<void> {
 	if (
@@ -178,13 +190,22 @@ async function submitArchiveProject(): Promise<void> {
 					:parent-ticket-id="null"
 				/>
 				<p v-else>Als Viewer kannst du keine Tickets erstellen.</p>
-				<label class="project-page__ticket-filter">
-					Ticketansicht
-					<select v-model="showArchived" :disabled="isLoadingTickets">
-						<option :value="false">Aktive Tickets</option>
-						<option :value="true">Archivierte Tickets</option>
-					</select>
-				</label>
+				<div class="project-page__ticket-filter">
+					<Label for="ticket-view">Ticketansicht</Label>
+					<Select
+						:model-value="showArchived ? 'archived' : 'active'"
+						:disabled="isLoadingTickets"
+						@update:model-value="selectTicketView"
+					>
+						<SelectTrigger id="ticket-view" class="w-52">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="active">Aktive Tickets</SelectItem>
+							<SelectItem value="archived">Archivierte Tickets</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
 				<p v-if="isLoadingTickets">Tickets werden geladen...</p>
 				<div v-else class="project-page__tickets">
 					<Card>
@@ -344,7 +365,6 @@ async function submitArchiveProject(): Promise<void> {
 	width: min(100%, 40rem);
 }
 
-.project-page__ticket-filter select,
 .project-page__details-form textarea {
 	padding: 0.45rem 0.6rem;
 	border: 1px solid var(--border);
