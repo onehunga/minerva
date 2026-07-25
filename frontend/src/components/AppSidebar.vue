@@ -142,7 +142,11 @@ async function submitLogout(): Promise<void> {
 				<SidebarGroupContent>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton tooltip="Benutzer" @click="$router.push('/admin')">
+							<SidebarMenuButton
+								tooltip="Benutzer"
+								:is-active="route.name === 'admin-users'"
+								@click="$router.push({ name: 'admin-users' })"
+							>
 								<HugeiconsIcon :icon="User" />
 								<span>Benutzer</span>
 							</SidebarMenuButton>

@@ -1,95 +1,278 @@
 <script setup lang="ts">
-import BaseModal from "@/components/BaseModal.vue";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+	Sheet,
+	SheetContent,
+	SheetDescription,
+	SheetHeader,
+	SheetTitle,
+} from "@/components/ui/sheet";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableFooter,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { useManageUsers } from "..";
-import type { UserRecord } from "../user.model";
+import type { UserRecord, UserRole } from "../user.model";
+import UserCreateForm from "./UserCreateForm.vue";
 import UserEditForm from "./UserEditForm.vue";
+
+const props = defineProps<{
+	currentUserId?: number;
+}>();
 
 const { deletingUserId, deleteUser, errorMessage, isLoadingUsers, loadUsers, users } =
 	useManageUsers();
-
+const isCreateOpen = ref(false);
 const selectedUser = ref<UserRecord | null>(null);
+const deleteCandidate = ref<UserRecord | null>(null);
+
+const isEditOpen = computed(() => selectedUser.value !== null);
 
 onMounted(loadUsers);
 
-function openEditModal(user: UserRecord): void {
+function formatRole(role: UserRole): string {
+	return role === "ADMIN" ? "Administrator" : "Nutzer";
+}
+
+function openEdit(user: UserRecord): void {
 	selectedUser.value = user;
 }
 
-function closeEditModal(): void {
+function closeEdit(): void {
 	selectedUser.value = null;
+}
+
+function updateEditOpen(open: boolean): void {
+	if (!open) {
+		closeEdit();
+	}
+}
+
+function isCurrentUser(user: UserRecord): boolean {
+	return user.id === props.currentUserId;
+}
+
+async function handleCreated(): Promise<void> {
+	isCreateOpen.value = false;
+	await loadUsers();
+}
+
+function openDeleteDialog(user: UserRecord): void {
+	if (user.role === "USER") {
+		deleteCandidate.value = user;
+	}
+}
+
+function updateDeleteOpen(open: boolean): void {
+	if (!open && deletingUserId.value === null) {
+		deleteCandidate.value = null;
+	}
+}
+
+async function confirmDelete(): Promise<void> {
+	if (deleteCandidate.value === null) {
+		return;
+	}
+
+	if (await deleteUser(deleteCandidate.value)) {
+		deleteCandidate.value = null;
+	}
 }
 </script>
 
 <template>
-	<p v-if="isLoadingUsers">Benutzer werden geladen...</p>
-	<p v-else-if="errorMessage && users.length === 0" role="alert">{{ errorMessage }}</p>
-	<p v-else-if="users.length === 0">Es sind noch keine Benutzer vorhanden.</p>
+	<section class="flex min-h-0 flex-1 flex-col gap-3">
+		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+			{{ errorMessage }}
+		</p>
+		<p v-if="isLoadingUsers" class="m-0">Benutzer werden geladen...</p>
 
-	<template v-else>
-		<p v-if="errorMessage" role="alert">{{ errorMessage }}</p>
+		<div v-else class="min-h-0 flex-1 overflow-auto">
+			<Table class="min-w-lg">
+				<TableHeader class="bg-card sticky top-0 z-10">
+					<TableRow>
+						<TableHead>Benutzername</TableHead>
+						<TableHead>Rolle</TableHead>
+						<TableHead class="w-12">
+							<span class="sr-only">Aktionen</span>
+						</TableHead>
+					</TableRow>
+				</TableHeader>
 
-		<table class="user-list">
-			<thead>
-				<tr>
-					<th scope="col">Benutzername</th>
-					<th scope="col">Rolle</th>
-					<th scope="col">Aktionen</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr v-for="user in users" :key="user.id">
-					<td>{{ user.username }}</td>
-					<td>{{ user.role }}</td>
-					<td>
-						<button
-							type="button"
-							:aria-label="`Benutzer ${user.username} bearbeiten`"
-							@click="openEditModal(user)"
-						>
-							...
-						</button>
-						<button
-							v-if="user.role === 'USER'"
-							type="button"
-							:disabled="deletingUserId !== null"
-							@click="deleteUser(user)"
-						>
-							{{ deletingUserId === user.id ? "Wird gelöscht..." : "Löschen" }}
-						</button>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-	</template>
+				<TableBody>
+					<TableRow v-if="users.length === 0">
+						<TableCell colspan="3" class="h-24 text-center text-muted-foreground">
+							Es sind noch keine Benutzer vorhanden.
+						</TableCell>
+					</TableRow>
 
-	<BaseModal :open="selectedUser !== null" @close="closeEditModal">
-		<template #title>Benutzer bearbeiten</template>
+					<ContextMenu v-for="user in users" :key="user.id">
+						<ContextMenuTrigger as-child>
+							<TableRow>
+								<TableCell class="font-medium">{{ user.username }}</TableCell>
+								<TableCell>{{ formatRole(user.role) }}</TableCell>
+								<TableCell class="text-right">
+									<DropdownMenu>
+										<DropdownMenuTrigger as-child>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												:aria-label="`Aktionen für ${user.username}`"
+												@click.stop
+											>
+												<EllipsisIcon />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end">
+											<DropdownMenuItem
+												data-action="edit"
+												@select="openEdit(user)"
+											>
+												<PencilIcon />
+												Benutzer bearbeiten
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												data-action="delete"
+												variant="destructive"
+												:disabled="user.role === 'ADMIN'"
+												@select="openDeleteDialog(user)"
+											>
+												<Trash2Icon />
+												Benutzer löschen
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</TableCell>
+							</TableRow>
+						</ContextMenuTrigger>
 
-		<UserEditForm
-			v-if="selectedUser !== null"
-			:user="selectedUser"
-			@saved="closeEditModal"
-			@cancel="closeEditModal"
-		/>
-	</BaseModal>
+						<ContextMenuContent>
+							<ContextMenuItem data-action="edit" @select="openEdit(user)">
+								<PencilIcon />
+								Benutzer bearbeiten
+							</ContextMenuItem>
+							<ContextMenuSeparator />
+							<ContextMenuItem
+								data-action="delete"
+								variant="destructive"
+								:disabled="user.role === 'ADMIN'"
+								@select="openDeleteDialog(user)"
+							>
+								<Trash2Icon />
+								Benutzer löschen
+							</ContextMenuItem>
+						</ContextMenuContent>
+					</ContextMenu>
+				</TableBody>
+
+				<TableFooter class="bg-card sticky bottom-0 z-10">
+					<TableRow>
+						<TableCell colspan="3" class="p-0">
+							<Button
+								variant="ghost"
+								class="h-11 w-full justify-start rounded-none px-3"
+								@click="isCreateOpen = true"
+							>
+								<UserPlusIcon />
+								Nutzer hinzufügen
+							</Button>
+						</TableCell>
+					</TableRow>
+				</TableFooter>
+			</Table>
+		</div>
+
+		<Sheet v-model:open="isCreateOpen">
+			<SheetContent side="right" class="sm:max-w-md">
+				<SheetHeader>
+					<SheetTitle>Nutzer hinzufügen</SheetTitle>
+					<SheetDescription>
+						Lege einen neuen Nutzer mit der Standardrolle „Nutzer“ an.
+					</SheetDescription>
+				</SheetHeader>
+				<UserCreateForm @created="handleCreated" @cancel="isCreateOpen = false" />
+			</SheetContent>
+		</Sheet>
+
+		<Sheet :open="isEditOpen" @update:open="updateEditOpen">
+			<SheetContent side="right" class="sm:max-w-md">
+				<SheetHeader>
+					<SheetTitle>Benutzer bearbeiten</SheetTitle>
+					<SheetDescription>Ändere Benutzername, Passwort oder Rolle.</SheetDescription>
+				</SheetHeader>
+				<UserEditForm
+					v-if="selectedUser !== null"
+					:key="selectedUser.id"
+					:user="selectedUser"
+					:can-edit-role="!isCurrentUser(selectedUser)"
+					@saved="closeEdit"
+					@cancel="closeEdit"
+				/>
+			</SheetContent>
+		</Sheet>
+
+		<AlertDialog :open="deleteCandidate !== null" @update:open="updateDeleteOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Benutzer löschen?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Der Benutzer „{{ deleteCandidate?.username }}“ wird anonymisiert und kann
+						sich anschließend nicht mehr anmelden.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="deletingUserId !== null">
+						Abbrechen
+					</AlertDialogCancel>
+					<Button
+						variant="destructive"
+						:disabled="deletingUserId !== null"
+						@click="confirmDelete"
+					>
+						{{ deletingUserId === null ? "Benutzer löschen" : "Wird gelöscht..." }}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+	</section>
 </template>
 
 <style scoped>
-.user-list {
-	width: 100%;
-	border-collapse: collapse;
-}
-
-.user-list th,
-.user-list td {
-	padding: 0.5rem;
-	text-align: left;
-	border-bottom: 1px solid currentColor;
-}
-
-.user-list td:last-child {
-	display: flex;
-	gap: 0.5rem;
+:deep([data-slot="table-container"]) {
+	overflow: visible;
 }
 </style>
