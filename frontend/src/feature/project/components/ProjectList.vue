@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { useProjectRepository, type model } from "@/feature/project";
 import { onMounted, ref } from "vue";
+import { RouterLink } from "vue-router";
 
 const projectRepository = useProjectRepository();
 
@@ -12,26 +14,21 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div>
+	<div class="flex flex-col gap-4">
 		<h2>Projects</h2>
-		<div>
-			<div
+		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			<RouterLink
 				v-for="project in projects"
 				:key="project.id"
-				class="project-item"
-				@click="$router.push({ name: 'project', params: { id: project.id } })"
+				:to="{ name: 'project', params: { id: project.id } }"
+				class="rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 			>
-				<span>{{ project.name }}</span>
-			</div>
+				<Card class="h-full transition-shadow hover:shadow-md">
+					<CardHeader>
+						<CardTitle>{{ project.name }}</CardTitle>
+					</CardHeader>
+				</Card>
+			</RouterLink>
 		</div>
 	</div>
 </template>
-
-<style scoped>
-.project-item {
-	padding: 8px;
-	border: 1px solid #ccc;
-	border-radius: 4px;
-	margin-bottom: 8px;
-}
-</style>

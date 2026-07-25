@@ -21,18 +21,24 @@ test("admin can create a user", async ({ page }) => {
 	});
 
 	await test.step("admin opens user management", async () => {
-		await page.goto("/admin");
+		await page.getByRole("button", { name: "Benutzer", exact: true }).click();
 
-		await expect(page.getByRole("heading", { name: "Administrator Ansicht" })).toBeVisible();
+		await expect(page).toHaveURL(/\/admin\/users$/);
+		await expect(page.getByRole("heading", { name: "Benutzerverwaltung" })).toBeVisible();
 	});
 
 	await test.step("admin creates a user", async () => {
-		await page.getByLabel("Benutzername").fill("test-user");
-		await page.getByLabel("Passwort").fill("test-password");
-		await page.getByLabel("Rolle").selectOption("USER");
-		await page.getByRole("button", { name: "Benutzer erstellen" }).click();
+		await page.getByRole("button", { name: "Nutzer hinzufügen" }).click();
 
-		await expect(page.getByText("Benutzer wurde erstellt.")).toBeVisible();
-		await expect(page.getByRole("cell", { name: "test-user", exact: true })).toBeVisible();
+		const drawer = page.getByRole("dialog", { name: "Nutzer hinzufügen" });
+		await drawer.getByLabel("Benutzername").fill("test-user");
+		await drawer.getByLabel("Passwort").fill("test-password");
+		await drawer.getByLabel("Rolle").click();
+		await page.getByRole("option", { name: "Administrator" }).click();
+		await drawer.getByRole("button", { name: "Benutzer erstellen" }).click();
+
+		await expect(drawer).toBeHidden();
+		const userRow = page.getByRole("row").filter({ hasText: "test-user" });
+		await expect(userRow.getByRole("cell", { name: "Administrator" })).toBeVisible();
 	});
 });

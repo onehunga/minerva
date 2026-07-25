@@ -8,16 +8,33 @@ import type {
 	WorkflowTransition,
 } from "../ticket.model";
 import { TICKET_PRIORITY_ORDER, TICKET_PRIORITY_LABELS } from "../priority-labels";
-import CustomSelect from "@/components/CustomSelect.vue";
-import { useProject } from "@/feature/project";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { ActivityTimeline, useTicketActivities } from "@/feature/activity";
-import TicketComments from "./TicketComments.vue";
+import { useProject } from "@/feature/project";
 import CreateTicketForm from "./CreateTicketForm.vue";
+import TicketComments from "./TicketComments.vue";
 
 const props = defineProps<{
 	ticket: Ticket;
 	ticketType?: TicketType;
 	childTickets: Ticket[];
+}>();
+
+const emit = defineEmits<{
+	selectTicket: [ticketId: number];
 }>();
 
 const {
@@ -30,20 +47,12 @@ const {
 	updateTicketDetails,
 	updateTicketAssignee,
 } = useProject();
-
 const {
 	events: activityEvents,
 	isLoading: isActivityLoading,
 	errorMessage: activityError,
 } = useTicketActivities(props.ticket.projectId, props.ticket.id);
 
-const TICKET_PRIORITIES = TICKET_PRIORITY_ORDER;
-const emit = defineEmits<{
-	(event: "selectTicket", ticketId: number): void;
-}>();
-
-const selectedTransition = ref<WorkflowTransition | null>(null);
-const selectedPriority = ref<TicketPriorityName | null>(null);
 const isDeletingTicket = ref(false);
 const isArchivingTicket = ref(false);
 const isUpdatingStatus = ref(false);
@@ -54,23 +63,17 @@ const editingField = ref<"name" | "description" | null>(null);
 const draftName = ref(props.ticket.name);
 const draftDescription = ref(props.ticket.description);
 
-const selectedAssignee = ref<number | null>(props.ticket.assignedTo);
 const projectMemberUsers = computed(() => projectUsers.value.filter((user) => user.member));
 const possibleAssignees = computed<Array<number | null>>(() => [
 	null,
-	...projectMemberUsers.value
-		.map((user) => user.id)
-		.filter((userId) => userId !== props.ticket.assignedTo),
+	...projectMemberUsers.value.map((user) => user.id),
 ]);
-
 const canModifyTickets = computed(
 	() => projectDetails.value != null && projectDetails.value.projectRole !== "VIEWER",
 );
-
 const currentStatus = computed<WorkflowState | undefined>(() =>
 	props.ticketType?.states.find((state) => state.id === props.ticket.statusId),
 );
-
 const availableTransitions = computed<WorkflowTransition[]>(
 	() =>
 		props.ticketType?.transitions.filter(
@@ -80,29 +83,10 @@ const availableTransitions = computed<WorkflowTransition[]>(
 					transition.fromStateId === props.ticket.statusId),
 		) ?? [],
 );
-
+const canHaveChildTickets = computed(() => (props.ticketType?.children.length ?? 0) > 0);
 const ticketTypeName = computed(
 	() => props.ticketType?.name ?? `Ticketart #${props.ticket.ticketTypeId}`,
 );
-
-function getStateName(statusId: number): string {
-	return (
-		props.ticketType?.states.find((state) => state.id === statusId)?.name ??
-		`Status #${statusId}`
-	);
-}
-
-function selectChildTicket(ticketId: number): void {
-	emit("selectTicket", ticketId);
-}
-
-watch(selectedTransition, () => {
-	submitStatusUpdate();
-});
-
-watch(selectedPriority, () => {
-	submitPriorityUpdate();
-});
 
 watch(
 	() => [props.ticket.id, props.ticket.name, props.ticket.description],
@@ -114,102 +98,11 @@ watch(
 	},
 );
 
-watch(
-	() => props.ticket.assignedTo,
-	(assignedTo) => {
-		selectedAssignee.value = assignedTo;
-	},
-);
-
-watch(selectedAssignee, async () => {
-	if (selectedAssignee.value === props.ticket.assignedTo) {
-		return;
-	}
-
-	if (isUpdatingAssignee.value || !canModifyTickets.value) {
-		selectedAssignee.value = props.ticket.assignedTo;
-		return;
-	}
-
-	const assignedTo = selectedAssignee.value;
-	const previousAssignee = props.ticket.assignedTo;
-	isUpdatingAssignee.value = true;
-
-	try {
-		await updateTicketAssignee(props.ticket.id, assignedTo);
-	} catch {
-		alert("Der Bearbeiter konnte nicht aktualisiert werden.");
-		selectedAssignee.value = previousAssignee;
-	} finally {
-		isUpdatingAssignee.value = false;
-	}
-});
-
-async function submitStatusUpdate(): Promise<void> {
-	if (selectedTransition.value == null) {
-		return;
-	}
-
-	const transition = availableTransitions.value.find(
-		(currentTransition) => currentTransition.id === selectedTransition.value?.id,
+function getStateName(statusId: number): string {
+	return (
+		props.ticketType?.states.find((state) => state.id === statusId)?.name ??
+		`Status #${statusId}`
 	);
-
-	if (transition === undefined) {
-		alert("Der gewählte Übergang ist nicht mehr verfügbar.");
-		return;
-	}
-
-	isUpdatingStatus.value = true;
-
-	try {
-		await updateTicketStatus(props.ticket.id, transition.id, transition.toStateId);
-		selectedTransition.value = null;
-	} catch {
-		alert("Der Status konnte nicht aktualisiert werden.");
-	} finally {
-		isUpdatingStatus.value = false;
-	}
-}
-
-async function submitDeleteTicket(): Promise<void> {
-	if (isDeletingTicket.value || !canModifyTickets.value) {
-		return;
-	}
-
-	if (!confirm("Ticket wirklich löschen?")) {
-		return;
-	}
-
-	isDeletingTicket.value = true;
-
-	try {
-		await deleteTicket(props.ticket.id);
-	} catch {
-		alert("Das Ticket konnte nicht gelöscht werden.");
-	} finally {
-		isDeletingTicket.value = false;
-	}
-}
-
-async function submitArchiveTicket(): Promise<void> {
-	if (
-		isArchivingTicket.value ||
-		!canModifyTickets.value ||
-		props.ticket.archived ||
-		!confirm("Ticket wirklich archivieren?")
-	) {
-		return;
-	}
-
-	isArchivingTicket.value = true;
-
-	try {
-		await archiveTicket(props.ticket.id);
-	} catch {
-		alert("Das Ticket konnte nicht archiviert werden.");
-	} finally {
-		isArchivingTicket.value = false;
-	}
 }
 
 function beginDetailsEdit(field: "name" | "description"): void {
@@ -235,14 +128,12 @@ async function submitDetailsUpdate(): Promise<void> {
 
 	const name = draftName.value.trim();
 	const description = draftDescription.value.trim();
-
 	if (name === props.ticket.name && description === props.ticket.description) {
 		editingField.value = null;
 		return;
 	}
 
 	isUpdatingDetails.value = true;
-
 	try {
 		await updateTicketDetails(props.ticket.id, name, description);
 		editingField.value = null;
@@ -253,31 +144,101 @@ async function submitDetailsUpdate(): Promise<void> {
 	}
 }
 
-async function submitPriorityUpdate(): Promise<void> {
-	if (selectedPriority.value == null) {
+async function submitStatusUpdate(value: unknown): Promise<void> {
+	if (isUpdatingStatus.value || !canModifyTickets.value) {
 		return;
 	}
 
+	const transition = availableTransitions.value.find(
+		(currentTransition) => currentTransition.id === Number(value),
+	);
+	if (transition === undefined) {
+		alert("Der gewählte Übergang ist nicht mehr verfügbar.");
+		return;
+	}
+
+	isUpdatingStatus.value = true;
+	try {
+		await updateTicketStatus(props.ticket.id, transition.id, transition.toStateId);
+	} catch {
+		alert("Der Status konnte nicht aktualisiert werden.");
+	} finally {
+		isUpdatingStatus.value = false;
+	}
+}
+
+async function submitPriorityUpdate(value: unknown): Promise<void> {
 	if (isUpdatingPriority.value || !canModifyTickets.value) {
-		selectedPriority.value = null;
 		return;
 	}
 
-	const priority = selectedPriority.value;
-	selectedPriority.value = null;
-
+	const priority = String(value) as TicketPriorityName;
 	if (priority === props.ticket.priority) {
 		return;
 	}
 
 	isUpdatingPriority.value = true;
-
 	try {
 		await updateTicketPriority(props.ticket.id, priority);
 	} catch {
 		alert("Die Priorität konnte nicht aktualisiert werden.");
 	} finally {
 		isUpdatingPriority.value = false;
+	}
+}
+
+async function submitAssigneeUpdate(value: unknown): Promise<void> {
+	if (isUpdatingAssignee.value || !canModifyTickets.value) {
+		return;
+	}
+
+	const assignedTo = value === "unassigned" ? null : Number(value);
+	if (assignedTo === props.ticket.assignedTo) {
+		return;
+	}
+
+	isUpdatingAssignee.value = true;
+	try {
+		await updateTicketAssignee(props.ticket.id, assignedTo);
+	} catch {
+		alert("Der Bearbeiter konnte nicht aktualisiert werden.");
+	} finally {
+		isUpdatingAssignee.value = false;
+	}
+}
+
+async function submitArchiveTicket(): Promise<void> {
+	if (
+		isArchivingTicket.value ||
+		!canModifyTickets.value ||
+		props.ticket.archived ||
+		!confirm("Ticket wirklich archivieren?")
+	) {
+		return;
+	}
+
+	isArchivingTicket.value = true;
+	try {
+		await archiveTicket(props.ticket.id);
+	} catch {
+		alert("Das Ticket konnte nicht archiviert werden.");
+	} finally {
+		isArchivingTicket.value = false;
+	}
+}
+
+async function submitDeleteTicket(): Promise<void> {
+	if (isDeletingTicket.value || !canModifyTickets.value || !confirm("Ticket wirklich löschen?")) {
+		return;
+	}
+
+	isDeletingTicket.value = true;
+	try {
+		await deleteTicket(props.ticket.id);
+	} catch {
+		alert("Das Ticket konnte nicht gelöscht werden.");
+	} finally {
+		isDeletingTicket.value = false;
 	}
 }
 
@@ -307,339 +268,342 @@ function formatDate(value: string | null): string {
 
 <template>
 	<article class="ticket-detail">
-		<p v-if="ticket.archived" class="ticket-detail__archive-banner" role="status">
-			Dieses Ticket ist archiviert.
-		</p>
-		<header class="ticket-detail__header">
-			<p class="ticket-detail__eyebrow">Ticket #{{ ticket.id }}</p>
-			<div v-if="editingField === 'name'" class="ticket-detail__inline-edit">
-				<input
-					v-model="draftName"
-					aria-label="Ticketname"
-					:disabled="isUpdatingDetails"
-					@keyup.enter="submitDetailsUpdate"
-					@keyup.escape="cancelDetailsEdit"
-				/>
-				<button
-					type="button"
-					aria-label="Ticketname speichern"
-					:disabled="isUpdatingDetails || !draftName.trim()"
-					@click="submitDetailsUpdate"
-				>
-					✓
-				</button>
-				<button
-					type="button"
-					aria-label="Ticketname bearbeiten abbrechen"
-					:disabled="isUpdatingDetails"
-					@click="cancelDetailsEdit"
-				>
-					×
-				</button>
-			</div>
-			<h3 v-else>
-				<button
-					v-if="canModifyTickets"
-					type="button"
-					class="ticket-detail__editable"
-					@click="beginDetailsEdit('name')"
-				>
-					{{ ticket.name }}
-				</button>
-				<template v-else>{{ ticket.name }}</template>
-			</h3>
-			<div v-if="canModifyTickets" class="ticket-detail__actions">
-				<button
-					v-if="!ticket.archived"
-					type="button"
-					:disabled="isArchivingTicket"
-					@click="submitArchiveTicket"
-				>
-					{{ isArchivingTicket ? "Wird archiviert..." : "Ticket archivieren" }}
-				</button>
-				<button type="button" :disabled="isDeletingTicket" @click="submitDeleteTicket">
-					Ticket löschen
-				</button>
-			</div>
-		</header>
+		<Alert v-if="ticket.archived">
+			<AlertTitle>Archiviertes Ticket</AlertTitle>
+			<AlertDescription>Dieses Ticket ist archiviert.</AlertDescription>
+		</Alert>
 
-		<div v-if="editingField === 'description'" class="ticket-detail__inline-edit">
-			<textarea
-				v-model="draftDescription"
-				aria-label="Ticketbeschreibung"
-				:disabled="isUpdatingDetails"
-				@keyup.escape="cancelDetailsEdit"
-			></textarea>
-			<button
-				type="button"
-				aria-label="Ticketbeschreibung speichern"
-				:disabled="isUpdatingDetails || !draftName.trim()"
-				@click="submitDetailsUpdate"
-			>
-				✓
-			</button>
-			<button
-				type="button"
-				aria-label="Ticketbeschreibung bearbeiten abbrechen"
-				:disabled="isUpdatingDetails"
-				@click="cancelDetailsEdit"
-			>
-				×
-			</button>
-		</div>
-		<p v-else class="ticket-detail__description">
-			<button
-				v-if="canModifyTickets"
-				type="button"
-				class="ticket-detail__editable"
-				@click="beginDetailsEdit('description')"
-			>
-				{{ ticket.description || "Keine Beschreibung hinterlegt." }}
-			</button>
-			<template v-else>{{ ticket.description || "Keine Beschreibung hinterlegt." }}</template>
-		</p>
+		<div class="ticket-detail__layout">
+			<div class="ticket-detail__main">
+				<header class="ticket-detail__header">
+					<p class="ticket-detail__eyebrow">Ticket #{{ ticket.id }}</p>
+					<div v-if="editingField === 'name'" class="ticket-detail__inline-edit">
+						<Input
+							v-model="draftName"
+							aria-label="Ticketname"
+							:disabled="isUpdatingDetails"
+							@keyup.enter="submitDetailsUpdate"
+							@keyup.escape="cancelDetailsEdit"
+						/>
+						<Button
+							type="button"
+							aria-label="Ticketname speichern"
+							:disabled="isUpdatingDetails || !draftName.trim()"
+							@click="submitDetailsUpdate"
+						>
+							Speichern
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							:disabled="isUpdatingDetails"
+							@click="cancelDetailsEdit"
+						>
+							Abbrechen
+						</Button>
+					</div>
+					<h3 v-else>
+						<Button
+							v-if="canModifyTickets"
+							variant="ghost"
+							class="ticket-detail__editable"
+							@click="beginDetailsEdit('name')"
+						>
+							{{ ticket.name }}
+						</Button>
+						<template v-else>{{ ticket.name }}</template>
+					</h3>
+				</header>
 
-		<label for="ticket-status">Status</label>
-		<CustomSelect :options="availableTransitions" v-model="selectedTransition">
-			<template #trigger>
-				{{ currentStatus?.name }}
-			</template>
-			<template #option="{ value: transition }">
-				{{ transition.name }} → {{ getStateName(transition.toStateId) }}
-			</template>
-		</CustomSelect>
-		<label for="ticket-priority">Priorität</label>
-		<CustomSelect
-			v-if="canModifyTickets"
-			:options="TICKET_PRIORITIES"
-			v-model="selectedPriority"
-		>
-			<template #trigger>
-				{{ formatPriority(ticket.priority) }}
-			</template>
-			<template #option="{ value: priority }">
-				{{ formatPriority(priority) }}
-			</template>
-		</CustomSelect>
-		<p v-else id="ticket-priority" class="ticket-detail__readonly-value">
-			{{ formatPriority(ticket.priority) }}
-		</p>
-
-		<dl class="ticket-detail__meta">
-			<div>
-				<dt>Ticketart</dt>
-				<dd>{{ ticketTypeName }}</dd>
-			</div>
-			<div>
-				<dt>Projekt</dt>
-				<dd>#{{ ticket.projectId }}</dd>
-			</div>
-			<div>
-				<dt>Erstellt von</dt>
-				<dd>{{ formatProjectUser(ticket.createdBy) }}</dd>
-			</div>
-			<div>
-				<dt>Zugewiesen an</dt>
-				<dd>
-					<CustomSelect
-						:options="possibleAssignees"
-						v-model="selectedAssignee"
-						v-if="canModifyTickets"
-					>
-						<template #trigger>
-							{{ formatAssignee(ticket.assignedTo) }}
-						</template>
-						<template #option="{ value: userId }">
-							{{ formatAssignee(userId) }}
-						</template>
-					</CustomSelect>
-					<p v-else class="ticket-detail__readonly-value">
-						{{ formatAssignee(ticket.assignedTo) }}
-					</p>
-				</dd>
-			</div>
-			<div>
-				<dt>Erstellt am</dt>
-				<dd>{{ formatDate(ticket.createdAt) }}</dd>
-			</div>
-			<div>
-				<dt>Aktualisiert am</dt>
-				<dd>{{ formatDate(ticket.updatedAt) }}</dd>
-			</div>
-		</dl>
-
-		<TicketComments
-			:project-id="ticket.projectId"
-			:ticket-id="ticket.id"
-			:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
-		/>
-
-		<ActivityTimeline
-			:events="activityEvents"
-			:is-loading="isActivityLoading"
-			:error-message="activityError"
-		/>
-
-		<section class="ticket-detail__children" aria-labelledby="ticket-children-heading">
-			<h4 id="ticket-children-heading">Kindtickets</h4>
-			<p v-if="childTickets.length === 0" class="ticket-detail__hint">
-				Keine Kindtickets vorhanden.
-			</p>
-			<ul v-else class="ticket-detail__children-list">
-				<li v-for="childTicket in childTickets" :key="childTicket.id">
-					<button
+				<div v-if="editingField === 'description'" class="ticket-detail__inline-edit">
+					<Textarea
+						v-model="draftDescription"
+						aria-label="Ticketbeschreibung"
+						:disabled="isUpdatingDetails"
+						@keyup.escape="cancelDetailsEdit"
+					/>
+					<Button
 						type="button"
-						class="ticket-detail__child"
-						@click="selectChildTicket(childTicket.id)"
+						:disabled="isUpdatingDetails || !draftName.trim()"
+						@click="submitDetailsUpdate"
 					>
-						<span>{{ childTicket.name }}</span>
-						<small>#{{ childTicket.id }}</small>
-					</button>
-				</li>
-			</ul>
-		</section>
+						Speichern
+					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						:disabled="isUpdatingDetails"
+						@click="cancelDetailsEdit"
+					>
+						Abbrechen
+					</Button>
+				</div>
+				<p v-else class="ticket-detail__description">
+					<Button
+						v-if="canModifyTickets"
+						variant="ghost"
+						class="ticket-detail__editable"
+						@click="beginDetailsEdit('description')"
+					>
+						{{ ticket.description || "Keine Beschreibung hinterlegt." }}
+					</Button>
+					<template v-else>
+						{{ ticket.description || "Keine Beschreibung hinterlegt." }}
+					</template>
+				</p>
 
-		<section
-			v-if="projectDetails?.projectRole !== 'VIEWER'"
-			class="ticket-detail__create-child"
-			aria-labelledby="create-child-ticket-heading"
-		>
-			<h4 id="create-child-ticket-heading">Kindticket erstellen</h4>
-			<CreateTicketForm
-				:parent-ticket-id="ticket.id"
-				:parent-ticket-type-id="ticket.ticketTypeId"
-			/>
-		</section>
+				<template v-if="canHaveChildTickets">
+					<Separator />
+					<section
+						class="ticket-detail__section"
+						aria-labelledby="ticket-children-heading"
+					>
+						<h4 id="ticket-children-heading">Kindtickets</h4>
+						<p v-if="childTickets.length === 0">Keine Kindtickets vorhanden.</p>
+						<ul v-else class="ticket-detail__children-list">
+							<li v-for="childTicket in childTickets" :key="childTicket.id">
+								<Button
+									variant="outline"
+									class="ticket-detail__child"
+									@click="emit('selectTicket', childTicket.id)"
+								>
+									<span>{{ childTicket.name }}</span>
+									<small>#{{ childTicket.id }}</small>
+								</Button>
+							</li>
+						</ul>
+					</section>
+
+					<section
+						v-if="projectDetails?.projectRole !== 'VIEWER'"
+						class="ticket-detail__section"
+					>
+						<CreateTicketForm
+							:parent-ticket-id="ticket.id"
+							:parent-ticket-type-id="ticket.ticketTypeId"
+						/>
+					</section>
+				</template>
+
+				<Separator />
+				<Tabs default-value="comments">
+					<TabsList>
+						<TabsTrigger value="comments">Kommentare</TabsTrigger>
+						<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
+					</TabsList>
+					<TabsContent value="comments" class="ticket-detail__tab-content">
+						<TicketComments
+							:project-id="ticket.projectId"
+							:ticket-id="ticket.id"
+							:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
+						/>
+					</TabsContent>
+					<TabsContent value="activities" class="ticket-detail__tab-content">
+						<ActivityTimeline
+							:events="activityEvents"
+							:is-loading="isActivityLoading"
+							:error-message="activityError"
+						/>
+					</TabsContent>
+				</Tabs>
+			</div>
+
+			<Separator orientation="vertical" class="ticket-detail__separator--desktop" />
+			<Separator class="ticket-detail__separator--mobile" />
+
+			<aside class="ticket-detail__sidebar">
+				<section class="ticket-detail__section" aria-labelledby="ticket-actions-heading">
+					<h4 id="ticket-actions-heading">Aktionen</h4>
+
+					<div class="ticket-detail__field">
+						<Label for="ticket-status">Status</Label>
+						<Select
+							:disabled="
+								!canModifyTickets ||
+								isUpdatingStatus ||
+								availableTransitions.length === 0
+							"
+							@update:model-value="submitStatusUpdate"
+						>
+							<SelectTrigger id="ticket-status" class="w-full">
+								<SelectValue :placeholder="currentStatus?.name ?? 'Unbekannt'" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem
+									v-for="transition in availableTransitions"
+									:key="transition.id"
+									:value="String(transition.id)"
+								>
+									{{ transition.name }} → {{ getStateName(transition.toStateId) }}
+								</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					<div class="ticket-detail__field">
+						<Label for="ticket-priority">Priorität</Label>
+						<Select
+							:model-value="ticket.priority"
+							:disabled="!canModifyTickets || isUpdatingPriority"
+							@update:model-value="submitPriorityUpdate"
+						>
+							<SelectTrigger id="ticket-priority" class="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem
+									v-for="priority in TICKET_PRIORITY_ORDER"
+									:key="priority"
+									:value="priority"
+								>
+									{{ formatPriority(priority) }}
+								</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					<div class="ticket-detail__field">
+						<Label for="ticket-assignee">Bearbeiter</Label>
+						<Select
+							:model-value="
+								ticket.assignedTo == null ? 'unassigned' : String(ticket.assignedTo)
+							"
+							:disabled="!canModifyTickets || isUpdatingAssignee"
+							@update:model-value="submitAssigneeUpdate"
+						>
+							<SelectTrigger id="ticket-assignee" class="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem
+									v-for="userId in possibleAssignees"
+									:key="userId ?? 'unassigned'"
+									:value="userId == null ? 'unassigned' : String(userId)"
+								>
+									{{ formatAssignee(userId) }}
+								</SelectItem>
+							</SelectContent>
+						</Select>
+					</div>
+
+					<Button
+						v-if="canModifyTickets && !ticket.archived"
+						variant="outline"
+						:disabled="isArchivingTicket"
+						@click="submitArchiveTicket"
+					>
+						{{ isArchivingTicket ? "Wird archiviert..." : "Ticket archivieren" }}
+					</Button>
+					<Button
+						v-if="canModifyTickets"
+						variant="destructive"
+						:disabled="isDeletingTicket"
+						@click="submitDeleteTicket"
+					>
+						{{ isDeletingTicket ? "Wird gelöscht..." : "Ticket löschen" }}
+					</Button>
+				</section>
+
+				<Separator />
+
+				<section class="ticket-detail__section" aria-labelledby="ticket-meta-heading">
+					<h4 id="ticket-meta-heading">Eckdaten</h4>
+					<dl class="ticket-detail__meta">
+						<div>
+							<dt>Ticketart</dt>
+							<dd>{{ ticketTypeName }}</dd>
+						</div>
+						<div>
+							<dt>Projekt</dt>
+							<dd>#{{ ticket.projectId }}</dd>
+						</div>
+						<div>
+							<dt>Erstellt von</dt>
+							<dd>{{ formatProjectUser(ticket.createdBy) }}</dd>
+						</div>
+						<div>
+							<dt>Erstellt am</dt>
+							<dd>{{ formatDate(ticket.createdAt) }}</dd>
+						</div>
+						<div>
+							<dt>Aktualisiert am</dt>
+							<dd>{{ formatDate(ticket.updatedAt) }}</dd>
+						</div>
+					</dl>
+				</section>
+			</aside>
+		</div>
 	</article>
 </template>
 
 <style scoped>
-.ticket-detail {
+.ticket-detail,
+.ticket-detail__main,
+.ticket-detail__sidebar,
+.ticket-detail__section,
+.ticket-detail__field,
+.ticket-detail__meta,
+.ticket-detail__meta div {
 	display: flex;
 	flex-direction: column;
+}
+
+.ticket-detail {
 	gap: 1rem;
-	padding: 1rem;
-	border: 1px solid currentColor;
-	min-height: 18rem;
-	box-sizing: border-box;
+}
+
+.ticket-detail__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto minmax(14rem, 18rem);
+	gap: 1.5rem;
+}
+
+.ticket-detail__main,
+.ticket-detail__sidebar {
+	gap: 1.25rem;
 }
 
 .ticket-detail__header,
-.ticket-detail__description,
-.ticket-detail__meta,
-.ticket-detail__children h4,
-.ticket-detail__create-child h4 {
-	margin: 0;
-}
-
-.ticket-detail__header {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) auto;
-	gap: 0.25rem;
-	align-items: start;
-}
-
 .ticket-detail__header h3,
-.ticket-detail__eyebrow {
+.ticket-detail__header p,
+.ticket-detail__description,
+.ticket-detail__section h4,
+.ticket-detail__section p,
+.ticket-detail__meta {
 	margin: 0;
+}
+
+.ticket-detail__eyebrow {
+	color: var(--muted-foreground);
+	font-size: 0.875rem;
 }
 
 .ticket-detail__editable {
-	display: inline;
+	height: auto;
+	max-width: 100%;
+	justify-content: flex-start;
 	padding: 0;
-	border: 0;
-	background: transparent;
-	color: inherit;
+	white-space: normal;
 	font: inherit;
 	text-align: left;
-	cursor: pointer;
 }
 
 .ticket-detail__inline-edit {
 	display: flex;
+	flex-wrap: wrap;
 	gap: 0.5rem;
 	align-items: start;
 }
 
-.ticket-detail__inline-edit input,
-.ticket-detail__inline-edit textarea {
-	flex: 1;
-	min-width: 0;
-	padding: 0.45rem 0.55rem;
-	border: 1px solid currentColor;
-	background: Canvas;
-	color: CanvasText;
-	font: inherit;
+.ticket-detail__inline-edit > :first-child {
+	flex: 1 1 16rem;
 }
 
-.ticket-detail__inline-edit textarea {
-	min-height: 5rem;
-	resize: vertical;
-}
-
-.ticket-detail__eyebrow {
-	grid-column: 1 / -1;
-	font-size: 0.85rem;
-}
-
-.ticket-detail__actions {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: flex-end;
-	gap: 0.5rem;
-}
-
-.ticket-detail__actions button {
-	padding: 0.45rem 0.7rem;
-	border: 1px solid currentColor;
-	background: transparent;
-	color: inherit;
-	cursor: pointer;
-}
-
-.ticket-detail__archive-banner {
-	margin: 0;
-	padding: 0.75rem;
-	border: 2px solid currentColor;
-	font-weight: 700;
-}
-
-.ticket-detail__hint,
-.ticket-detail__readonly-value,
-.ticket-detail__error {
-	margin: 0;
-	font-size: 0.9rem;
-}
-
-.ticket-detail__error {
-	color: #b00020;
-}
-
-.ticket-detail__meta {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-	gap: 0.75rem 1rem;
-}
-
+.ticket-detail__section,
+.ticket-detail__field,
+.ticket-detail__meta,
 .ticket-detail__meta div {
-	display: flex;
-	flex-direction: column;
-	gap: 0.2rem;
-}
-
-.ticket-detail__meta dt {
-	font-weight: 700;
-}
-
-.ticket-detail__meta dd {
-	margin: 0;
-}
-
-.ticket-detail__children,
-.ticket-detail__create-child {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
+	gap: 0.5rem;
 }
 
 .ticket-detail__children-list {
@@ -652,15 +616,38 @@ function formatDate(value: string | null): string {
 }
 
 .ticket-detail__child {
-	display: flex;
 	width: 100%;
 	justify-content: space-between;
-	gap: 0.75rem;
-	text-align: left;
-	padding: 0.6rem 0.8rem;
-	border: 1px solid currentColor;
-	background: transparent;
-	color: inherit;
-	cursor: pointer;
+}
+
+.ticket-detail__tab-content {
+	padding-top: 0.75rem;
+}
+
+.ticket-detail__meta dt {
+	font-weight: 600;
+}
+
+.ticket-detail__meta dd {
+	margin: 0;
+	color: var(--muted-foreground);
+}
+
+.ticket-detail__separator--mobile {
+	display: none;
+}
+
+@media (max-width: 64rem) {
+	.ticket-detail__layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ticket-detail__separator--desktop {
+		display: none;
+	}
+
+	.ticket-detail__separator--mobile {
+		display: block;
+	}
 }
 </style>

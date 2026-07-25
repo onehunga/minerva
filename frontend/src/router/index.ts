@@ -26,10 +26,33 @@ const router: Router = createRouter({
 		{
 			path: "/admin",
 			name: "admin",
-			component: () => import("@/views/AdminView.vue"),
+			redirect: { name: "admin-users" },
+			children: [
+				{
+					path: "users",
+					name: "admin-users",
+					component: () => import("@/views/admin/UserManagementView.vue"),
+				},
+			],
 			meta: {
 				requiresAuth: true,
 				requiredRole: "ADMIN",
+			},
+		},
+		{
+			path: "/projects",
+			name: "projects",
+			component: () => import("@/views/ProjectsView.vue"),
+			meta: {
+				requiresAuth: true,
+			},
+		},
+		{
+			path: "/activities",
+			name: "activities",
+			component: () => import("@/views/ActivitiesView.vue"),
+			meta: {
+				requiresAuth: true,
 			},
 		},
 		{

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ProjectDetails } from "@/feature/project";
+import { ProjectPage } from "@/feature/project";
 import { useProject } from "@/feature/project/composables/useProject";
 import { onBeforeMount } from "vue";
 
@@ -13,5 +13,5 @@ onBeforeMount(() => {
 </script>
 
 <template>
-	<ProjectDetails :id="Number($props.id)" />
+	<ProjectPage :id="Number($props.id)" />
 </template>

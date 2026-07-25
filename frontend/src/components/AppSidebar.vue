@@ -11,12 +11,25 @@ import {
 	SidebarGroup,
 	SidebarGroupContent,
 	SidebarGroupLabel,
+	SidebarRail,
 } from "@/components/ui/sidebar";
 import { HugeiconsIcon } from "@hugeicons/vue";
-import { Plus, Sun, Moon, Computer } from "@hugeicons/core-free-icons";
+import {
+	Activity,
+	Computer,
+	Folder,
+	Home,
+	Logout,
+	Moon,
+	Paint,
+	Plus,
+	Sun,
+	User,
+} from "@hugeicons/core-free-icons";
 import { useProjects } from "@/feature/project/composables/useProjects";
 import { useUser } from "@/feature/user";
 import { useColorMode } from "@vueuse/core";
+import { useRoute, useRouter } from "vue-router";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -27,20 +40,31 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const { projects } = useProjects();
-const { userDetails } = useUser();
+const { logout, userDetails } = useUser();
+const route = useRoute();
+const router = useRouter();
 
 const mode = useColorMode();
 mode.value = "dark";
+
+async function submitLogout(): Promise<void> {
+	await logout();
+	await router.push({ name: "login" });
+}
 </script>
 
 <template>
-	<Sidebar class="bg-sidebar">
+	<Sidebar variant="floating" collapsible="icon">
 		<SidebarHeader>
-			<SidebarMenu>
-				<SidebarMenuItem>
-					<SidebarMenuButton @click="$router.push('/')" size="lg">
-						Minerva
+			<SidebarMenu class="flex-row items-center">
+				<SidebarMenuItem class="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+					<SidebarMenuButton tooltip="Minerva" @click="$router.push('/')">
+						<HugeiconsIcon :icon="Home" />
+						<span>Minerva</span>
 					</SidebarMenuButton>
+				</SidebarMenuItem>
+				<SidebarMenuItem class="shrink-0 group-data-[collapsible=icon]:mx-auto">
+					<SidebarTrigger class="size-8" />
 				</SidebarMenuItem>
 			</SidebarMenu>
 		</SidebarHeader>
@@ -50,12 +74,34 @@ mode.value = "dark";
 				<SidebarGroupContent>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton @click="$router.push('/')"
-								>Übersicht</SidebarMenuButton
+							<SidebarMenuButton
+								tooltip="Übersicht"
+								:is-active="route.name === 'landing'"
+								@click="$router.push('/')"
 							>
+								<HugeiconsIcon :icon="Home" />
+								<span>Übersicht</span>
+							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
-							<SidebarMenuButton>Projekte</SidebarMenuButton>
+							<SidebarMenuButton
+								tooltip="Projekte"
+								:is-active="route.name === 'projects'"
+								@click="$router.push({ name: 'projects' })"
+							>
+								<HugeiconsIcon :icon="Folder" />
+								<span>Projekte</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								tooltip="Aktivitäten"
+								:is-active="route.name === 'activities'"
+								@click="$router.push({ name: 'activities' })"
+							>
+								<HugeiconsIcon :icon="Activity" />
+								<span>Aktivitäten</span>
+							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarGroupContent>
@@ -67,21 +113,22 @@ mode.value = "dark";
 					<SidebarMenu>
 						<SidebarMenuItem class="m-1" v-for="project in projects" :key="project.id">
 							<SidebarMenuButton
+								:tooltip="project.name"
 								@click="
 									$router.push({ name: 'project', params: { id: project.id } })
 								"
 							>
-								{{ project.name }}
+								<HugeiconsIcon :icon="Folder" />
+								<span>{{ project.name }}</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
-							<SidebarMenuButton @click="$router.push('/create-project')">
-								<div
-									class="flex items-center justify-center w-6 h-6 rounded-full bg-sidebar-primary text-sidebar-primary-foreground"
-								>
+							<SidebarMenuButton
+								tooltip="Projekt Erstellen"
+								@click="$router.push('/create-project')"
+							>
+								<div class="flex flex-row items-center gap-2">
 									<HugeiconsIcon :icon="Plus" class="" />
-								</div>
-								<div>
 									<p>Projekt erstellen</p>
 								</div>
 							</SidebarMenuButton>
@@ -95,9 +142,14 @@ mode.value = "dark";
 				<SidebarGroupContent>
 					<SidebarMenu>
 						<SidebarMenuItem>
-							<SidebarMenuButton @click="$router.push('/admin')"
-								>Benutzer</SidebarMenuButton
+							<SidebarMenuButton
+								tooltip="Benutzer"
+								:is-active="route.name === 'admin-users'"
+								@click="$router.push({ name: 'admin-users' })"
 							>
+								<HugeiconsIcon :icon="User" />
+								<span>Benutzer</span>
+							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarGroupContent>
@@ -107,14 +159,19 @@ mode.value = "dark";
 			<SidebarMenu>
 				<SidebarMenuItem>
 					<DropdownMenu>
-						<DropdownMenuTrigger>
-							{{
-								mode === "dark"
-									? "Dark Mode"
-									: mode == "light"
-										? "Light Mode"
-										: "System"
-							}}
+						<DropdownMenuTrigger as-child>
+							<SidebarMenuButton tooltip="Farbmodus">
+								<HugeiconsIcon
+									:icon="mode === 'dark' ? Moon : mode === 'light' ? Sun : Paint"
+								/>
+								<span>{{
+									mode === "dark"
+										? "Dunkler Modus"
+										: mode == "light"
+											? "Heller Modus"
+											: "System"
+								}}</span>
+							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent>
 							<DropdownMenuLabel>Farbmodus</DropdownMenuLabel>
@@ -134,8 +191,24 @@ mode.value = "dark";
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</SidebarMenuItem>
+				<SidebarMenuItem>
+					<DropdownMenu>
+						<DropdownMenuTrigger as-child>
+							<SidebarMenuButton :tooltip="userDetails?.username">
+								<HugeiconsIcon :icon="User" />
+								<span>{{ userDetails?.username }}</span>
+							</SidebarMenuButton>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent side="top" align="end">
+							<DropdownMenuItem @select="submitLogout">
+								<HugeiconsIcon :icon="Logout" class="mr-2" />
+								Abmelden
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</SidebarMenuItem>
 			</SidebarMenu>
 		</SidebarFooter>
+		<SidebarRail />
 	</Sidebar>
-	<SidebarTrigger></SidebarTrigger>
 </template>

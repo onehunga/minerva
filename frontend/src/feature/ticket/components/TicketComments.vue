@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useTicketRepository } from "../composables/useTicketRepository";
 import type { TicketComment } from "../ticket.model";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 
 const props = defineProps<{
 	projectId: number;
@@ -17,6 +20,9 @@ const isLoading = ref(false);
 const isCreating = ref(false);
 const errorMessage = ref("");
 const createErrorMessage = ref("");
+
+// API liefert chronologisch; neu erstellte Kommentare werden angehängt → umkehren genügt.
+const newestFirstComments = computed(() => [...comments.value].reverse());
 
 async function loadComments(): Promise<void> {
 	isLoading.value = true;
@@ -90,89 +96,46 @@ watch(
 </script>
 
 <template>
-	<section class="ticket-comments" aria-labelledby="ticket-comments-heading">
-		<h4 id="ticket-comments-heading">Kommentare</h4>
+	<section class="flex flex-col gap-3" aria-labelledby="ticket-comments-heading">
+		<h4 id="ticket-comments-heading" class="m-0">Kommentare</h4>
 
-		<p v-if="isLoading">Kommentare werden geladen...</p>
-		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
-		<p v-else-if="comments.length === 0">Keine Kommentare vorhanden.</p>
-		<ul v-else class="ticket-comments__list">
-			<li v-for="comment in comments" :key="comment.id" class="ticket-comments__item">
-				<p>{{ comment.content }}</p>
-				<small>
+		<p v-if="isLoading" class="m-0">Kommentare werden geladen...</p>
+		<Alert v-else-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
+		<p v-else-if="comments.length === 0" class="m-0">Keine Kommentare vorhanden.</p>
+		<ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
+			<li
+				v-for="comment in newestFirstComments"
+				:key="comment.id"
+				class="flex flex-col gap-1 rounded-md border px-3 py-2"
+			>
+				<p class="m-0">{{ comment.content }}</p>
+				<small class="text-muted-foreground">
 					{{ comment.authorDeleted ? "Gelöschter Nutzer" : comment.authorUsername }} -
 					{{ formatDate(comment.createdAt) }}
 				</small>
 			</li>
 		</ul>
 
-		<form v-if="canCreateComment" class="ticket-comments__form" @submit.prevent="createComment">
-			<textarea
+		<form
+			v-if="canCreateComment"
+			class="flex max-w-lg flex-col gap-3"
+			@submit.prevent="createComment"
+		>
+			<Textarea
 				v-model="content"
 				aria-label="Kommentar"
 				placeholder="Kommentar schreiben"
+				class="min-h-20 resize-y"
 				:disabled="isCreating"
-			></textarea>
-			<button type="submit" :disabled="isCreating || !content.trim()">
+			/>
+			<Button type="submit" class="self-start" :disabled="isCreating || !content.trim()">
 				{{ isCreating ? "Kommentar wird gespeichert..." : "Kommentieren" }}
-			</button>
-			<p v-if="createErrorMessage" class="form-message" role="alert">
-				{{ createErrorMessage }}
-			</p>
+			</Button>
+			<Alert v-if="createErrorMessage" variant="destructive">
+				<AlertDescription>{{ createErrorMessage }}</AlertDescription>
+			</Alert>
 		</form>
 	</section>
 </template>
-
-<style scoped>
-.ticket-comments {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-
-.ticket-comments h4,
-.ticket-comments p {
-	margin: 0;
-}
-
-.ticket-comments__list {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.ticket-comments__item {
-	display: flex;
-	flex-direction: column;
-	gap: 0.3rem;
-	padding: 0.6rem 0.8rem;
-	border: 1px solid currentColor;
-}
-
-.ticket-comments__form {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-	max-width: 32rem;
-}
-
-.ticket-comments__form textarea {
-	min-height: 5rem;
-	padding: 0.45rem 0.55rem;
-	border: 1px solid currentColor;
-	background: Canvas;
-	color: CanvasText;
-	resize: vertical;
-}
-
-.ticket-comments__form button {
-	align-self: flex-start;
-}
-
-.form-message {
-	margin: 0;
-}
-</style>

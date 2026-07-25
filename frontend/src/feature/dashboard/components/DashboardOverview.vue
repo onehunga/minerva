@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import type {
-	DashboardCategoryCount,
-	DashboardPriorityRow,
-	DashboardRecentTicket,
-	DashboardResponse,
-} from "../dashboard.model";
-import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_ORDER } from "@/feature/ticket/priority-labels";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableEmpty,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import type { DashboardRecentTicket, DashboardResponse } from "../dashboard.model";
+import TicketPriorityDistributionChart from "./TicketPriorityDistributionChart.vue";
+import TicketStatusDistributionChart from "./TicketStatusDistributionChart.vue";
+import { TICKET_PRIORITY_LABELS } from "@/feature/ticket/priority-labels";
 import type { TicketPriorityName } from "@/feature/ticket/ticket.model";
 
 const props = defineProps<{
@@ -15,40 +21,6 @@ const props = defineProps<{
 	errorMessage: string;
 	showProjectName: boolean;
 }>();
-
-const prioritiesInOrder = computed<DashboardPriorityRow[]>(() => {
-	const data = props.data;
-	if (data === null) {
-		return TICKET_PRIORITY_ORDER.map((priority) => ({
-			priority,
-			open: 0,
-			inProgress: 0,
-			completed: 0,
-			total: 0,
-		}));
-	}
-
-	return TICKET_PRIORITY_ORDER.map(
-		(priority) =>
-			data.priorities.find((row) => row.priority === priority) ?? {
-				priority,
-				open: 0,
-				inProgress: 0,
-				completed: 0,
-				total: 0,
-			},
-	);
-});
-
-function categoryCount(): DashboardCategoryCount {
-	return (
-		props.data?.ticketsByCategory ?? {
-			open: 0,
-			inProgress: 0,
-			completed: 0,
-		}
-	);
-}
 
 function recent(): DashboardRecentTicket[] {
 	return props.data?.recentTickets ?? [];
@@ -77,59 +49,55 @@ function formatDate(value: string | null): string {
 		<p v-if="isLoading">Dashboard wird geladen...</p>
 		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
 
-		<template v-else>
-			<p>
-				Gesamt: <strong>{{ data?.totalTickets ?? 0 }}</strong>
-			</p>
-			<p>
-				Offen: <strong>{{ categoryCount().open }}</strong> | In Arbeit:
-				<strong>{{ categoryCount().inProgress }}</strong> | Abgeschlossen:
-				<strong>{{ categoryCount().completed }}</strong>
-			</p>
+		<template v-else-if="data != null">
+			<div class="dashboard-overview__charts">
+				<TicketStatusDistributionChart :counts="data.ticketsByCategory" />
+				<TicketPriorityDistributionChart :priorities="data.priorities" />
+			</div>
 
-			<table>
-				<thead>
-					<tr>
-						<th>Priorität</th>
-						<th>Offen</th>
-						<th>In Arbeit</th>
-						<th>Abgeschlossen</th>
-						<th>Gesamt</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="row in prioritiesInOrder" :key="row.priority">
-						<td>{{ priorityLabel(row.priority) }}</td>
-						<td>{{ row.open }}</td>
-						<td>{{ row.inProgress }}</td>
-						<td>{{ row.completed }}</td>
-						<td>{{ row.total }}</td>
-					</tr>
-				</tbody>
-			</table>
-
-			<h4>Zuletzt erstellte Tickets</h4>
-			<p v-if="recent().length === 0">Keine Tickets vorhanden.</p>
-			<table v-else>
-				<thead>
-					<tr>
-						<th v-if="showProjectName">Projekt</th>
-						<th>Ticket</th>
-						<th>Status</th>
-						<th>Priorität</th>
-						<th>Erstellt</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr v-for="ticket in recent()" :key="ticket.id">
-						<td v-if="showProjectName">{{ ticket.projectName ?? "-" }}</td>
-						<td>{{ ticket.name }}</td>
-						<td>{{ ticket.statusName }}</td>
-						<td>{{ priorityLabel(ticket.priority) }}</td>
-						<td>{{ formatDate(ticket.createdAt) }}</td>
-					</tr>
-				</tbody>
-			</table>
+			<Card>
+				<CardHeader>
+					<CardTitle>Zuletzt erstellte Tickets</CardTitle>
+					<CardDescription>Die fünf neuesten Tickets im Überblick</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead v-if="showProjectName">Projekt</TableHead>
+								<TableHead>Ticket</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead>Priorität</TableHead>
+								<TableHead>Erstellt</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							<TableEmpty
+								v-if="recent().length === 0"
+								:colspan="showProjectName ? 5 : 4"
+							>
+								Keine Tickets vorhanden.
+							</TableEmpty>
+							<TableRow v-for="ticket in recent()" v-else :key="ticket.id">
+								<TableCell v-if="showProjectName">
+									{{ ticket.projectName ?? "-" }}
+								</TableCell>
+								<TableCell>
+									<div class="flex flex-col">
+										<span class="font-medium">{{ ticket.name }}</span>
+										<small class="text-muted-foreground"
+											>#{{ ticket.id }}</small
+										>
+									</div>
+								</TableCell>
+								<TableCell>{{ ticket.statusName }}</TableCell>
+								<TableCell>{{ priorityLabel(ticket.priority) }}</TableCell>
+								<TableCell>{{ formatDate(ticket.createdAt) }}</TableCell>
+							</TableRow>
+						</TableBody>
+					</Table>
+				</CardContent>
+			</Card>
 		</template>
 	</section>
 </template>
@@ -138,17 +106,18 @@ function formatDate(value: string | null): string {
 .dashboard-overview {
 	display: flex;
 	flex-direction: column;
-	gap: 0.75rem;
+	gap: 1rem;
 }
 
-.dashboard-overview table {
-	border-collapse: collapse;
+.dashboard-overview__charts {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1rem;
 }
 
-.dashboard-overview th,
-.dashboard-overview td {
-	border: 1px solid currentColor;
-	padding: 0.4rem 0.6rem;
-	text-align: left;
+@media (max-width: 64rem) {
+	.dashboard-overview__charts {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 </style>

@@ -23,6 +23,8 @@
 		"@hugeicons/vue": "^1.0.7",
 		"@lucide/vue": "^1.25.0",
 		"@tailwindcss/vite": "^4.3.3",
+		"@unovis/ts": "^1.6.7",
+		"@unovis/vue": "^1.6.7",
 		"@vueuse/core": "^14.3.0",
 		"axios": "^1.16.0",
 		"class-variance-authority": "^0.7.1",

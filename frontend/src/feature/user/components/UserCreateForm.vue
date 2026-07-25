@@ -1,16 +1,29 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { useManageUsers, type model } from "..";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { SheetFooter } from "@/components/ui/sheet";
+import { useManageUsers } from "..";
+import type { UserRole } from "../user.model";
 
 const emit = defineEmits<{
-	(event: "created"): void;
+	cancel: [];
+	created: [];
 }>();
 
-const { createUser, errorMessage, isCreatingUser, successMessage } = useManageUsers();
+const { createUser, errorMessage, isCreatingUser } = useManageUsers();
 
 const username = ref("");
 const password = ref("");
-const role = ref<model.UserRole>("USER");
+const role = ref<UserRole>("USER");
 
 async function submitUser(): Promise<void> {
 	const wasCreated = await createUser(username.value, password.value, role.value);
@@ -22,66 +35,78 @@ async function submitUser(): Promise<void> {
 		emit("created");
 	}
 }
+
+function selectRole(value: unknown): void {
+	role.value = String(value) as UserRole;
+}
 </script>
 
 <template>
-	<form class="user-create-form" @submit.prevent="submitUser">
-		<div class="form-field">
-			<label for="username">Benutzername</label>
-			<input
-				id="username"
-				v-model="username"
-				name="username"
-				required
-				autocomplete="username"
-			/>
+	<form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitUser">
+		<div class="flex flex-col gap-4 overflow-y-auto px-4">
+			<div class="flex flex-col gap-2">
+				<Label for="username">Benutzername</Label>
+				<Input
+					id="username"
+					v-model="username"
+					name="username"
+					required
+					minlength="3"
+					maxlength="50"
+					pattern="[A-Za-z0-9._-]+"
+					autocomplete="username"
+					:disabled="isCreatingUser"
+				/>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<Label for="password">Passwort</Label>
+				<Input
+					id="password"
+					v-model="password"
+					name="password"
+					type="password"
+					required
+					minlength="8"
+					autocomplete="new-password"
+					:disabled="isCreatingUser"
+				/>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<Label for="role">Rolle</Label>
+				<Select
+					:model-value="role"
+					:disabled="isCreatingUser"
+					@update:model-value="selectRole"
+				>
+					<SelectTrigger id="role" class="w-full">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="USER">Nutzer</SelectItem>
+						<SelectItem value="ADMIN">Administrator</SelectItem>
+					</SelectContent>
+				</Select>
+			</div>
+
+			<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+				{{ errorMessage }}
+			</p>
 		</div>
 
-		<div class="form-field">
-			<label for="password">Passwort</label>
-			<input
-				id="password"
-				v-model="password"
-				name="password"
-				type="password"
-				required
-				autocomplete="new-password"
-			/>
-		</div>
-
-		<div class="form-field">
-			<label for="role">Rolle</label>
-			<select id="role" v-model="role" name="role">
-				<option value="USER">User</option>
-				<option value="ADMIN">Admin</option>
-			</select>
-		</div>
-
-		<p v-if="errorMessage" class="form-message" role="alert">
-			{{ errorMessage }}
-		</p>
-		<p v-if="successMessage" class="form-message">{{ successMessage }}</p>
-
-		<button type="submit" :disabled="isCreatingUser">
-			{{ isCreatingUser ? "Wird erstellt..." : "Benutzer erstellen" }}
-		</button>
+		<SheetFooter class="sm:flex-row sm:justify-end">
+			<Button
+				type="button"
+				variant="outline"
+				:disabled="isCreatingUser"
+				@click="emit('cancel')"
+			>
+				Abbrechen
+			</Button>
+			<Button type="submit" :disabled="isCreatingUser">
+				{{ isCreatingUser ? "Wird erstellt..." : "Benutzer erstellen" }}
+			</Button>
+		</SheetFooter>
 	</form>
 </template>
-
-<style scoped>
-.user-create-form {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-}
-
-.form-field {
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-.form-message {
-	margin: 0;
-}
-</style>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useId } from "vue";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ActivityEvent, ActivityEventType } from "../activity.model";
 
 withDefaults(
@@ -8,9 +9,11 @@ withDefaults(
 		isLoading: boolean;
 		errorMessage: string;
 		heading?: string;
+		fillHeight?: boolean;
 	}>(),
 	{
 		heading: "Aktivitäten",
+		fillHeight: false,
 	},
 );
 
@@ -34,6 +37,14 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_DELETED: "Ticket gelöscht",
 };
 
+const PRIORITY_LABELS: Record<string, string> = {
+	LOWEST: "Sehr niedrig",
+	LOW: "Niedrig",
+	NORMAL: "Normal",
+	HIGH: "Hoch",
+	HIGHEST: "Sehr hoch",
+};
+
 function formatType(type: ActivityEventType): string {
 	return ACTIVITY_TYPE_LABELS[type] ?? type;
 }
@@ -48,6 +59,73 @@ function formatDate(value: string | null): string {
 		timeStyle: "short",
 	}).format(new Date(value));
 }
+
+type Payload = Record<string, unknown>;
+
+function str(payload: Payload, key: string): string | null {
+	const value = payload[key];
+	return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function num(payload: Payload, key: string): number | null {
+	const value = payload[key];
+	return typeof value === "number" ? value : null;
+}
+
+function userRef(id: number | null): string {
+	return id == null ? "—" : `#${id}`;
+}
+
+function priorityLabel(value: string | null): string {
+	return (value && PRIORITY_LABELS[value]) || value || "?";
+}
+
+function describeDetailsUpdated(payload: Payload): string {
+	const parts: string[] = [];
+	const previousName = str(payload, "previousName");
+	const newName = str(payload, "newName");
+	if (previousName !== newName && newName != null) {
+		parts.push(`Name: „${previousName}" → „${newName}"`);
+	}
+	if (str(payload, "previousDescription") !== str(payload, "newDescription")) {
+		parts.push("Beschreibung geändert");
+	}
+	return parts.join(", ");
+}
+
+function describe(event: ActivityEvent): string {
+	const payload = event.payload;
+	switch (event.type) {
+		case "PROJECT_CREATED":
+		case "PROJECT_ARCHIVED":
+		case "TICKET_CREATED":
+		case "TICKET_ARCHIVED":
+		case "TICKET_DELETED":
+			return `„${str(payload, "name") ?? "?"}"`;
+		case "PROJECT_DETAILS_UPDATED":
+		case "TICKET_DETAILS_UPDATED":
+			return describeDetailsUpdated(payload);
+		case "PROJECT_USER_ADDED":
+			return `${userRef(num(payload, "userId"))} (Rolle: ${str(payload, "role") ?? "?"})`;
+		case "PROJECT_USER_ROLE_CHANGED":
+			return `${userRef(num(payload, "userId"))}: ${str(payload, "oldRole") ?? "?"} → ${str(payload, "newRole") ?? "?"}`;
+		case "PROJECT_USER_REMOVED":
+			return userRef(num(payload, "userId"));
+		case "TICKET_COMMENT_CREATED":
+			return str(payload, "content") ?? "";
+		case "TICKET_STATUS_CHANGED": {
+			const transition = str(payload, "transitionName");
+			const change = `„${str(payload, "previousStatusName") ?? "?"}" → „${str(payload, "newStatusName") ?? "?"}"`;
+			return transition ? `${change} (Übergang „${transition}")` : change;
+		}
+		case "TICKET_PRIORITY_CHANGED":
+			return `${priorityLabel(str(payload, "previousPriority"))} → ${priorityLabel(str(payload, "newPriority"))}`;
+		case "TICKET_ASSIGNEE_CHANGED":
+			return `${userRef(num(payload, "previousAssigneeId"))} → ${userRef(num(payload, "newAssigneeId"))}`;
+		case "TICKET_SUBTICKET_ADDED":
+			return `„${str(payload, "subticketName") ?? "?"}"`;
+	}
+}
 </script>
 
 <template>
@@ -57,24 +135,33 @@ function formatDate(value: string | null): string {
 		<p v-if="isLoading">Aktivitäten werden geladen...</p>
 		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
 		<p v-else-if="events.length === 0">Keine Aktivitäten vorhanden.</p>
-		<ul v-else class="activity-timeline__list">
-			<li v-for="event in events" :key="event.id" class="activity-timeline__item">
-				<p class="activity-timeline__title">{{ formatType(event.type) }}</p>
-				<small>
-					{{
-						event.actorDeleted
-							? "Gelöschter Nutzer"
-							: (event.actorUsername ?? `#${event.actorUserId}`)
-					}}
-					-
-					{{ formatDate(event.occurredAt) }}
-				</small>
-				<details class="activity-timeline__payload">
-					<summary>Payload</summary>
-					<pre>{{ JSON.stringify(event.payload, null, 2) }}</pre>
-				</details>
-			</li>
-		</ul>
+		<ScrollArea v-else :class="fillHeight ? 'min-h-0 flex-1' : undefined">
+			<ul class="m-0 flex flex-col gap-1">
+				<li
+					v-for="event in events"
+					:key="event.id"
+					class="flex flex-col gap-1 rounded-md border px-3 py-2"
+				>
+					<p class="activity-timeline__title">{{ formatType(event.type) }}</p>
+					<p
+						v-if="describe(event)"
+						class="activity-timeline__detail truncate"
+						:title="describe(event)"
+					>
+						{{ describe(event) }}
+					</p>
+					<small>
+						{{
+							event.actorDeleted
+								? "Gelöschter Nutzer"
+								: (event.actorUsername ?? `#${event.actorUserId}`)
+						}}
+						-
+						{{ formatDate(event.occurredAt) }}
+					</small>
+				</li>
+			</ul>
+		</ScrollArea>
 	</section>
 </template>
 
@@ -90,38 +177,11 @@ function formatDate(value: string | null): string {
 	margin: 0;
 }
 
-.activity-timeline__list {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.activity-timeline__item {
-	display: flex;
-	flex-direction: column;
-	gap: 0.3rem;
-	padding: 0.6rem 0.8rem;
-	border: 1px solid currentColor;
-}
-
 .activity-timeline__title {
 	font-weight: 700;
 }
 
-.activity-timeline__payload summary {
-	cursor: pointer;
-}
-
-.activity-timeline__payload pre {
-	margin: 0.4rem 0 0;
-	padding: 0.5rem;
-	border: 1px solid currentColor;
-	white-space: pre-wrap;
-	word-break: break-word;
-	font-family: monospace;
-	font-size: 0.85rem;
+.activity-timeline__detail {
+	font-size: 0.9rem;
 }
 </style>
