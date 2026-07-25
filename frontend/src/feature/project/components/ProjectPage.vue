@@ -135,7 +135,7 @@ async function submitArchiveProject(): Promise<void> {
 			Dieses Projekt ist archiviert.
 		</p>
 
-		<Tabs default-value="overview">
+		<Tabs default-value="overview" class="min-h-0 flex-1">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
 					<TabsTrigger value="overview">Übersicht</TabsTrigger>
@@ -210,13 +210,15 @@ async function submitArchiveProject(): Promise<void> {
 				</div>
 			</TabsContent>
 
-			<TabsContent value="activities" class="project-page__tab-content">
-				<Card>
-					<CardContent>
+			<TabsContent value="activities" class="project-page__tab-content min-h-0">
+				<Card class="min-h-0 flex-1">
+					<CardContent class="flex min-h-0 flex-1">
 						<ActivityTimeline
+							class="min-h-0 flex-1"
 							:events="activityEvents"
 							:is-loading="isActivityLoading"
 							:error-message="activityError"
+							fill-height
 						/>
 					</CardContent>
 				</Card>
@@ -277,6 +279,10 @@ async function submitArchiveProject(): Promise<void> {
 
 <style scoped>
 .project-page {
+	display: flex;
+	height: 100%;
+	box-sizing: border-box;
+	flex-direction: column;
 	width: min(100%, 90rem);
 	margin: 0 auto;
 	padding: 2rem;

@@ -11,11 +11,11 @@ mode.value = "auto";
 <template>
 	<SidebarProvider>
 		<AppSidebar v-if="isAuthenticated" />
-		<SidebarInset>
+		<SidebarInset class="h-svh overflow-hidden">
 			<div v-if="isAuthenticated" class="p-2 pb-0 md:hidden">
 				<SidebarTrigger />
 			</div>
-			<div class="flex-1 p-4 md:p-6">
+			<div class="min-h-0 flex-1 overflow-auto p-4 md:p-6">
 				<RouterView />
 			</div>
 		</SidebarInset>
