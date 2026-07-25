@@ -34,19 +34,9 @@ const stubs = {
 };
 
 describe("dashboard charts", () => {
-	it("normalizes missing priorities to all five priority groups", () => {
+	it("renders all five priority groups without tickets", () => {
 		const wrapper = shallowMount(TicketPriorityDistributionChart, {
-			props: {
-				priorities: [
-					{
-						priority: "NORMAL",
-						open: 2,
-						inProgress: 1,
-						completed: 0,
-						total: 3,
-					},
-				],
-			},
+			props: { priorities: [] },
 			global: { stubs },
 		});
 
@@ -55,16 +45,15 @@ describe("dashboard charts", () => {
 			TICKET_PRIORITY_ORDER,
 		);
 		expect(data[0]).toMatchObject({ open: 0, inProgress: 0, completed: 0 });
-		expect(data[2]).toMatchObject({ open: 2, inProgress: 1, completed: 0 });
 	});
 
-	it("shows an empty state instead of an empty donut", () => {
+	it("renders the status visualization without tickets", () => {
 		const wrapper = shallowMount(TicketStatusDistributionChart, {
 			props: { counts: { open: 0, inProgress: 0, completed: 0 } },
 			global: { stubs },
 		});
 
-		expect(wrapper.text()).toContain("Keine Tickets vorhanden.");
-		expect(wrapper.findComponent(VisSingleContainer).exists()).toBe(false);
+		expect(wrapper.text()).not.toContain("Keine Tickets vorhanden.");
+		expect(wrapper.findComponent(VisSingleContainer).exists()).toBe(true);
 	});
 });

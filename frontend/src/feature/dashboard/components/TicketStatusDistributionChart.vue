@@ -42,39 +42,33 @@ const total = computed(() => chartData.value.reduce((sum, item) => sum + item.co
 			<CardDescription>Aktive Tickets nach Bearbeitungsstand</CardDescription>
 		</CardHeader>
 		<CardContent>
-			<p v-if="total === 0" class="status-chart__empty">Keine Tickets vorhanden.</p>
-			<template v-else>
-				<div class="status-chart__visual">
-					<ChartContainer
-						:config="config"
-						class="status-chart__chart"
-						:aria-label="`${total} Tickets nach Status verteilt`"
-					>
-						<VisSingleContainer :data="chartData">
-							<VisDonut
-								:value="(item: ChartRow) => item.count"
-								:color="(item: ChartRow) => item.color"
-								:arc-width="32"
-							/>
-						</VisSingleContainer>
-					</ChartContainer>
-					<div class="status-chart__total" aria-hidden="true">
-						<strong>{{ total }}</strong>
-						<span>Tickets</span>
-					</div>
+			<div class="status-chart__visual">
+				<ChartContainer
+					:config="config"
+					class="status-chart__chart"
+					:aria-label="`${total} Tickets nach Status verteilt`"
+				>
+					<VisSingleContainer :data="chartData">
+						<VisDonut
+							:value="(item: ChartRow) => item.count"
+							:color="(item: ChartRow) => item.color"
+							:arc-width="32"
+						/>
+					</VisSingleContainer>
+				</ChartContainer>
+				<div class="status-chart__total" aria-hidden="true">
+					<strong>{{ total }}</strong>
+					<span>Tickets</span>
 				</div>
+			</div>
 
-				<ul class="status-chart__legend" aria-label="Statuswerte">
-					<li v-for="item in chartData" :key="item.category">
-						<span
-							class="status-chart__dot"
-							:style="{ backgroundColor: item.color }"
-						></span>
-						<span>{{ config[item.category]?.label }}</span>
-						<strong>{{ item.count }}</strong>
-					</li>
-				</ul>
-			</template>
+			<ul class="status-chart__legend" aria-label="Statuswerte">
+				<li v-for="item in chartData" :key="item.category">
+					<span class="status-chart__dot" :style="{ backgroundColor: item.color }"></span>
+					<span>{{ config[item.category]?.label }}</span>
+					<strong>{{ item.count }}</strong>
+				</li>
+			</ul>
 		</CardContent>
 	</Card>
 </template>
@@ -127,10 +121,5 @@ const total = computed(() => chartData.value.reduce((sum, item) => sum + item.co
 	width: 0.5rem;
 	height: 0.5rem;
 	border-radius: 9999px;
-}
-
-.status-chart__empty {
-	margin: 0;
-	color: var(--muted-foreground);
 }
 </style>

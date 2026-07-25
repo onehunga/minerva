@@ -36,9 +36,6 @@ const chartData = computed(() =>
 		};
 	}),
 );
-const total = computed(() =>
-	chartData.value.reduce((sum, item) => sum + item.open + item.inProgress + item.completed, 0),
-);
 
 type ChartRow = (typeof chartData.value)[number];
 
@@ -55,8 +52,7 @@ function priorityLabel(value: number | Date): string {
 			<CardDescription>Statusverteilung innerhalb jeder Priorität</CardDescription>
 		</CardHeader>
 		<CardContent>
-			<p v-if="total === 0" class="priority-chart__empty">Keine Tickets vorhanden.</p>
-			<ChartContainer v-else :config="config" class="priority-chart__chart">
+			<ChartContainer :config="config" class="priority-chart__chart">
 				<VisXYContainer :data="chartData">
 					<VisGroupedBar
 						:x="(item: ChartRow) => item.index"
@@ -107,10 +103,5 @@ function priorityLabel(value: number | Date): string {
 <style scoped>
 .priority-chart__chart {
 	height: 20rem;
-}
-
-.priority-chart__empty {
-	margin: 0;
-	color: var(--muted-foreground);
 }
 </style>
