@@ -3,8 +3,16 @@ import { ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { SheetFooter } from "@/components/ui/sheet";
 import { useManageUsers } from "..";
+import type { UserRole } from "../user.model";
 
 const emit = defineEmits<{
 	cancel: [];
@@ -15,15 +23,21 @@ const { createUser, errorMessage, isCreatingUser } = useManageUsers();
 
 const username = ref("");
 const password = ref("");
+const role = ref<UserRole>("USER");
 
 async function submitUser(): Promise<void> {
-	const wasCreated = await createUser(username.value, password.value, "USER");
+	const wasCreated = await createUser(username.value, password.value, role.value);
 
 	if (wasCreated) {
 		username.value = "";
 		password.value = "";
+		role.value = "USER";
 		emit("created");
 	}
+}
+
+function selectRole(value: unknown): void {
+	role.value = String(value) as UserRole;
 }
 </script>
 
@@ -57,6 +71,23 @@ async function submitUser(): Promise<void> {
 					autocomplete="new-password"
 					:disabled="isCreatingUser"
 				/>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<Label for="role">Rolle</Label>
+				<Select
+					:model-value="role"
+					:disabled="isCreatingUser"
+					@update:model-value="selectRole"
+				>
+					<SelectTrigger id="role" class="w-full">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="USER">Nutzer</SelectItem>
+						<SelectItem value="ADMIN">Administrator</SelectItem>
+					</SelectContent>
+				</Select>
 			</div>
 
 			<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">

@@ -218,7 +218,7 @@ async function confirmDelete(): Promise<void> {
 				<SheetHeader>
 					<SheetTitle>Nutzer hinzufügen</SheetTitle>
 					<SheetDescription>
-						Lege einen neuen Nutzer mit der Standardrolle „Nutzer“ an.
+						Lege einen neuen Nutzer und dessen Rolle an.
 					</SheetDescription>
 				</SheetHeader>
 				<UserCreateForm @created="handleCreated" @cancel="isCreateOpen = false" />

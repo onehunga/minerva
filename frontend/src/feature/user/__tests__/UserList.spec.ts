@@ -139,7 +139,7 @@ describe("UserList", () => {
 		expect(sheet?.textContent).toContain("Nutzer hinzufügen");
 		expect(document.body.querySelector("#username")).not.toBeNull();
 		expect(document.body.querySelector("#password")).not.toBeNull();
-		expect(document.body.querySelector("#role")).toBeNull();
+		expect(document.body.querySelector("#role")).not.toBeNull();
 	});
 
 	it("confirms deletion before removing a user", async () => {

@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { flushPromises, mount } from "@vue/test-utils";
+import { Select } from "@/components/ui/select";
 import { UserRepositoryKey, type IUserRepository, type model } from "..";
 import UserCreateForm from "../components/UserCreateForm.vue";
 import type { TokenPair } from "@/api/credentials.ts";
@@ -91,6 +92,7 @@ describe("UserCreateForm", () => {
 
 		await wrapper.get("#username").setValue("new-user");
 		await wrapper.get("#password").setValue("secret-password");
+		wrapper.findComponent(Select).vm.$emit("update:modelValue", "ADMIN");
 		await wrapper.get("form").trigger("submit");
 		await flushPromises();
 
@@ -98,7 +100,7 @@ describe("UserCreateForm", () => {
 			{
 				username: "new-user",
 				password: "secret-password",
-				role: "USER",
+				role: "ADMIN",
 			},
 		]);
 		expect(wrapper.emitted("created")).toHaveLength(1);
