@@ -6,7 +6,7 @@ import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketDetail, TicketList } from "@/feature/ticket";
 import { useUserStore } from "@/feature/user";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useProject, useProjectRepository } from "..";
@@ -136,7 +136,7 @@ async function submitArchiveProject(): Promise<void> {
 			Dieses Projekt ist archiviert.
 		</p>
 
-		<Tabs default-value="overview" class="min-h-0 flex-1 overflow-hidden">
+		<Tabs default-value="overview" class="flex-1">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
 					<TabsTrigger value="overview">Übersicht</TabsTrigger>
@@ -150,15 +150,14 @@ async function submitArchiveProject(): Promise<void> {
 				</TabsList>
 			</div>
 
-			<TabsContent
-				value="overview"
-				class="project-page__tab-content project-page__tab-content--scroll"
-			>
+			<TabsContent value="overview" class="project-page__tab-content">
 				<Card>
-					<CardContent>
-						<h1>{{ details.name }}</h1>
-						<p>{{ details.description || "Keine Beschreibung hinterlegt." }}</p>
-					</CardContent>
+					<CardHeader>
+						<h1 class="cn-font-heading text-2xl font-semibold">{{ details.name }}</h1>
+						<CardDescription>
+							{{ details.description || "Keine Beschreibung hinterlegt." }}
+						</CardDescription>
+					</CardHeader>
 				</Card>
 
 				<DashboardOverview
@@ -172,7 +171,7 @@ async function submitArchiveProject(): Promise<void> {
 			<TabsContent
 				v-if="details.projectRole !== null"
 				value="tickets"
-				class="project-page__tab-content overflow-hidden"
+				class="project-page__tab-content"
 			>
 				<CreateTicketForm
 					v-if="details.projectRole !== 'VIEWER'"
@@ -188,11 +187,11 @@ async function submitArchiveProject(): Promise<void> {
 				</label>
 				<p v-if="isLoadingTickets">Tickets werden geladen...</p>
 				<div v-else class="project-page__tickets">
-					<Card class="min-h-0">
+					<Card>
 						<CardHeader>
 							<CardTitle>Tickets</CardTitle>
 						</CardHeader>
-						<CardContent class="min-h-0 flex-1 overflow-y-auto">
+						<CardContent>
 							<TicketList
 								:tickets="tickets"
 								:selected-ticket-id="selectedTicketId"
@@ -201,8 +200,8 @@ async function submitArchiveProject(): Promise<void> {
 						</CardContent>
 					</Card>
 
-					<Card class="project-page__ticket-detail-card min-h-0">
-						<CardContent class="min-h-0 flex-1 overflow-y-auto">
+					<Card class="project-page__ticket-detail-card">
+						<CardContent>
 							<TicketDetail
 								v-if="selectedTicket"
 								:ticket="selectedTicket"
@@ -216,7 +215,10 @@ async function submitArchiveProject(): Promise<void> {
 				</div>
 			</TabsContent>
 
-			<TabsContent value="activities" class="project-page__tab-content overflow-hidden">
+			<TabsContent
+				value="activities"
+				class="project-page__tab-content min-h-0 overflow-hidden"
+			>
 				<Card class="min-h-0 flex-1">
 					<CardContent class="flex min-h-0 flex-1">
 						<ActivityTimeline
@@ -230,11 +232,7 @@ async function submitArchiveProject(): Promise<void> {
 				</Card>
 			</TabsContent>
 
-			<TabsContent
-				v-if="canOpenSettings"
-				value="settings"
-				class="project-page__tab-content project-page__tab-content--scroll"
-			>
+			<TabsContent v-if="canOpenSettings" value="settings" class="project-page__tab-content">
 				<Card v-if="canUpdateDetails">
 					<CardHeader>
 						<CardTitle>Projektdetails</CardTitle>
@@ -317,14 +315,8 @@ async function submitArchiveProject(): Promise<void> {
 	padding-top: 1rem;
 }
 
-.project-page__tab-content--scroll {
-	overflow-y: auto;
-}
-
 .project-page__tickets {
 	display: grid;
-	min-height: 0;
-	flex: 1;
 	grid-template-columns: minmax(14rem, 0.7fr) minmax(0, 2fr);
 	gap: 1rem;
 	align-items: stretch;
@@ -398,7 +390,6 @@ async function submitArchiveProject(): Promise<void> {
 
 	.project-page__tickets {
 		grid-template-columns: 1fr;
-		grid-template-rows: repeat(2, minmax(0, 1fr));
 	}
 }
 </style>

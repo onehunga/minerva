@@ -135,7 +135,7 @@ function describe(event: ActivityEvent): string {
 		<p v-if="isLoading">Aktivitäten werden geladen...</p>
 		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
 		<p v-else-if="events.length === 0">Keine Aktivitäten vorhanden.</p>
-		<ScrollArea v-else :class="fillHeight ? 'min-h-0 flex-1' : 'h-96'">
+		<ScrollArea v-else :class="fillHeight ? 'min-h-0 flex-1' : undefined">
 			<ul class="m-0 flex flex-col gap-1">
 				<li
 					v-for="event in events"
