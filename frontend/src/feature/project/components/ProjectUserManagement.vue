@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
 import {
 	AlertDialog,
@@ -54,6 +54,10 @@ import {
 import { useUserStore } from "@/feature/user";
 import { type model, useProject, useProjectUsers } from "..";
 
+const props = defineProps<{
+	projectId: number;
+}>();
+
 const projectRoles: model.ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
 const projectRoleLabels: Record<model.ProjectRole, string> = {
 	OWNER: "Owner",
@@ -75,7 +79,7 @@ const {
 	updateProjectUserRole,
 	updatingUserRoleId,
 	users,
-} = useProjectUsers(projectDetails.value!.id);
+} = useProjectUsers(() => props.projectId);
 
 const selectedUserId = ref<number | null>(null);
 const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
@@ -96,7 +100,13 @@ const hasSelectedRoleChanged = computed(
 		selectedRole.value !== roleCandidate.value?.projectRole,
 );
 
-onMounted(loadUsers);
+watch(
+	() => props.projectId,
+	() => {
+		loadUsers();
+	},
+	{ immediate: true },
+);
 
 function formatProjectRole(role: model.ProjectRole | null): string {
 	return role === null ? "Kein Mitglied" : projectRoleLabels[role];

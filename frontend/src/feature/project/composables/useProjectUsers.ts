@@ -1,11 +1,11 @@
 import { storeToRefs } from "pinia";
-import { ref } from "vue";
+import { ref, toValue, type MaybeRefOrGetter } from "vue";
 import { useActiveProjectStore } from "../project.store";
 import type { ProjectRole } from "../project.model";
 import { useProjectRepository } from "./useProjectRepository";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function useProjectUsers(projectId: number) {
+export function useProjectUsers(projectId: MaybeRefOrGetter<number>) {
 	const projectRepository = useProjectRepository();
 	const store = useActiveProjectStore();
 	const { projectUsers: users } = storeToRefs(store);
@@ -22,7 +22,7 @@ export function useProjectUsers(projectId: number) {
 		errorMessage.value = "";
 
 		try {
-			store.setProjectUsers(await projectRepository.getProjectUsers(projectId));
+			store.setProjectUsers(await projectRepository.getProjectUsers(toValue(projectId)));
 		} catch {
 			errorMessage.value = "Projektbenutzer konnten nicht geladen werden.";
 		} finally {
@@ -36,7 +36,7 @@ export function useProjectUsers(projectId: number) {
 		isAddingUser.value = true;
 
 		try {
-			await projectRepository.addProjectUser(projectId, userId, role);
+			await projectRepository.addProjectUser(toValue(projectId), userId, role);
 			await loadUsers();
 			successMessage.value = "Benutzer wurde hinzugefügt.";
 			return true;
@@ -54,7 +54,7 @@ export function useProjectUsers(projectId: number) {
 		updatingUserRoleId.value = userId;
 
 		try {
-			await projectRepository.updateProjectUserRole(projectId, userId, role);
+			await projectRepository.updateProjectUserRole(toValue(projectId), userId, role);
 			await loadUsers();
 			successMessage.value = "Projektrolle wurde aktualisiert.";
 			return true;
@@ -72,7 +72,7 @@ export function useProjectUsers(projectId: number) {
 		removingUserId.value = userId;
 
 		try {
-			await projectRepository.removeProjectUser(projectId, userId);
+			await projectRepository.removeProjectUser(toValue(projectId), userId);
 			for (const ticket of store.tickets.filter((ticket) => ticket.assignedTo === userId)) {
 				store.updateTicketAssignee(ticket.id, null);
 			}

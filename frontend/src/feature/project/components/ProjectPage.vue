@@ -54,12 +54,20 @@ const {
 	events: activityEvents,
 	isLoading: isActivityLoading,
 	errorMessage: activityError,
-} = useProjectActivities(props.id);
+} = useProjectActivities(() => props.id);
 const {
 	data: projectDashboard,
 	isLoading: isProjectDashboardLoading,
 	errorMessage: projectDashboardError,
-} = useProjectDashboard(props.id);
+} = useProjectDashboard(() => props.id);
+
+watch(
+	() => props.id,
+	() => {
+		showArchived.value = false;
+		selectedTicketId.value = null;
+	},
+);
 
 watch(
 	() => [details.value?.name, details.value?.description],
@@ -289,7 +297,7 @@ async function submitArchiveProject(): Promise<void> {
 				</Card>
 				<Card>
 					<CardContent>
-						<ProjectUserManagement />
+						<ProjectUserManagement :project-id="id" />
 					</CardContent>
 				</Card>
 				<Card v-if="details.projectRole === 'OWNER' && !details.archived">

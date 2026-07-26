@@ -51,7 +51,10 @@ const {
 	events: activityEvents,
 	isLoading: isActivityLoading,
 	errorMessage: activityError,
-} = useTicketActivities(props.ticket.projectId, props.ticket.id);
+} = useTicketActivities(
+	() => props.ticket.projectId,
+	() => props.ticket.id,
+);
 
 const isDeletingTicket = ref(false);
 const isArchivingTicket = ref(false);
