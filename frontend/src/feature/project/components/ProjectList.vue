@@ -1,17 +1,9 @@
 <script setup lang="ts">
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import type { ProjectRecord } from "../project.model";
-import { useProjectRepository } from "../composables/useProjectRepository";
+import { useProjects } from "../composables/useProjects";
 
-const projectRepository = useProjectRepository();
-
-const projects = ref<ProjectRecord[]>([]);
-
-onMounted(async () => {
-	projects.value = await projectRepository.getAllProjects();
-});
+const { projects } = useProjects();
 </script>
 
 <template>
