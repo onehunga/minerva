@@ -5,6 +5,15 @@ import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketDetail, TicketList } from "@/feature/ticket";
 import { useUserStore } from "@/feature/user";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +26,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProject, useProjectRepository } from "..";
+import { useProject } from "../composables/useProject";
+import { useProjectRepository } from "../composables/useProjectRepository";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -33,11 +43,16 @@ const selectedTicketId = ref<number | null>(null);
 const showArchived = ref(false);
 const isLoadingTickets = ref(false);
 const isArchivingProject = ref(false);
+const isArchiveDialogOpen = ref(false);
 const isUpdatingDetails = ref(false);
+const errorMessage = ref("");
 const draftName = ref("");
 const draftDescription = ref("");
 
 const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER");
+const canModifyProject = computed(
+	() => canUpdateDetails.value && details.value?.archived === false,
+);
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const canOpenSettings = computed(() => details.value?.projectRole === "OWNER" || isAdmin.value);
 const selectedTicket = computed(() =>
@@ -54,12 +69,22 @@ const {
 	events: activityEvents,
 	isLoading: isActivityLoading,
 	errorMessage: activityError,
-} = useProjectActivities(props.id);
+} = useProjectActivities(() => props.id);
 const {
 	data: projectDashboard,
 	isLoading: isProjectDashboardLoading,
 	errorMessage: projectDashboardError,
-} = useProjectDashboard(props.id);
+} = useProjectDashboard(() => props.id);
+
+watch(
+	() => props.id,
+	() => {
+		errorMessage.value = "";
+		isArchiveDialogOpen.value = false;
+		showArchived.value = false;
+		selectedTicketId.value = null;
+	},
+);
 
 watch(
 	() => [details.value?.name, details.value?.description],
@@ -82,11 +107,12 @@ watch(
 
 watch(showArchived, async (archived) => {
 	isLoadingTickets.value = true;
+	errorMessage.value = "";
 
 	try {
 		await fetchTickets(archived);
 	} catch {
-		alert("Die Tickets konnten nicht geladen werden.");
+		errorMessage.value = "Die Tickets konnten nicht geladen werden.";
 	} finally {
 		isLoadingTickets.value = false;
 	}
@@ -99,7 +125,7 @@ function selectTicketView(value: unknown): void {
 async function submitDetailsUpdate(): Promise<void> {
 	if (
 		isUpdatingDetails.value ||
-		!canUpdateDetails.value ||
+		!canModifyProject.value ||
 		details.value == null ||
 		!draftName.value.trim()
 	) {
@@ -114,28 +140,46 @@ async function submitDetailsUpdate(): Promise<void> {
 	}
 
 	isUpdatingDetails.value = true;
+	errorMessage.value = "";
 
 	try {
 		await updateProjectDetails(name, description);
 	} catch {
-		alert("Die Projektdetails konnten nicht aktualisiert werden.");
+		errorMessage.value = "Die Projektdetails konnten nicht aktualisiert werden.";
 	} finally {
 		isUpdatingDetails.value = false;
 	}
 }
 
+function updateArchiveDialogOpen(open: boolean): void {
+	if (!open && !isArchivingProject.value) {
+		isArchiveDialogOpen.value = false;
+	}
+}
+
+function openArchiveDialog(): void {
+	if (details.value?.archived !== false) {
+		return;
+	}
+
+	errorMessage.value = "";
+	isArchiveDialogOpen.value = true;
+}
+
 async function submitArchiveProject(): Promise<void> {
-	if (isArchivingProject.value || !confirm("Projekt wirklich archivieren?")) {
+	if (isArchivingProject.value || details.value?.archived !== false) {
 		return;
 	}
 
 	isArchivingProject.value = true;
+	errorMessage.value = "";
 
 	try {
 		await projectRepository.archiveProject(props.id);
+		isArchiveDialogOpen.value = false;
 		await router.push({ name: "landing" });
 	} catch {
-		alert("Das Projekt konnte nicht archiviert werden.");
+		errorMessage.value = "Das Projekt konnte nicht archiviert werden.";
 	} finally {
 		isArchivingProject.value = false;
 	}
@@ -144,11 +188,12 @@ async function submitArchiveProject(): Promise<void> {
 
 <template>
 	<main v-if="details != null" class="project-page">
-		<p v-if="details.archived" class="project-page__archive-banner" role="status">
-			Dieses Projekt ist archiviert.
+		<p v-if="details.archived" class="archive-banner">Dieses Projekt ist archiviert.</p>
+		<p v-if="errorMessage" class="m-0 text-sm text-destructive">
+			{{ errorMessage }}
 		</p>
 
-		<Tabs default-value="overview" class="flex-1">
+		<Tabs default-value="overview" class="flex-1 mt-2">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
 					<TabsTrigger value="overview">Übersicht</TabsTrigger>
@@ -188,6 +233,7 @@ async function submitArchiveProject(): Promise<void> {
 				<CreateTicketForm
 					v-if="details.projectRole !== 'VIEWER'"
 					:parent-ticket-id="null"
+					:disabled="details.archived"
 				/>
 				<p v-else>Als Viewer kannst du keine Tickets erstellen.</p>
 				<div class="project-page__ticket-filter">
@@ -265,18 +311,24 @@ async function submitArchiveProject(): Promise<void> {
 						>
 							<label>
 								Projektname
-								<Input v-model="draftName" required :disabled="isUpdatingDetails" />
+								<Input
+									v-model="draftName"
+									required
+									:disabled="isUpdatingDetails || !canModifyProject"
+								/>
 							</label>
 							<label>
 								Beschreibung
 								<Textarea
 									v-model="draftDescription"
-									:disabled="isUpdatingDetails"
+									:disabled="isUpdatingDetails || !canModifyProject"
 								></Textarea>
 							</label>
 							<Button
 								type="submit"
-								:disabled="isUpdatingDetails || !draftName.trim()"
+								:disabled="
+									isUpdatingDetails || !canModifyProject || !draftName.trim()
+								"
 							>
 								{{
 									isUpdatingDetails
@@ -289,25 +341,49 @@ async function submitArchiveProject(): Promise<void> {
 				</Card>
 				<Card>
 					<CardContent>
-						<ProjectUserManagement />
+						<ProjectUserManagement :project-id="id" :disabled="details.archived" />
 					</CardContent>
 				</Card>
-				<Card v-if="details.projectRole === 'OWNER' && !details.archived">
+				<Card v-if="details.projectRole === 'OWNER'">
 					<CardHeader>
 						<CardTitle>Projektverwaltung</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<Button
 							type="button"
-							:disabled="isArchivingProject"
-							@click="submitArchiveProject"
+							:disabled="isArchivingProject || details.archived"
+							@click="openArchiveDialog"
 						>
-							{{ isArchivingProject ? "Wird archiviert..." : "Projekt archivieren" }}
+							{{
+								details.archived ? "Projekt ist archiviert" : "Projekt archivieren"
+							}}
 						</Button>
 					</CardContent>
 				</Card>
 			</TabsContent>
 		</Tabs>
+
+		<AlertDialog :open="isArchiveDialogOpen" @update:open="updateArchiveDialogOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Projekt archivieren?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Das Projekt „{{ details.name }}“ wird archiviert.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="isArchivingProject">
+						Abbrechen
+					</AlertDialogCancel>
+					<Button :disabled="isArchivingProject" @click="submitArchiveProject">
+						{{ isArchivingProject ? "Wird archiviert..." : "Projekt archivieren" }}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	</main>
 	<p v-else>Loading...</p>
 </template>
@@ -388,8 +464,7 @@ async function submitArchiveProject(): Promise<void> {
 	margin: 0;
 }
 
-.project-page__archive-banner {
-	margin: 0 0 1rem;
+.archive-banner {
 	padding: 1rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-lg);

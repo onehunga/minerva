@@ -1,96 +1,45 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
-import { useTicketRepository } from "../composables/useTicketRepository";
-import type { TicketComment } from "../ticket.model";
+import { computed, ref, watch } from "vue";
+import { useTicketComments } from "../composables/useTicketComments";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDate } from "@/lib/date";
 
-const props = defineProps<{
-	projectId: number;
-	ticketId: number;
-	canCreateComment: boolean;
-}>();
+const props = withDefaults(
+	defineProps<{
+		projectId: number;
+		ticketId: number;
+		canCreateComment: boolean;
+		disabled?: boolean;
+	}>(),
+	{ disabled: false },
+);
 
-const ticketRepository = useTicketRepository();
-
-const comments = ref<TicketComment[]>([]);
 const content = ref("");
-const isLoading = ref(false);
-const isCreating = ref(false);
-const errorMessage = ref("");
-const createErrorMessage = ref("");
+const { comments, isLoading, isCreating, hasLoadError, hasCreateError, createComment } =
+	useTicketComments(
+		() => props.projectId,
+		() => props.ticketId,
+	);
 
 // API liefert chronologisch; neu erstellte Kommentare werden angehängt → umkehren genügt.
 const newestFirstComments = computed(() => [...comments.value].reverse());
 
-async function loadComments(): Promise<void> {
-	isLoading.value = true;
-	errorMessage.value = "";
-
-	try {
-		comments.value = await ticketRepository.getTicketComments(props.projectId, props.ticketId);
-	} catch {
-		comments.value = [];
-		errorMessage.value = "Kommentare konnten nicht geladen werden.";
-	} finally {
-		isLoading.value = false;
-	}
-}
-
-async function createComment(): Promise<void> {
-	if (!content.value.trim() || isCreating.value) {
+async function submitComment(): Promise<void> {
+	if (props.disabled) {
 		return;
 	}
 
-	isCreating.value = true;
-	createErrorMessage.value = "";
-
-	try {
-		const comment = await ticketRepository.createTicketComment(
-			props.projectId,
-			props.ticketId,
-			{
-				content: content.value,
-			},
-		);
-
-		comments.value = [
-			...comments.value,
-			{
-				...comment,
-				createdAt: comment.createdAt ?? new Date().toISOString(),
-			},
-		];
+	if (await createComment(content.value)) {
 		content.value = "";
-	} catch {
-		createErrorMessage.value = "Kommentar konnte nicht gespeichert werden.";
-	} finally {
-		isCreating.value = false;
 	}
 }
-
-function formatDate(value: string | null): string {
-	if (value == null) {
-		return "-";
-	}
-
-	return new Intl.DateTimeFormat("de-DE", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value));
-}
-
-onMounted(() => {
-	loadComments();
-});
 
 watch(
 	() => [props.projectId, props.ticketId],
 	() => {
 		content.value = "";
-		createErrorMessage.value = "";
-		loadComments();
 	},
 );
 </script>
@@ -100,8 +49,8 @@ watch(
 		<h4 id="ticket-comments-heading" class="m-0">Kommentare</h4>
 
 		<p v-if="isLoading" class="m-0">Kommentare werden geladen...</p>
-		<Alert v-else-if="errorMessage" variant="destructive">
-			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		<Alert v-else-if="hasLoadError" variant="destructive">
+			<AlertDescription>Kommentare konnten nicht geladen werden.</AlertDescription>
 		</Alert>
 		<p v-else-if="comments.length === 0" class="m-0">Keine Kommentare vorhanden.</p>
 		<ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
@@ -121,20 +70,24 @@ watch(
 		<form
 			v-if="canCreateComment"
 			class="flex max-w-lg flex-col gap-3"
-			@submit.prevent="createComment"
+			@submit.prevent="submitComment"
 		>
 			<Textarea
 				v-model="content"
 				aria-label="Kommentar"
 				placeholder="Kommentar schreiben"
 				class="min-h-20 resize-y"
-				:disabled="isCreating"
+				:disabled="isCreating || disabled"
 			/>
-			<Button type="submit" class="self-start" :disabled="isCreating || !content.trim()">
+			<Button
+				type="submit"
+				class="self-start"
+				:disabled="isCreating || disabled || !content.trim()"
+			>
 				{{ isCreating ? "Kommentar wird gespeichert..." : "Kommentieren" }}
 			</Button>
-			<Alert v-if="createErrorMessage" variant="destructive">
-				<AlertDescription>{{ createErrorMessage }}</AlertDescription>
+			<Alert v-if="hasCreateError" variant="destructive">
+				<AlertDescription>Kommentar konnte nicht gespeichert werden.</AlertDescription>
 			</Alert>
 		</form>
 	</section>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
 import {
 	AlertDialog,
@@ -52,10 +52,20 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useUserStore } from "@/feature/user";
-import { type model, useProject, useProjectUsers } from "..";
+import type { ProjectRole, ProjectUser } from "../project.model";
+import { useProject } from "../composables/useProject";
+import { useProjectUsers } from "../composables/useProjectUsers";
 
-const projectRoles: model.ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
-const projectRoleLabels: Record<model.ProjectRole, string> = {
+const props = withDefaults(
+	defineProps<{
+		projectId: number;
+		disabled?: boolean;
+	}>(),
+	{ disabled: false },
+);
+
+const projectRoles: ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
+const projectRoleLabels: Record<ProjectRole, string> = {
 	OWNER: "Owner",
 	CONTRIBUTOR: "Mitwirkender",
 	VIEWER: "Betrachter",
@@ -65,22 +75,28 @@ const { details: projectDetails } = useProject();
 const userStore = useUserStore();
 const {
 	addProjectUser,
-	errorMessage,
+	hasLoadError,
 	isAddingUser,
 	isLoadingUsers,
 	loadUsers,
 	removeProjectUser,
 	removingUserId,
-	successMessage,
 	updateProjectUserRole,
 	updatingUserRoleId,
 	users,
-} = useProjectUsers(projectDetails.value!.id);
+} = useProjectUsers(() => props.projectId);
 
+const errorMessage = ref("");
+const successMessage = ref("");
+const visibleErrorMessage = computed(
+	() =>
+		errorMessage.value ||
+		(hasLoadError.value ? "Projektbenutzer konnten nicht geladen werden." : ""),
+);
 const selectedUserId = ref<number | null>(null);
-const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
-const roleCandidate = ref<model.ProjectUser | null>(null);
-const deleteCandidate = ref<model.ProjectUser | null>(null);
+const selectedRole = ref<ProjectRole>("CONTRIBUTOR");
+const roleCandidate = ref<ProjectUser | null>(null);
+const deleteCandidate = ref<ProjectUser | null>(null);
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
@@ -96,14 +112,27 @@ const hasSelectedRoleChanged = computed(
 		selectedRole.value !== roleCandidate.value?.projectRole,
 );
 
-onMounted(loadUsers);
+watch(
+	() => props.projectId,
+	() => {
+		clearMessages();
+		loadUsers();
+	},
+	{ immediate: true },
+);
 
-function formatProjectRole(role: model.ProjectRole | null): string {
+function formatProjectRole(role: ProjectRole | null): string {
 	return role === null ? "Kein Mitglied" : projectRoleLabels[role];
 }
 
-function canUpdateProjectRole(user: model.ProjectUser): boolean {
+function clearMessages(): void {
+	errorMessage.value = "";
+	successMessage.value = "";
+}
+
+function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
+		!props.disabled &&
 		isOwner.value &&
 		user.member &&
 		user.id !== userStore.userDetails?.id &&
@@ -111,11 +140,11 @@ function canUpdateProjectRole(user: model.ProjectUser): boolean {
 	);
 }
 
-function canAssignOwner(user: model.ProjectUser): boolean {
-	return isAdmin.value && user.member && user.projectRole !== "OWNER";
+function canAssignOwner(user: ProjectUser): boolean {
+	return !props.disabled && isAdmin.value && user.member && user.projectRole !== "OWNER";
 }
 
-function canManageUser(user: model.ProjectUser): boolean {
+function canManageUser(user: ProjectUser): boolean {
 	return canUpdateProjectRole(user) || canAssignOwner(user);
 }
 
@@ -124,26 +153,30 @@ function selectUser(value: unknown): void {
 }
 
 function selectRole(value: unknown): void {
-	selectedRole.value = String(value) as model.ProjectRole;
+	selectedRole.value = String(value) as ProjectRole;
 }
 
 async function submitProjectUser(): Promise<void> {
-	if (selectedUserId.value === null) {
+	if (props.disabled || selectedUserId.value === null) {
 		return;
 	}
 
+	clearMessages();
 	if (await addProjectUser(selectedUserId.value, selectedRole.value)) {
 		selectedUserId.value = null;
 		selectedRole.value = "CONTRIBUTOR";
+		successMessage.value = "Benutzer wurde hinzugefügt.";
+	} else {
+		errorMessage.value = "Benutzer konnte nicht hinzugefügt werden.";
 	}
 }
 
-function openRoleEdit(user: model.ProjectUser): void {
+function openRoleEdit(user: ProjectUser): void {
 	if (!canManageUser(user)) {
 		return;
 	}
 
-	errorMessage.value = "";
+	clearMessages();
 	roleCandidate.value = user;
 	selectedRole.value = canUpdateProjectRole(user) ? user.projectRole! : "OWNER";
 }
@@ -155,21 +188,25 @@ function updateRoleEditOpen(open: boolean): void {
 }
 
 async function submitProjectUserRole(): Promise<void> {
-	if (roleCandidate.value === null || !hasSelectedRoleChanged.value) {
+	if (props.disabled || roleCandidate.value === null || !hasSelectedRoleChanged.value) {
 		return;
 	}
 
+	clearMessages();
 	if (await updateProjectUserRole(roleCandidate.value.id, selectedRole.value)) {
 		roleCandidate.value = null;
+		successMessage.value = "Projektrolle wurde aktualisiert.";
+	} else {
+		errorMessage.value = "Projektrolle konnte nicht aktualisiert werden.";
 	}
 }
 
-function openDeleteDialog(user: model.ProjectUser): void {
+function openDeleteDialog(user: ProjectUser): void {
 	if (!canUpdateProjectRole(user)) {
 		return;
 	}
 
-	errorMessage.value = "";
+	clearMessages();
 	deleteCandidate.value = user;
 }
 
@@ -180,12 +217,16 @@ function updateDeleteOpen(open: boolean): void {
 }
 
 async function confirmRemove(): Promise<void> {
-	if (deleteCandidate.value === null) {
+	if (props.disabled || deleteCandidate.value === null) {
 		return;
 	}
 
+	clearMessages();
 	if (await removeProjectUser(deleteCandidate.value.id)) {
 		deleteCandidate.value = null;
+		successMessage.value = "Projektmitglied wurde entfernt.";
+	} else {
+		errorMessage.value = "Projektmitglied konnte nicht entfernt werden.";
 	}
 }
 </script>
@@ -194,8 +235,8 @@ async function confirmRemove(): Promise<void> {
 	<section class="flex min-h-0 flex-1 flex-col gap-3">
 		<h2 class="m-0 text-lg font-semibold">Projektbenutzer</h2>
 
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ errorMessage }}
+		<p v-if="visibleErrorMessage" class="m-0 text-sm text-destructive" role="alert">
+			{{ visibleErrorMessage }}
 		</p>
 		<p v-if="successMessage" class="m-0 text-sm text-muted-foreground" role="status">
 			{{ successMessage }}
@@ -296,7 +337,9 @@ async function confirmRemove(): Promise<void> {
 												? undefined
 												: String(selectedUserId)
 										"
-										:disabled="availableUsers.length === 0 || isAddingUser"
+										:disabled="
+											disabled || availableUsers.length === 0 || isAddingUser
+										"
 										@update:model-value="selectUser"
 									>
 										<SelectTrigger id="project-user" class="w-full">
@@ -324,7 +367,9 @@ async function confirmRemove(): Promise<void> {
 									<Label for="project-role">Projektrolle</Label>
 									<Select
 										:model-value="selectedRole"
-										:disabled="availableUsers.length === 0 || isAddingUser"
+										:disabled="
+											disabled || availableUsers.length === 0 || isAddingUser
+										"
 										@update:model-value="selectRole"
 									>
 										<SelectTrigger id="project-role" class="w-full">
@@ -346,6 +391,7 @@ async function confirmRemove(): Promise<void> {
 									type="submit"
 									:disabled="
 										selectedUserId === null ||
+										disabled ||
 										availableUsers.length === 0 ||
 										isAddingUser
 									"
@@ -374,7 +420,7 @@ async function confirmRemove(): Promise<void> {
 						<Label for="edit-project-role">Projektrolle</Label>
 						<Select
 							:model-value="selectedRole"
-							:disabled="updatingUserRoleId !== null"
+							:disabled="disabled || updatingUserRoleId !== null"
 							@update:model-value="selectRole"
 						>
 							<SelectTrigger id="edit-project-role" class="w-full">
@@ -407,7 +453,9 @@ async function confirmRemove(): Promise<void> {
 						</Button>
 						<Button
 							type="submit"
-							:disabled="updatingUserRoleId !== null || !hasSelectedRoleChanged"
+							:disabled="
+								disabled || updatingUserRoleId !== null || !hasSelectedRoleChanged
+							"
 						>
 							{{
 								updatingUserRoleId === null
@@ -437,7 +485,7 @@ async function confirmRemove(): Promise<void> {
 					</AlertDialogCancel>
 					<Button
 						variant="destructive"
-						:disabled="removingUserId !== null"
+						:disabled="disabled || removingUserId !== null"
 						@click="confirmRemove"
 					>
 						{{ removingUserId === null ? "Aus Projekt entfernen" : "Wird entfernt..." }}

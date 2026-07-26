@@ -1,4 +1,4 @@
-import { api } from ".";
+import * as api from "./dashboard.api";
 import type { DashboardResponse } from "./dashboard.model";
 
 export const DashboardRepositoryKey = Symbol("DashboardRepository");

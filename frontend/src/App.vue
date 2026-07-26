@@ -3,10 +3,6 @@ import { isAuthenticated } from "@/api";
 import AppSidebar from "./components/AppSidebar.vue";
 import { ScrollArea } from "./components/ui/scroll-area";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "./components/ui/sidebar";
-import { useColorMode } from "@vueuse/core";
-
-const mode = useColorMode();
-mode.value = "auto";
 </script>
 
 <template>

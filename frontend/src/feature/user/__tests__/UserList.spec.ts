@@ -1,12 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { enableAutoUnmount, flushPromises, mount, type VueWrapper } from "@vue/test-utils";
 import { nextTick } from "vue";
-import { UserRepository, UserRepositoryKey, type model } from "..";
+import type { UserRecord, UserRecordList } from "../user.model";
+import { UserRepository, UserRepositoryKey } from "../user.repository";
 import UserList from "../components/UserList.vue";
 
 enableAutoUnmount(afterEach);
 
-const testUsers: model.UserRecord[] = [
+const testUsers: UserRecord[] = [
 	{
 		id: 1,
 		username: "admin",
@@ -27,7 +28,7 @@ const testUsers: model.UserRecord[] = [
 class MockUserRepository extends UserRepository {
 	deletedUserIds: number[] = [];
 
-	override async getAllUsers(): Promise<model.UserRecordList> {
+	override async getAllUsers(): Promise<UserRecordList> {
 		return {
 			users: testUsers.map((user) => ({ ...user })),
 		};
@@ -39,7 +40,7 @@ class MockUserRepository extends UserRepository {
 }
 
 class EmptyUserRepository extends UserRepository {
-	override async getAllUsers(): Promise<model.UserRecordList> {
+	override async getAllUsers(): Promise<UserRecordList> {
 		return {
 			users: [],
 		};
@@ -47,14 +48,14 @@ class EmptyUserRepository extends UserRepository {
 }
 
 class FailingUserRepository extends UserRepository {
-	override async getAllUsers(): Promise<model.UserRecordList> {
+	override async getAllUsers(): Promise<UserRecordList> {
 		throw new Error("Failed to load users");
 	}
 }
 
 class PendingUserRepository extends UserRepository {
-	override async getAllUsers(): Promise<model.UserRecordList> {
-		return new Promise<model.UserRecordList>(() => {});
+	override async getAllUsers(): Promise<UserRecordList> {
+		return new Promise<UserRecordList>(() => {});
 	}
 }
 

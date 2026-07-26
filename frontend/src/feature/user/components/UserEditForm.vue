@@ -89,8 +89,11 @@ function selectRole(value: unknown): void {
 				</Select>
 			</div>
 
-			<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-				{{ errorMessage }}
+			<p v-if="errorMessage.length > 0" class="m-0 text-sm text-destructive" role="alert">
+				<template v-for="(message, index) in errorMessage" :key="index">
+					<br v-if="index > 0" />
+					{{ message }}
+				</template>
 			</p>
 		</div>
 

@@ -1,4 +1,4 @@
-import { api } from ".";
+import * as api from "./project.api";
 import type {
 	CreateProjectRequest,
 	ProjectDetails,

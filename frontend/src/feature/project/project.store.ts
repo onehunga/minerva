@@ -1,12 +1,12 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
-import type { model } from ".";
+import type { ProjectDetails, ProjectRecord, ProjectUser } from "./project.model";
 import type { Ticket, TicketPriorityName, TicketType } from "../ticket/ticket.model";
 
 export const useActiveProjectStore = defineStore("active.project", () => {
 	const activeProject = ref<null | string>(null);
-	const details = ref<null | model.ProjectDetails>(null);
-	const projectUsers = ref<model.ProjectUser[]>([]);
+	const details = ref<null | ProjectDetails>(null);
+	const projectUsers = ref<ProjectUser[]>([]);
 	const ticketTypes = ref<TicketType[]>([]);
 	const tickets = ref<Ticket[]>([]);
 	const ticketsArchived = ref(false);
@@ -15,7 +15,7 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 		activeProject.value = project;
 	}
 
-	function setProjectDetails(projectDetails: model.ProjectDetails | null): void {
+	function setProjectDetails(projectDetails: ProjectDetails | null): void {
 		details.value = projectDetails;
 	}
 
@@ -26,7 +26,7 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 		}
 	}
 
-	function setProjectUsers(users: model.ProjectUser[]): void {
+	function setProjectUsers(users: ProjectUser[]): void {
 		projectUsers.value = users;
 	}
 
@@ -108,9 +108,9 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 });
 
 export const useProjectsStore = defineStore("projects", () => {
-	const projects = ref<model.ProjectRecord[]>([]);
+	const projects = ref<ProjectRecord[]>([]);
 
-	function setProjects(projectRecords: model.ProjectRecord[]): void {
+	function setProjects(projectRecords: ProjectRecord[]): void {
 		projects.value = projectRecords;
 	}
 

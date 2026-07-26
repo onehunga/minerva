@@ -4,14 +4,17 @@ import { clearTokens, getAuthorizationHeader, setTokens, type TokenPair } from "
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, type Pinia } from "pinia";
 import { defineComponent } from "vue";
-import { UserRepository, UserRepositoryKey, useUser, useUserStore, type model } from "..";
+import type { UserDetails } from "../user.model";
+import { UserRepository, UserRepositoryKey } from "../user.repository";
+import { useUserStore } from "../user.store";
+import { useUser } from "../composables/useUser";
 
 const tokens: TokenPair = {
 	accessToken: "access-token",
 	refreshToken: "refresh-token",
 };
 
-const userDetails: model.UserDetails = {
+const userDetails: UserDetails = {
 	id: 1,
 	username: "admin",
 	role: "ADMIN",
@@ -30,12 +33,18 @@ class LoginUserRepository extends UserRepository {
 		return tokens;
 	}
 
-	override async details(): Promise<model.UserDetails> {
+	override async details(): Promise<UserDetails> {
 		return userDetails;
 	}
 
 	override async logout(refreshToken: string): Promise<void> {
 		this.logoutCalls.push(refreshToken);
+	}
+}
+
+class FailingDetailsUserRepository extends LoginUserRepository {
+	override async details(): Promise<UserDetails> {
+		throw new Error("Request failed");
 	}
 }
 
@@ -91,6 +100,27 @@ describe("useUser", () => {
 		expect(getAuthorizationHeader()).toBe("Bearer access-token");
 		expect(sessionStorage.getItem("minerva.refreshToken")).toBe("refresh-token");
 		expect(userStore.userDetails).toEqual(userDetails);
+	});
+
+	it("clears the session when loading user details after login fails", async () => {
+		const pinia: Pinia = createPinia();
+		const userRepository = new FailingDetailsUserRepository();
+		const userStore = useUserStore(pinia);
+		userStore.setUserDetails(userDetails);
+		const wrapper = mount(LoginHarness, {
+			global: {
+				plugins: [pinia],
+				provide: {
+					[UserRepositoryKey]: userRepository,
+				},
+			},
+		});
+
+		await expect(wrapper.vm.login("admin", "secret")).rejects.toThrow("Request failed");
+
+		expect(getAuthorizationHeader()).toBeNull();
+		expect(sessionStorage.getItem("minerva.refreshToken")).toBeNull();
+		expect(userStore.userDetails).toBeNull();
 	});
 
 	it("revokes the refresh token and clears the session", async () => {

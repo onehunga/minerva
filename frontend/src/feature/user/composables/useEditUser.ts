@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import type { UserRecord, UserRole } from "../user.model";
 import { useUserRepository } from "./useUserRepository";
 
@@ -14,23 +14,19 @@ export function useEditUser(user: UserRecord) {
 	const username = ref(user.username);
 	const password = ref("");
 	const role = ref<UserRole>(user.role);
-	const errorMessage = ref("");
+	const errorMessage = ref<string[]>([]);
 	const isUpdatingUser = ref(false);
 
-	const trimmedUsername = computed((): string => username.value.trim());
-	const hasUsernameChange = computed((): boolean => trimmedUsername.value !== user.username);
-	const hasPasswordChange = computed((): boolean => password.value.length > 0);
-	const hasRoleChange = computed((): boolean => role.value !== user.role);
-
 	function validateForm(): boolean {
-		if (!isUsernameValid(trimmedUsername.value)) {
-			errorMessage.value =
-				"Benutzername muss 3 bis 50 Zeichen lang sein und darf nur Buchstaben, Zahlen, '.', '_' oder '-' enthalten.";
+		if (!isUsernameValid(username.value.trim())) {
+			errorMessage.value = [
+				"Benutzername muss 3 bis 50 Zeichen lang sein und darf nur Buchstaben, Zahlen, '.', '_' oder '-' enthalten.",
+			];
 			return false;
 		}
 
-		if (hasPasswordChange.value && password.value.length < MIN_PASSWORD_LENGTH) {
-			errorMessage.value = "Passwort muss mindestens 8 Zeichen lang sein.";
+		if (password.value.length > 0 && password.value.length < MIN_PASSWORD_LENGTH) {
+			errorMessage.value = ["Passwort muss mindestens 8 Zeichen lang sein."];
 			return false;
 		}
 
@@ -46,7 +42,7 @@ export function useEditUser(user: UserRecord) {
 	}
 
 	async function updateUser(): Promise<boolean> {
-		errorMessage.value = "";
+		errorMessage.value = [];
 
 		if (!validateForm()) {
 			return false;
@@ -55,28 +51,44 @@ export function useEditUser(user: UserRecord) {
 		isUpdatingUser.value = true;
 
 		try {
-			if (hasRoleChange.value) {
+			if (role.value !== user.role) {
 				await userRepository.updateUserRole(user.id, role.value);
 			}
 
-			if (hasUsernameChange.value) {
-				await userRepository.updateUsername(user.id, trimmedUsername.value);
+			user.role = role.value;
+		} catch {
+			errorMessage.value.push(
+				`Rolle des Benutzers "${user.username}" konnte nicht aktualisiert werden.`,
+			);
+		}
+
+		try {
+			if (username.value.trim() !== user.username) {
+				await userRepository.updateUsername(user.id, username.value.trim());
 			}
 
-			if (hasPasswordChange.value) {
+			user.username = username.value.trim();
+		} catch {
+			errorMessage.value.push(
+				`Benutzername "${user.username}" konnte nicht aktualisiert werden.`,
+			);
+		}
+
+		try {
+			if (password.value.trim().length > 0) {
 				await userRepository.updateUserPassword(user.id, password.value);
 			}
 
-			user.username = trimmedUsername.value;
-			user.role = role.value;
 			password.value = "";
-			return true;
 		} catch {
-			errorMessage.value = `Benutzer "${user.username}" konnte nicht aktualisiert werden.`;
-			return false;
-		} finally {
-			isUpdatingUser.value = false;
+			errorMessage.value.push(
+				`Passwort des Benutzers "${user.username}" konnte nicht aktualisiert werden.`,
+			);
 		}
+
+		isUpdatingUser.value = false;
+
+		return true;
 	}
 
 	return {

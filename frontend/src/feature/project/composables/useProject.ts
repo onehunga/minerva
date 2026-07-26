@@ -1,7 +1,9 @@
 import { storeToRefs } from "pinia";
+import { toValue, watch, type MaybeRefOrGetter } from "vue";
 import { useTicketRepository } from "@/feature/ticket";
-import { useActiveProjectStore, useProjectRepository } from "..";
 import type { CreateTicketRequest, Ticket, TicketPriorityName } from "@/feature/ticket";
+import { useActiveProjectStore } from "../project.store";
+import { useProjectRepository } from "./useProjectRepository";
 
 /**
  * Management für das aktive Projekt.
@@ -11,51 +13,68 @@ import type { CreateTicketRequest, Ticket, TicketPriorityName } from "@/feature/
  * @returns
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function useProject(projectId?: string) {
+export function useProject(projectId?: MaybeRefOrGetter<string>) {
 	const store = useActiveProjectStore();
 	const projectRepository = useProjectRepository();
 	const ticketRepository = useTicketRepository();
+	let projectLoadGeneration = 0;
+	let ticketLoadGeneration = 0;
 
-	if (projectId) {
-		if (isNaN(Number(projectId))) {
-			throw new Error("Invalid project ID");
-		}
+	if (projectId !== undefined) {
+		watch(
+			() => toValue(projectId),
+			(currentProjectId) => {
+				if (currentProjectId === "" || isNaN(Number(currentProjectId))) {
+					throw new Error("Invalid project ID");
+				}
 
-		if (store.activeProject != projectId) {
-			store.setActiveProject(projectId);
+				if (store.activeProject === currentProjectId) {
+					return;
+				}
 
-			fetchProjectData();
-		}
+				store.setActiveProject(currentProjectId);
+				store.setProjectDetails(null);
+				store.setProjectUsers([]);
+				store.setTicketTypes([]);
+				store.setTickets([]);
+				ticketLoadGeneration++;
+				void fetchProjectData(currentProjectId, ++projectLoadGeneration);
+			},
+			{ immediate: true },
+		);
 	} else if (!store.activeProject) {
 		throw new Error("Invalid State: No project ID provided and no active project set.");
 	}
 
-	async function fetchProjectDetails() {
-		store.setProjectDetails(
-			await projectRepository.getProjectDetails(Number(store.activeProject)),
-		);
-	}
-
-	async function fetchTicketTypes() {
-		store.setTicketTypes(await ticketRepository.getTicketTypes(Number(store.activeProject)));
-	}
-
-	async function fetchProjectUsers() {
-		store.setProjectUsers(await projectRepository.getProjectUsers(Number(store.activeProject)));
-	}
-
 	async function fetchTickets(archived: boolean = false): Promise<void> {
-		const tickets = await ticketRepository.getTickets(Number(store.activeProject), archived);
+		const currentProjectId = store.activeProject;
+		const generation = ++ticketLoadGeneration;
+		const tickets = await ticketRepository.getTickets(Number(currentProjectId), archived);
+
+		if (generation !== ticketLoadGeneration || currentProjectId !== store.activeProject) {
+			return;
+		}
+
 		store.setTickets(tickets, archived);
 	}
 
-	async function fetchProjectData() {
-		await Promise.all([
-			fetchProjectDetails(),
-			fetchProjectUsers(),
-			fetchTicketTypes(),
-			fetchTickets(),
+	async function fetchProjectData(projectId: string, generation: number): Promise<void> {
+		const numericProjectId = Number(projectId);
+		const [details, projectUsers, ticketTypes, tickets] = await Promise.all([
+			projectRepository.getProjectDetails(numericProjectId),
+			projectRepository.getProjectUsers(numericProjectId),
+			ticketRepository.getTicketTypes(numericProjectId),
+			ticketRepository.getTickets(numericProjectId),
 		]);
+
+		if (generation !== projectLoadGeneration) {
+			return;
+		}
+
+		store.setProjectDetails(details);
+		store.setProjectUsers(projectUsers);
+		store.setTicketTypes(ticketTypes);
+		store.setTickets(tickets);
 	}
 
 	async function createTicket(req: CreateTicketRequest): Promise<Ticket> {

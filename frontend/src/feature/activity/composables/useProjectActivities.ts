@@ -1,38 +1,38 @@
-import { onMounted, ref, toValue, watch } from "vue";
+import { ref, toValue, watch, type MaybeRefOrGetter } from "vue";
 import type { ActivityEvent } from "../activity.model";
 import { useActivityRepository } from "./useActivityRepository";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function useProjectActivities(projectId: number) {
+export function useProjectActivities(projectId: MaybeRefOrGetter<number>) {
 	const repository = useActivityRepository();
 	const events = ref<ActivityEvent[]>([]);
 	const isLoading = ref(false);
 	const errorMessage = ref("");
+	let loadGeneration = 0;
 
-	async function load(): Promise<void> {
+	async function load(currentProjectId: number): Promise<void> {
+		const generation = ++loadGeneration;
+		events.value = [];
 		isLoading.value = true;
 		errorMessage.value = "";
 
 		try {
-			events.value = await repository.getProjectActivities(toValue(projectId));
+			const nextEvents = await repository.getProjectActivities(currentProjectId);
+			if (generation === loadGeneration) {
+				events.value = nextEvents;
+			}
 		} catch {
-			events.value = [];
-			errorMessage.value = "Aktivitäten konnten nicht geladen werden.";
+			if (generation === loadGeneration) {
+				errorMessage.value = "Aktivitäten konnten nicht geladen werden.";
+			}
 		} finally {
-			isLoading.value = false;
+			if (generation === loadGeneration) {
+				isLoading.value = false;
+			}
 		}
 	}
 
-	onMounted(() => {
-		load();
-	});
-
-	watch(
-		() => toValue(projectId),
-		() => {
-			load();
-		},
-	);
+	watch(() => toValue(projectId), load, { immediate: true });
 
 	return { events, isLoading, errorMessage };
 }

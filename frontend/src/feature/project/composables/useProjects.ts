@@ -1,6 +1,7 @@
 import { onMounted } from "vue";
-import { useProjectRepository, useProjectsStore } from "..";
 import { storeToRefs } from "pinia";
+import { useProjectsStore } from "../project.store";
+import { useProjectRepository } from "./useProjectRepository";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function useProjects() {

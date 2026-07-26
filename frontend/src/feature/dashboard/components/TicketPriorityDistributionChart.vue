@@ -12,7 +12,7 @@ import {
 	componentToString,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_ORDER } from "@/feature/ticket";
+import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "@/feature/ticket";
 
 const props = defineProps<{
 	priorities: DashboardPriorityRow[];
@@ -41,7 +41,7 @@ type ChartRow = (typeof chartData.value)[number];
 
 function priorityLabel(value: number | Date): string {
 	const priority = chartData.value[Number(value)]?.priority;
-	return priority == null ? "" : TICKET_PRIORITY_LABELS[priority];
+	return priority == null ? "" : formatTicketPriority(priority);
 }
 </script>
 

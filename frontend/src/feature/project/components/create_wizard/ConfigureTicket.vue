@@ -8,8 +8,13 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import type { TicketStatusCategory, TicketWorkflow } from "@/feature/ticket";
-
-type WorkflowTransition = TicketWorkflow["transitions"][number];
+import {
+	getWorkflowTransitionTargets,
+	groupWorkflowTransitions,
+	isWorkflowConnectionAvailable,
+	isWorkflowStateReferenced,
+	type WorkflowTransition,
+} from "../../create-project-workflow";
 
 const props = defineProps<{
 	workflow: TicketWorkflow;
@@ -39,17 +44,7 @@ const possibleChildren = computed(() =>
 	props.ticketNames.filter((name) => !props.workflow.children.includes(name)),
 );
 const stateNames = computed(() => props.workflow.states.map((state) => state.name));
-const transitionGroups = computed(() => {
-	const groups = new Map<string, WorkflowTransition[]>();
-
-	for (const transition of props.workflow.transitions) {
-		const connections = groups.get(transition.name) ?? [];
-		connections.push(transition);
-		groups.set(transition.name, connections);
-	}
-
-	return Array.from(groups, ([name, connections]) => ({ name, connections }));
-});
+const transitionGroups = computed(() => groupWorkflowTransitions(props.workflow));
 const possibleNewTransitionSources = computed(() =>
 	[wildcardState, ...stateNames.value].filter(
 		(source) => possibleTransitionTargets(sourceToState(source)).length > 0,
@@ -102,28 +97,14 @@ function stateToSource(state: string | null): string {
 	return state ?? wildcardState;
 }
 
-function isAvailableConnection(
-	from: string | null,
-	to: string,
-	current?: WorkflowTransition,
-): boolean {
-	return (
-		from !== to &&
-		!props.workflow.transitions.some(
-			(transition) =>
-				transition !== current && transition.from === from && transition.to === to,
-		)
-	);
-}
-
 function possibleTransitionSources(current: WorkflowTransition): string[] {
 	return [wildcardState, ...stateNames.value].filter((source) =>
-		isAvailableConnection(sourceToState(source), current.to, current),
+		isWorkflowConnectionAvailable(props.workflow, sourceToState(source), current.to, current),
 	);
 }
 
 function possibleTransitionTargets(from: string | null, current?: WorkflowTransition): string[] {
-	return stateNames.value.filter((to) => isAvailableConnection(from, to, current));
+	return getWorkflowTransitionTargets(props.workflow, from, current);
 }
 
 function transitionKey(transition: WorkflowTransition): string {
@@ -175,10 +156,7 @@ function updateStateCategory(stateName: string, category: TicketStatusCategory) 
 }
 
 function removeState(stateName: string) {
-	const isReferenced = props.workflow.transitions.some(
-		(transition) => transition.from === stateName || transition.to === stateName,
-	);
-	if (isReferenced) {
+	if (isWorkflowStateReferenced(props.workflow, stateName)) {
 		errorMessage.value = "Dieser Zustand wird noch von einem Übergang verwendet.";
 		return;
 	}
@@ -199,7 +177,7 @@ function addTransition() {
 		errorMessage.value = "Bitte wählen Sie gültige Zustände aus.";
 		return;
 	}
-	if (!isAvailableConnection(from, to)) {
+	if (!isWorkflowConnectionAvailable(props.workflow, from, to)) {
 		errorMessage.value = "Dieser Übergang ist bereits definiert.";
 		return;
 	}
@@ -216,7 +194,7 @@ function updateTransition(
 ) {
 	const from = "from" in changes ? (changes.from ?? null) : transition.from;
 	const to = changes.to ?? transition.to;
-	if (!isAvailableConnection(from, to, transition)) {
+	if (!isWorkflowConnectionAvailable(props.workflow, from, to, transition)) {
 		errorMessage.value = "Dieser Übergang ist bereits definiert.";
 		return;
 	}

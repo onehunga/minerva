@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import Button from "@/components/ui/button/Button.vue";
+import { Button } from "@/components/ui/button";
 import type { TicketWorkflow } from "@/feature/ticket";
+import { removeTicketWorkflow, replaceTicketWorkflow } from "../create-project-workflow";
 import { useProjectRepository } from "../composables/useProjectRepository";
 import { useProjects } from "../composables/useProjects";
 import ConfigureTicket from "./create_wizard/ConfigureTicket.vue";
@@ -92,17 +93,7 @@ function openTicket(ticketName: string) {
 }
 
 function removeTicket(ticketName: string) {
-	draft.tickets.delete(ticketName);
-
-	for (const [name, workflow] of draft.tickets) {
-		if (workflow.children.includes(ticketName)) {
-			draft.tickets.set(name, {
-				...workflow,
-				children: workflow.children.filter((child) => child !== ticketName),
-			});
-		}
-	}
-
+	draft.tickets = removeTicketWorkflow(draft.tickets, ticketName);
 	maxStepIdx.value = Math.min(maxStepIdx.value, wizardSteps.value.length - 1);
 }
 
@@ -111,25 +102,10 @@ function updateTicket(oldName: string, updatedWorkflow: TicketWorkflow) {
 	if (newName === "" || (newName !== oldName && draft.tickets.has(newName))) {
 		return;
 	}
-	if (newName === oldName) {
-		draft.tickets.set(oldName, { ...updatedWorkflow, name: newName });
-		return;
-	}
-
-	const entries = Array.from(draft.tickets.entries()).map(([name, workflow]) => {
-		const nextWorkflow = name === oldName ? { ...updatedWorkflow, name: newName } : workflow;
-		return [
-			name === oldName ? newName : name,
-			{
-				...nextWorkflow,
-				children: nextWorkflow.children.map((child) =>
-					child === oldName ? newName : child,
-				),
-			},
-		] as const;
+	draft.tickets = replaceTicketWorkflow(draft.tickets, oldName, {
+		...updatedWorkflow,
+		name: newName,
 	});
-
-	draft.tickets = new Map(entries);
 }
 
 async function createProject() {

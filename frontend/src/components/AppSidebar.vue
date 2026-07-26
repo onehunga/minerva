@@ -26,7 +26,7 @@ import {
 	Sun,
 	User,
 } from "@hugeicons/core-free-icons";
-import { useProjects } from "@/feature/project/composables/useProjects";
+import { useProjects } from "@/feature/project";
 import { useUser } from "@/feature/user";
 import { useColorMode } from "@vueuse/core";
 import { useRoute, useRouter } from "vue-router";
@@ -45,7 +45,6 @@ const route = useRoute();
 const router = useRouter();
 
 const mode = useColorMode();
-mode.value = "dark";
 
 async function submitLogout(): Promise<void> {
 	await logout();

@@ -1,32 +1,38 @@
-import { onMounted, ref, watch } from "vue";
+import { ref, toValue, watch, type MaybeRefOrGetter } from "vue";
 import type { DashboardResponse } from "../dashboard.model";
 import { useDashboardRepository } from "./useDashboardRepository";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-export function useProjectDashboard(projectId: number) {
+export function useProjectDashboard(projectId: MaybeRefOrGetter<number>) {
 	const repository = useDashboardRepository();
 	const data = ref<DashboardResponse | null>(null);
 	const isLoading = ref(false);
 	const errorMessage = ref("");
+	let loadGeneration = 0;
 
-	async function load(): Promise<void> {
+	async function load(currentProjectId: number): Promise<void> {
+		const generation = ++loadGeneration;
+		data.value = null;
 		isLoading.value = true;
 		errorMessage.value = "";
 
 		try {
-			data.value = await repository.getProjectDashboard(projectId);
+			const nextData = await repository.getProjectDashboard(currentProjectId);
+			if (generation === loadGeneration) {
+				data.value = nextData;
+			}
 		} catch {
-			data.value = null;
-			errorMessage.value = "Dashboard konnte nicht geladen werden.";
+			if (generation === loadGeneration) {
+				errorMessage.value = "Dashboard konnte nicht geladen werden.";
+			}
 		} finally {
-			isLoading.value = false;
+			if (generation === loadGeneration) {
+				isLoading.value = false;
+			}
 		}
 	}
 
-	onMounted(() => {
-		load();
-	});
-	watch(() => projectId, load);
+	watch(() => toValue(projectId), load, { immediate: true });
 
 	return { data, isLoading, errorMessage };
 }

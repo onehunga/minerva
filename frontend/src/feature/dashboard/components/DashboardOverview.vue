@@ -9,11 +9,11 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/date";
 import type { DashboardRecentTicket, DashboardResponse } from "../dashboard.model";
 import TicketPriorityDistributionChart from "./TicketPriorityDistributionChart.vue";
 import TicketStatusDistributionChart from "./TicketStatusDistributionChart.vue";
-import { TICKET_PRIORITY_LABELS } from "@/feature/ticket/priority-labels";
-import type { TicketPriorityName } from "@/feature/ticket/ticket.model";
+import { formatTicketPriority } from "@/feature/ticket";
 
 const props = defineProps<{
 	data: DashboardResponse | null;
@@ -24,21 +24,6 @@ const props = defineProps<{
 
 function recent(): DashboardRecentTicket[] {
 	return props.data?.recentTickets ?? [];
-}
-
-function priorityLabel(priority: TicketPriorityName): string {
-	return TICKET_PRIORITY_LABELS[priority];
-}
-
-function formatDate(value: string | null): string {
-	if (value === null) {
-		return "-";
-	}
-
-	return new Intl.DateTimeFormat("de-DE", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value));
 }
 </script>
 
@@ -91,7 +76,7 @@ function formatDate(value: string | null): string {
 									</div>
 								</TableCell>
 								<TableCell>{{ ticket.statusName }}</TableCell>
-								<TableCell>{{ priorityLabel(ticket.priority) }}</TableCell>
+								<TableCell>{{ formatTicketPriority(ticket.priority) }}</TableCell>
 								<TableCell>{{ formatDate(ticket.createdAt) }}</TableCell>
 							</TableRow>
 						</TableBody>
