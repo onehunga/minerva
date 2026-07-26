@@ -45,7 +45,6 @@ const route = useRoute();
 const router = useRouter();
 
 const mode = useColorMode();
-mode.value = "dark";
 
 async function submitLogout(): Promise<void> {
 	await logout();
