@@ -105,10 +105,13 @@ const ticketTypeName = computed(
 );
 
 watch(
-	() => [props.ticket.id, props.ticket.name, props.ticket.description],
-	() => {
+	() => [props.ticket.id, props.ticket.name, props.ticket.description] as const,
+	([ticketId], [previousTicketId]) => {
 		errorMessage.value = "";
 		ticketAction.value = null;
+		if (ticketId !== previousTicketId) {
+			editingField.value = null;
+		}
 		if (editingField.value == null) {
 			draftName.value = props.ticket.name;
 			draftDescription.value = props.ticket.description;

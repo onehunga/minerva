@@ -152,6 +152,37 @@ describe("TicketDetail", () => {
 		expect(projectActions.deleteTicket).toHaveBeenCalledTimes(2);
 		expect(getDialog()?.textContent).toContain("Das Ticket konnte nicht gelöscht werden.");
 	});
+
+	it("discards an open details draft when the selected ticket changes", async () => {
+		const wrapper = mount(TicketDetail, {
+			props: { ticket, ticketType, childTickets: [] },
+			global: {
+				stubs: {
+					Tabs: slotStub,
+					TabsList: slotStub,
+					TabsTrigger: slotStub,
+					TabsContent: slotStub,
+					Select: slotStub,
+					SelectTrigger: slotStub,
+					SelectValue: slotStub,
+					SelectContent: slotStub,
+					SelectItem: slotStub,
+					TicketComments: slotStub,
+					ActivityTimeline: slotStub,
+					CreateTicketForm: slotStub,
+				},
+			},
+		});
+
+		await clickButton(wrapper.element, ticket.name);
+		await wrapper.get("input[aria-label='Ticketname']").setValue("Nicht speichern");
+
+		const nextTicket = { ...ticket, id: 8, name: "Anderes Ticket" };
+		await wrapper.setProps({ ticket: nextTicket });
+
+		expect(wrapper.find("input[aria-label='Ticketname']").exists()).toBe(false);
+		expect(wrapper.text()).toContain(nextTicket.name);
+	});
 });
 
 const slotStub = { template: "<div><slot /></div>" };
