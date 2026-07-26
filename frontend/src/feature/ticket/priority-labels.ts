@@ -8,7 +8,7 @@ export const TICKET_PRIORITY_ORDER: TicketPriorityName[] = [
 	"HIGHEST",
 ];
 
-export const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
+const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
 	LOWEST: "Niedrigste",
 	LOW: "Niedrig",
 	NORMAL: "Normal",
@@ -16,6 +16,8 @@ export const TICKET_PRIORITY_LABELS: Record<TicketPriorityName, string> = {
 	HIGHEST: "Höchste",
 };
 
-export function formatTicketPriority(priority: TicketPriorityName): string {
-	return TICKET_PRIORITY_LABELS[priority];
+export function formatTicketPriority(priority: string | null): string {
+	return priority === null
+		? "?"
+		: (TICKET_PRIORITY_LABELS[priority as TicketPriorityName] ?? priority);
 }

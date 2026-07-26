@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useId } from "vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatTicketPriority } from "@/feature/ticket";
 import { formatDate } from "@/lib/date";
 import type { ActivityEvent, ActivityEventType } from "../activity.model";
 
@@ -38,14 +39,6 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_DELETED: "Ticket gelöscht",
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-	LOWEST: "Sehr niedrig",
-	LOW: "Niedrig",
-	NORMAL: "Normal",
-	HIGH: "Hoch",
-	HIGHEST: "Sehr hoch",
-};
-
 function formatType(type: ActivityEventType): string {
 	return ACTIVITY_TYPE_LABELS[type] ?? type;
 }
@@ -64,10 +57,6 @@ function num(payload: Payload, key: string): number | null {
 
 function userRef(id: number | null): string {
 	return id == null ? "—" : `#${id}`;
-}
-
-function priorityLabel(value: string | null): string {
-	return (value && PRIORITY_LABELS[value]) || value || "?";
 }
 
 function describeDetailsUpdated(payload: Payload): string {
@@ -109,7 +98,7 @@ function describe(event: ActivityEvent): string {
 			return transition ? `${change} (Übergang „${transition}")` : change;
 		}
 		case "TICKET_PRIORITY_CHANGED":
-			return `${priorityLabel(str(payload, "previousPriority"))} → ${priorityLabel(str(payload, "newPriority"))}`;
+			return `${formatTicketPriority(str(payload, "previousPriority"))} → ${formatTicketPriority(str(payload, "newPriority"))}`;
 		case "TICKET_ASSIGNEE_CHANGED":
 			return `${userRef(num(payload, "previousAssigneeId"))} → ${userRef(num(payload, "newAssigneeId"))}`;
 		case "TICKET_SUBTICKET_ADDED":

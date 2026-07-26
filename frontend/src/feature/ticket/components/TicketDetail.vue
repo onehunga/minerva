@@ -7,7 +7,7 @@ import type {
 	WorkflowState,
 	WorkflowTransition,
 } from "../ticket.model";
-import { TICKET_PRIORITY_ORDER, TICKET_PRIORITY_LABELS } from "../priority-labels";
+import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -246,10 +246,6 @@ async function submitDeleteTicket(): Promise<void> {
 	}
 }
 
-function formatPriority(priority: TicketPriorityName): string {
-	return TICKET_PRIORITY_LABELS[priority];
-}
-
 function formatProjectUser(userId: number): string {
 	return projectMemberUsers.value.find((user) => user.id === userId)?.username ?? `#${userId}`;
 }
@@ -449,7 +445,7 @@ function formatAssignee(userId: number | null): string {
 									:key="priority"
 									:value="priority"
 								>
-									{{ formatPriority(priority) }}
+									{{ formatTicketPriority(priority) }}
 								</SelectItem>
 							</SelectContent>
 						</Select>
