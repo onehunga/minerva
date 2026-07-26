@@ -9,6 +9,15 @@ import type {
 } from "../ticket.model";
 import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +73,7 @@ const isUpdatingPriority = ref(false);
 const isUpdatingDetails = ref(false);
 const isUpdatingAssignee = ref(false);
 const errorMessage = ref("");
+const ticketAction = ref<"archive" | "delete" | null>(null);
 const editingField = ref<"name" | "description" | null>(null);
 const draftName = ref(props.ticket.name);
 const draftDescription = ref(props.ticket.description);
@@ -89,6 +99,7 @@ const availableTransitions = computed<WorkflowTransition[]>(
 		) ?? [],
 );
 const canHaveChildTickets = computed(() => (props.ticketType?.children.length ?? 0) > 0);
+const isTicketActionPending = computed(() => isArchivingTicket.value || isDeletingTicket.value);
 const ticketTypeName = computed(
 	() => props.ticketType?.name ?? `Ticketart #${props.ticket.ticketTypeId}`,
 );
@@ -97,6 +108,7 @@ watch(
 	() => [props.ticket.id, props.ticket.name, props.ticket.description],
 	() => {
 		errorMessage.value = "";
+		ticketAction.value = null;
 		if (editingField.value == null) {
 			draftName.value = props.ticket.name;
 			draftDescription.value = props.ticket.description;
@@ -217,40 +229,52 @@ async function submitAssigneeUpdate(value: unknown): Promise<void> {
 	}
 }
 
-async function submitArchiveTicket(): Promise<void> {
-	if (
-		isArchivingTicket.value ||
-		!canModifyTickets.value ||
-		props.ticket.archived ||
-		!confirm("Ticket wirklich archivieren?")
-	) {
+function openTicketAction(action: "archive" | "delete"): void {
+	if (!canModifyTickets.value || (action === "archive" && props.ticket.archived)) {
 		return;
 	}
 
-	isArchivingTicket.value = true;
 	errorMessage.value = "";
-	try {
-		await archiveTicket(props.ticket.id);
-	} catch {
-		errorMessage.value = "Das Ticket konnte nicht archiviert werden.";
-	} finally {
-		isArchivingTicket.value = false;
+	ticketAction.value = action;
+}
+
+function updateTicketActionOpen(open: boolean): void {
+	if (!open && !isTicketActionPending.value) {
+		ticketAction.value = null;
 	}
 }
 
-async function submitDeleteTicket(): Promise<void> {
-	if (isDeletingTicket.value || !canModifyTickets.value || !confirm("Ticket wirklich löschen?")) {
+async function confirmTicketAction(): Promise<void> {
+	if (ticketAction.value === null || isTicketActionPending.value || !canModifyTickets.value) {
 		return;
 	}
 
-	isDeletingTicket.value = true;
+	const action = ticketAction.value;
+	if (action === "archive") {
+		isArchivingTicket.value = true;
+	} else {
+		isDeletingTicket.value = true;
+	}
 	errorMessage.value = "";
+
 	try {
-		await deleteTicket(props.ticket.id);
+		if (action === "archive") {
+			await archiveTicket(props.ticket.id);
+		} else {
+			await deleteTicket(props.ticket.id);
+		}
+		ticketAction.value = null;
 	} catch {
-		errorMessage.value = "Das Ticket konnte nicht gelöscht werden.";
+		errorMessage.value =
+			action === "archive"
+				? "Das Ticket konnte nicht archiviert werden."
+				: "Das Ticket konnte nicht gelöscht werden.";
 	} finally {
-		isDeletingTicket.value = false;
+		if (action === "archive") {
+			isArchivingTicket.value = false;
+		} else {
+			isDeletingTicket.value = false;
+		}
 	}
 }
 
@@ -490,7 +514,7 @@ function formatAssignee(userId: number | null): string {
 						v-if="canModifyTickets && !ticket.archived"
 						variant="outline"
 						:disabled="isArchivingTicket"
-						@click="submitArchiveTicket"
+						@click="openTicketAction('archive')"
 					>
 						{{ isArchivingTicket ? "Wird archiviert..." : "Ticket archivieren" }}
 					</Button>
@@ -498,7 +522,7 @@ function formatAssignee(userId: number | null): string {
 						v-if="canModifyTickets"
 						variant="destructive"
 						:disabled="isDeletingTicket"
-						@click="submitDeleteTicket"
+						@click="openTicketAction('delete')"
 					>
 						{{ isDeletingTicket ? "Wird gelöscht..." : "Ticket löschen" }}
 					</Button>
@@ -533,6 +557,43 @@ function formatAssignee(userId: number | null): string {
 				</section>
 			</aside>
 		</div>
+
+		<AlertDialog :open="ticketAction !== null" @update:open="updateTicketActionOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>
+						{{ ticketAction === "archive" ? "Ticket archivieren?" : "Ticket löschen?" }}
+					</AlertDialogTitle>
+					<AlertDialogDescription>
+						Das Ticket „{{ ticket.name }}“ wird
+						{{ ticketAction === "archive" ? "archiviert" : "gelöscht" }}.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="isTicketActionPending">
+						Abbrechen
+					</AlertDialogCancel>
+					<Button
+						:variant="ticketAction === 'delete' ? 'destructive' : 'default'"
+						:disabled="isTicketActionPending"
+						@click="confirmTicketAction"
+					>
+						{{
+							isTicketActionPending
+								? ticketAction === "archive"
+									? "Wird archiviert..."
+									: "Wird gelöscht..."
+								: ticketAction === "archive"
+									? "Ticket archivieren"
+									: "Ticket löschen"
+						}}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	</article>
 </template>
 

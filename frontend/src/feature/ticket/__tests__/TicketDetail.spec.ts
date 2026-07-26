@@ -1,7 +1,19 @@
-import { shallowMount } from "@vue/test-utils";
-import { describe, expect, it, vi } from "vitest";
+import { enableAutoUnmount, flushPromises, mount, shallowMount } from "@vue/test-utils";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 import type { Ticket, TicketType } from "../ticket.model";
 import TicketDetail from "../components/TicketDetail.vue";
+
+const projectActions = vi.hoisted(() => ({
+	deleteTicket: vi.fn<(ticketId: number) => Promise<void>>(),
+	archiveTicket: vi.fn<(ticketId: number) => Promise<void>>(),
+	updateTicketStatus:
+		vi.fn<(ticketId: number, transitionId: number, statusId: number) => Promise<void>>(),
+	updateTicketPriority: vi.fn<(ticketId: number, priority: string) => Promise<void>>(),
+	updateTicketDetails:
+		vi.fn<(ticketId: number, name: string, description: string) => Promise<void>>(),
+	updateTicketAssignee: vi.fn<(ticketId: number, assignedTo: number | null) => Promise<void>>(),
+}));
 
 vi.mock("@/feature/project", () => ({
 	useProject: () => ({
@@ -9,15 +21,7 @@ vi.mock("@/feature/project", () => ({
 		projectUsers: {
 			value: [{ id: 1, username: "admin", projectRole: "OWNER", member: true }],
 		},
-		deleteTicket: vi.fn<(ticketId: number) => Promise<void>>(),
-		archiveTicket: vi.fn<(ticketId: number) => Promise<void>>(),
-		updateTicketStatus:
-			vi.fn<(ticketId: number, transitionId: number, statusId: number) => Promise<void>>(),
-		updateTicketPriority: vi.fn<(ticketId: number, priority: string) => Promise<void>>(),
-		updateTicketDetails:
-			vi.fn<(ticketId: number, name: string, description: string) => Promise<void>>(),
-		updateTicketAssignee:
-			vi.fn<(ticketId: number, assignedTo: number | null) => Promise<void>>(),
+		...projectActions,
 	}),
 }));
 
@@ -29,6 +33,8 @@ vi.mock("@/feature/activity", () => ({
 		errorMessage: { value: "" },
 	}),
 }));
+
+enableAutoUnmount(afterEach);
 
 const ticket: Ticket = {
 	id: 7,
@@ -56,6 +62,10 @@ const ticketType: TicketType = {
 };
 
 describe("TicketDetail", () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	it("separates ticket content from actions and metadata", async () => {
 		const wrapper = shallowMount(TicketDetail, {
 			props: { ticket, ticketType, childTickets: [] },
@@ -88,4 +98,86 @@ describe("TicketDetail", () => {
 			wrapper.text().indexOf("Kommentare"),
 		);
 	});
+
+	it("archives and deletes only after confirmation", async () => {
+		const wrapper = mount(TicketDetail, {
+			attachTo: document.body,
+			props: { ticket, ticketType, childTickets: [] },
+			global: {
+				stubs: {
+					Tabs: slotStub,
+					TabsList: slotStub,
+					TabsTrigger: slotStub,
+					TabsContent: slotStub,
+					Select: slotStub,
+					SelectTrigger: slotStub,
+					SelectValue: slotStub,
+					SelectContent: slotStub,
+					SelectItem: slotStub,
+					TicketComments: slotStub,
+					ActivityTimeline: slotStub,
+					CreateTicketForm: slotStub,
+				},
+			},
+		});
+
+		await clickButton(wrapper.element, "Ticket archivieren");
+		await nextTick();
+		expect(projectActions.archiveTicket).not.toHaveBeenCalled();
+
+		clickDialogButton("Abbrechen");
+		await nextTick();
+		expect(projectActions.archiveTicket).not.toHaveBeenCalled();
+
+		await clickButton(wrapper.element, "Ticket archivieren");
+		await nextTick();
+		clickDialogButton("Ticket archivieren");
+		await flushPromises();
+		expect(projectActions.archiveTicket).toHaveBeenCalledExactlyOnceWith(ticket.id);
+
+		await clickButton(wrapper.element, "Ticket löschen");
+		await nextTick();
+		expect(projectActions.deleteTicket).not.toHaveBeenCalled();
+
+		clickDialogButton("Ticket löschen");
+		await flushPromises();
+		expect(projectActions.deleteTicket).toHaveBeenCalledExactlyOnceWith(ticket.id);
+
+		projectActions.deleteTicket.mockRejectedValueOnce(new Error("Request failed"));
+		await clickButton(wrapper.element, "Ticket löschen");
+		await nextTick();
+		clickDialogButton("Ticket löschen");
+		await flushPromises();
+
+		expect(projectActions.deleteTicket).toHaveBeenCalledTimes(2);
+		expect(getDialog()?.textContent).toContain("Das Ticket konnte nicht gelöscht werden.");
+	});
 });
+
+const slotStub = { template: "<div><slot /></div>" };
+
+async function clickButton(root: Element, label: string): Promise<void> {
+	const button = Array.from(root.querySelectorAll("button")).find(
+		(candidate) => candidate.textContent?.trim() === label,
+	);
+	if (button === undefined) {
+		throw new Error(`Expected button ${label}`);
+	}
+
+	button.click();
+}
+
+function clickDialogButton(label: string): void {
+	const button = Array.from(getDialog()?.querySelectorAll("button") ?? []).find(
+		(candidate) => candidate.textContent?.trim() === label,
+	);
+	if (button === undefined) {
+		throw new Error(`Expected dialog button ${label}`);
+	}
+
+	button.click();
+}
+
+function getDialog(): Element | null {
+	return document.body.querySelector("[data-slot='alert-dialog-content']");
+}

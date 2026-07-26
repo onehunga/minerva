@@ -5,6 +5,15 @@ import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketDetail, TicketList } from "@/feature/ticket";
 import { useUserStore } from "@/feature/user";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,6 +43,7 @@ const selectedTicketId = ref<number | null>(null);
 const showArchived = ref(false);
 const isLoadingTickets = ref(false);
 const isArchivingProject = ref(false);
+const isArchiveDialogOpen = ref(false);
 const isUpdatingDetails = ref(false);
 const errorMessage = ref("");
 const draftName = ref("");
@@ -67,6 +77,7 @@ watch(
 	() => props.id,
 	() => {
 		errorMessage.value = "";
+		isArchiveDialogOpen.value = false;
 		showArchived.value = false;
 		selectedTicketId.value = null;
 	},
@@ -137,8 +148,19 @@ async function submitDetailsUpdate(): Promise<void> {
 	}
 }
 
+function updateArchiveDialogOpen(open: boolean): void {
+	if (!open && !isArchivingProject.value) {
+		isArchiveDialogOpen.value = false;
+	}
+}
+
+function openArchiveDialog(): void {
+	errorMessage.value = "";
+	isArchiveDialogOpen.value = true;
+}
+
 async function submitArchiveProject(): Promise<void> {
-	if (isArchivingProject.value || !confirm("Projekt wirklich archivieren?")) {
+	if (isArchivingProject.value) {
 		return;
 	}
 
@@ -147,6 +169,7 @@ async function submitArchiveProject(): Promise<void> {
 
 	try {
 		await projectRepository.archiveProject(props.id);
+		isArchiveDialogOpen.value = false;
 		await router.push({ name: "landing" });
 	} catch {
 		errorMessage.value = "Das Projekt konnte nicht archiviert werden.";
@@ -317,14 +340,36 @@ async function submitArchiveProject(): Promise<void> {
 						<Button
 							type="button"
 							:disabled="isArchivingProject"
-							@click="submitArchiveProject"
+							@click="openArchiveDialog"
 						>
-							{{ isArchivingProject ? "Wird archiviert..." : "Projekt archivieren" }}
+							Projekt archivieren
 						</Button>
 					</CardContent>
 				</Card>
 			</TabsContent>
 		</Tabs>
+
+		<AlertDialog :open="isArchiveDialogOpen" @update:open="updateArchiveDialogOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Projekt archivieren?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Das Projekt „{{ details.name }}“ wird archiviert.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="isArchivingProject">
+						Abbrechen
+					</AlertDialogCancel>
+					<Button :disabled="isArchivingProject" @click="submitArchiveProject">
+						{{ isArchivingProject ? "Wird archiviert..." : "Projekt archivieren" }}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
 	</main>
 	<p v-else>Loading...</p>
 </template>

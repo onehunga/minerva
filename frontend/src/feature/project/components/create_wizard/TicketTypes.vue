@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +26,7 @@ const emit = defineEmits<{
 
 const ticketName = ref("");
 const ticketDescription = ref("");
+const deleteCandidate = ref<string | null>(null);
 const errorMessage = ref("");
 
 function addTicket() {
@@ -43,10 +53,19 @@ function addTicket() {
 	ticketDescription.value = "";
 }
 
-function removeTicket(ticketName: string) {
-	if (window.confirm(`Ticket-Typ „${ticketName}“ wirklich löschen?`)) {
-		emit("remove", ticketName);
+function updateDeleteOpen(open: boolean): void {
+	if (!open) {
+		deleteCandidate.value = null;
 	}
+}
+
+function confirmDelete(): void {
+	if (deleteCandidate.value === null) {
+		return;
+	}
+
+	emit("remove", deleteCandidate.value);
+	deleteCandidate.value = null;
 }
 </script>
 
@@ -106,7 +125,7 @@ function removeTicket(ticketName: string) {
 								type="button"
 								size="sm"
 								variant="outline"
-								@click="removeTicket(ticket.name)"
+								@click="deleteCandidate = ticket.name"
 							>
 								Löschen
 							</Button>
@@ -116,4 +135,20 @@ function removeTicket(ticketName: string) {
 			</CardContent>
 		</Card>
 	</div>
+
+	<AlertDialog :open="deleteCandidate !== null" @update:open="updateDeleteOpen">
+		<AlertDialogContent>
+			<AlertDialogHeader>
+				<AlertDialogTitle>Ticket-Typ löschen?</AlertDialogTitle>
+				<AlertDialogDescription>
+					Der Ticket-Typ „{{ deleteCandidate }}“ wird aus der Projektkonfiguration
+					entfernt.
+				</AlertDialogDescription>
+			</AlertDialogHeader>
+			<AlertDialogFooter>
+				<AlertDialogCancel>Abbrechen</AlertDialogCancel>
+				<Button variant="destructive" @click="confirmDelete"> Ticket-Typ löschen </Button>
+			</AlertDialogFooter>
+		</AlertDialogContent>
+	</AlertDialog>
 </template>
