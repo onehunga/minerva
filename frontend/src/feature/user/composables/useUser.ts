@@ -14,9 +14,14 @@ export function useUser() {
 
 		setTokens(tokens);
 
-		const userDetails = await userRepository.details();
-
-		userStore.setUserDetails(userDetails);
+		try {
+			const userDetails = await userRepository.details();
+			userStore.setUserDetails(userDetails);
+		} catch (error: unknown) {
+			clearTokens();
+			userStore.setUserDetails(null);
+			throw error;
+		}
 	}
 
 	async function logout(): Promise<void> {

@@ -42,6 +42,12 @@ class LoginUserRepository extends UserRepository {
 	}
 }
 
+class FailingDetailsUserRepository extends LoginUserRepository {
+	override async details(): Promise<UserDetails> {
+		throw new Error("Request failed");
+	}
+}
+
 const LoginHarness = defineComponent({
 	setup() {
 		const { login } = useUser();
@@ -94,6 +100,27 @@ describe("useUser", () => {
 		expect(getAuthorizationHeader()).toBe("Bearer access-token");
 		expect(sessionStorage.getItem("minerva.refreshToken")).toBe("refresh-token");
 		expect(userStore.userDetails).toEqual(userDetails);
+	});
+
+	it("clears the session when loading user details after login fails", async () => {
+		const pinia: Pinia = createPinia();
+		const userRepository = new FailingDetailsUserRepository();
+		const userStore = useUserStore(pinia);
+		userStore.setUserDetails(userDetails);
+		const wrapper = mount(LoginHarness, {
+			global: {
+				plugins: [pinia],
+				provide: {
+					[UserRepositoryKey]: userRepository,
+				},
+			},
+		});
+
+		await expect(wrapper.vm.login("admin", "secret")).rejects.toThrow("Request failed");
+
+		expect(getAuthorizationHeader()).toBeNull();
+		expect(sessionStorage.getItem("minerva.refreshToken")).toBeNull();
+		expect(userStore.userDetails).toBeNull();
 	});
 
 	it("revokes the refresh token and clears the session", async () => {
