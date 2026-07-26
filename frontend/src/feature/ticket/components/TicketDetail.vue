@@ -83,9 +83,11 @@ const possibleAssignees = computed<Array<number | null>>(() => [
 	null,
 	...projectMemberUsers.value.map((user) => user.id),
 ]);
-const canModifyTickets = computed(
+const hasTicketWritePermission = computed(
 	() => projectDetails.value != null && projectDetails.value.projectRole !== "VIEWER",
 );
+const isReadOnly = computed(() => projectDetails.value?.archived === true || props.ticket.archived);
+const canModifyTickets = computed(() => hasTicketWritePermission.value && !isReadOnly.value);
 const currentStatus = computed<WorkflowState | undefined>(() =>
 	props.ticketType?.states.find((state) => state.id === props.ticket.statusId),
 );
@@ -308,14 +310,14 @@ function formatAssignee(userId: number | null): string {
 						<Input
 							v-model="draftName"
 							aria-label="Ticketname"
-							:disabled="isUpdatingDetails"
+							:disabled="isUpdatingDetails || !canModifyTickets"
 							@keyup.enter="submitDetailsUpdate"
 							@keyup.escape="cancelDetailsEdit"
 						/>
 						<Button
 							type="button"
 							aria-label="Ticketname speichern"
-							:disabled="isUpdatingDetails || !draftName.trim()"
+							:disabled="isUpdatingDetails || !canModifyTickets || !draftName.trim()"
 							@click="submitDetailsUpdate"
 						>
 							Speichern
@@ -323,7 +325,7 @@ function formatAssignee(userId: number | null): string {
 						<Button
 							type="button"
 							variant="outline"
-							:disabled="isUpdatingDetails"
+							:disabled="isUpdatingDetails || !canModifyTickets"
 							@click="cancelDetailsEdit"
 						>
 							Abbrechen
@@ -331,9 +333,10 @@ function formatAssignee(userId: number | null): string {
 					</div>
 					<h3 v-else>
 						<Button
-							v-if="canModifyTickets"
+							v-if="hasTicketWritePermission"
 							variant="ghost"
 							class="ticket-detail__editable"
+							:disabled="!canModifyTickets"
 							@click="beginDetailsEdit('name')"
 						>
 							{{ ticket.name }}
@@ -346,12 +349,12 @@ function formatAssignee(userId: number | null): string {
 					<Textarea
 						v-model="draftDescription"
 						aria-label="Ticketbeschreibung"
-						:disabled="isUpdatingDetails"
+						:disabled="isUpdatingDetails || !canModifyTickets"
 						@keyup.escape="cancelDetailsEdit"
 					/>
 					<Button
 						type="button"
-						:disabled="isUpdatingDetails || !draftName.trim()"
+						:disabled="isUpdatingDetails || !canModifyTickets || !draftName.trim()"
 						@click="submitDetailsUpdate"
 					>
 						Speichern
@@ -359,7 +362,7 @@ function formatAssignee(userId: number | null): string {
 					<Button
 						type="button"
 						variant="outline"
-						:disabled="isUpdatingDetails"
+						:disabled="isUpdatingDetails || !canModifyTickets"
 						@click="cancelDetailsEdit"
 					>
 						Abbrechen
@@ -367,9 +370,10 @@ function formatAssignee(userId: number | null): string {
 				</div>
 				<p v-else class="ticket-detail__description">
 					<Button
-						v-if="canModifyTickets"
+						v-if="hasTicketWritePermission"
 						variant="ghost"
 						class="ticket-detail__editable"
+						:disabled="!canModifyTickets"
 						@click="beginDetailsEdit('description')"
 					>
 						{{ ticket.description || "Keine Beschreibung hinterlegt." }}
@@ -401,13 +405,11 @@ function formatAssignee(userId: number | null): string {
 						</ul>
 					</section>
 
-					<section
-						v-if="projectDetails?.projectRole !== 'VIEWER'"
-						class="ticket-detail__section"
-					>
+					<section v-if="hasTicketWritePermission" class="ticket-detail__section">
 						<CreateTicketForm
 							:parent-ticket-id="ticket.id"
 							:parent-ticket-type-id="ticket.ticketTypeId"
+							:disabled="isReadOnly"
 						/>
 					</section>
 				</template>
@@ -422,7 +424,8 @@ function formatAssignee(userId: number | null): string {
 						<TicketComments
 							:project-id="ticket.projectId"
 							:ticket-id="ticket.id"
-							:can-create-comment="projectDetails?.projectRole !== 'VIEWER'"
+							:can-create-comment="hasTicketWritePermission"
+							:disabled="isReadOnly"
 						/>
 					</TabsContent>
 					<TabsContent value="activities" class="ticket-detail__tab-content">
@@ -514,17 +517,17 @@ function formatAssignee(userId: number | null): string {
 					</div>
 
 					<Button
-						v-if="canModifyTickets && !ticket.archived"
+						v-if="hasTicketWritePermission && !ticket.archived"
 						variant="outline"
-						:disabled="isArchivingTicket"
+						:disabled="isArchivingTicket || !canModifyTickets"
 						@click="openTicketAction('archive')"
 					>
 						{{ isArchivingTicket ? "Wird archiviert..." : "Ticket archivieren" }}
 					</Button>
 					<Button
-						v-if="canModifyTickets"
+						v-if="hasTicketWritePermission"
 						variant="destructive"
-						:disabled="isDeletingTicket"
+						:disabled="isDeletingTicket || !canModifyTickets"
 						@click="openTicketAction('delete')"
 					>
 						{{ isDeletingTicket ? "Wird gelöscht..." : "Ticket löschen" }}

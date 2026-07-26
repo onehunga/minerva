@@ -17,7 +17,7 @@ const projectActions = vi.hoisted(() => ({
 
 vi.mock("@/feature/project", () => ({
 	useProject: () => ({
-		details: { value: { projectRole: "OWNER" } },
+		details: { value: { projectRole: "OWNER", archived: false } },
 		projectUsers: {
 			value: [{ id: 1, username: "admin", projectRole: "OWNER", member: true }],
 		},
@@ -183,11 +183,75 @@ describe("TicketDetail", () => {
 		expect(wrapper.find("input[aria-label='Ticketname']").exists()).toBe(false);
 		expect(wrapper.text()).toContain(nextTicket.name);
 	});
+
+	it("disables local ticket mutations for archived tickets", async () => {
+		const wrapper = shallowMount(TicketDetail, {
+			props: {
+				ticket: { ...ticket, archived: true },
+				ticketType: { ...ticketType, children: [3] },
+				childTickets: [],
+			},
+			global: {
+				stubs: {
+					Button: {
+						props: ["disabled"],
+						template: '<button :disabled="disabled"><slot /></button>',
+					},
+					Tabs: slotStub,
+					TabsList: slotStub,
+					TabsTrigger: slotStub,
+					TabsContent: slotStub,
+					Select: {
+						props: ["disabled"],
+						template:
+							'<div class="select-stub" :data-disabled="String(disabled)"><slot /></div>',
+					},
+					SelectTrigger: slotStub,
+					SelectValue: slotStub,
+					SelectContent: slotStub,
+					SelectItem: slotStub,
+					TicketComments: {
+						props: ["disabled"],
+						template:
+							'<div data-testid="ticket-comments" :data-disabled="String(disabled)" />',
+					},
+					ActivityTimeline: slotStub,
+					CreateTicketForm: {
+						props: ["disabled"],
+						template:
+							'<div data-testid="create-child-ticket" :data-disabled="String(disabled)" />',
+					},
+				},
+			},
+		});
+
+		expect(getButton(wrapper.element, ticket.name).disabled).toBe(true);
+		expect(getButton(wrapper.element, "Ticket löschen").disabled).toBe(true);
+		expect(
+			wrapper
+				.findAll(".select-stub")
+				.every((select) => select.attributes("data-disabled") === "true"),
+		).toBe(true);
+		expect(wrapper.get("[data-testid='ticket-comments']").attributes("data-disabled")).toBe(
+			"true",
+		);
+		expect(wrapper.get("[data-testid='create-child-ticket']").attributes("data-disabled")).toBe(
+			"true",
+		);
+
+		getButton(wrapper.element, "Ticket löschen").click();
+		await nextTick();
+		expect(projectActions.deleteTicket).not.toHaveBeenCalled();
+	});
 });
 
 const slotStub = { template: "<div><slot /></div>" };
 
 async function clickButton(root: Element, label: string): Promise<void> {
+	getButton(root, label).click();
+}
+
+function getButton(root: Element, label: string): HTMLButtonElement {
 	const button = Array.from(root.querySelectorAll("button")).find(
 		(candidate) => candidate.textContent?.trim() === label,
 	);
@@ -195,7 +259,7 @@ async function clickButton(root: Element, label: string): Promise<void> {
 		throw new Error(`Expected button ${label}`);
 	}
 
-	button.click();
+	return button;
 }
 
 function clickDialogButton(label: string): void {

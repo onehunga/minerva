@@ -50,6 +50,9 @@ const draftName = ref("");
 const draftDescription = ref("");
 
 const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER");
+const canModifyProject = computed(
+	() => canUpdateDetails.value && details.value?.archived === false,
+);
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const canOpenSettings = computed(() => details.value?.projectRole === "OWNER" || isAdmin.value);
 const selectedTicket = computed(() =>
@@ -122,7 +125,7 @@ function selectTicketView(value: unknown): void {
 async function submitDetailsUpdate(): Promise<void> {
 	if (
 		isUpdatingDetails.value ||
-		!canUpdateDetails.value ||
+		!canModifyProject.value ||
 		details.value == null ||
 		!draftName.value.trim()
 	) {
@@ -155,12 +158,16 @@ function updateArchiveDialogOpen(open: boolean): void {
 }
 
 function openArchiveDialog(): void {
+	if (details.value?.archived !== false) {
+		return;
+	}
+
 	errorMessage.value = "";
 	isArchiveDialogOpen.value = true;
 }
 
 async function submitArchiveProject(): Promise<void> {
-	if (isArchivingProject.value) {
+	if (isArchivingProject.value || details.value?.archived !== false) {
 		return;
 	}
 
@@ -181,14 +188,12 @@ async function submitArchiveProject(): Promise<void> {
 
 <template>
 	<main v-if="details != null" class="project-page">
-		<p v-if="details.archived" class="project-page__archive-banner" role="status">
-			Dieses Projekt ist archiviert.
-		</p>
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+		<p v-if="details.archived" class="archive-banner">Dieses Projekt ist archiviert.</p>
+		<p v-if="errorMessage" class="m-0 text-sm text-destructive">
 			{{ errorMessage }}
 		</p>
 
-		<Tabs default-value="overview" class="flex-1">
+		<Tabs default-value="overview" class="flex-1 mt-2">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
 					<TabsTrigger value="overview">Übersicht</TabsTrigger>
@@ -228,6 +233,7 @@ async function submitArchiveProject(): Promise<void> {
 				<CreateTicketForm
 					v-if="details.projectRole !== 'VIEWER'"
 					:parent-ticket-id="null"
+					:disabled="details.archived"
 				/>
 				<p v-else>Als Viewer kannst du keine Tickets erstellen.</p>
 				<div class="project-page__ticket-filter">
@@ -305,18 +311,24 @@ async function submitArchiveProject(): Promise<void> {
 						>
 							<label>
 								Projektname
-								<Input v-model="draftName" required :disabled="isUpdatingDetails" />
+								<Input
+									v-model="draftName"
+									required
+									:disabled="isUpdatingDetails || !canModifyProject"
+								/>
 							</label>
 							<label>
 								Beschreibung
 								<Textarea
 									v-model="draftDescription"
-									:disabled="isUpdatingDetails"
+									:disabled="isUpdatingDetails || !canModifyProject"
 								></Textarea>
 							</label>
 							<Button
 								type="submit"
-								:disabled="isUpdatingDetails || !draftName.trim()"
+								:disabled="
+									isUpdatingDetails || !canModifyProject || !draftName.trim()
+								"
 							>
 								{{
 									isUpdatingDetails
@@ -329,20 +341,22 @@ async function submitArchiveProject(): Promise<void> {
 				</Card>
 				<Card>
 					<CardContent>
-						<ProjectUserManagement :project-id="id" />
+						<ProjectUserManagement :project-id="id" :disabled="details.archived" />
 					</CardContent>
 				</Card>
-				<Card v-if="details.projectRole === 'OWNER' && !details.archived">
+				<Card v-if="details.projectRole === 'OWNER'">
 					<CardHeader>
 						<CardTitle>Projektverwaltung</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<Button
 							type="button"
-							:disabled="isArchivingProject"
+							:disabled="isArchivingProject || details.archived"
 							@click="openArchiveDialog"
 						>
-							Projekt archivieren
+							{{
+								details.archived ? "Projekt ist archiviert" : "Projekt archivieren"
+							}}
 						</Button>
 					</CardContent>
 				</Card>
@@ -450,8 +464,7 @@ async function submitArchiveProject(): Promise<void> {
 	margin: 0;
 }
 
-.project-page__archive-banner {
-	margin: 0 0 1rem;
+.archive-banner {
 	padding: 1rem;
 	border: 1px solid var(--border);
 	border-radius: var(--radius-lg);

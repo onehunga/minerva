@@ -22,10 +22,14 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/feature/project";
 
-const props = defineProps<{
-	parentTicketId: number | null;
-	parentTicketTypeId?: number | null;
-}>();
+const props = withDefaults(
+	defineProps<{
+		parentTicketId: number | null;
+		parentTicketTypeId?: number | null;
+		disabled?: boolean;
+	}>(),
+	{ disabled: false },
+);
 
 const { details: projectDetails, ticketTypes, tickets, createTicket } = useProject();
 const formId = useId();
@@ -67,6 +71,7 @@ const availableStates = computed(() => selectedTicketType.value?.states ?? []);
 const title = computed(() =>
 	props.parentTicketId == null ? "Ticket erstellen" : "Kindticket erstellen",
 );
+const isDisabled = computed(() => props.disabled || projectDetails.value?.archived === true);
 
 function selectDefaultTicketType(): void {
 	if (
@@ -106,7 +111,8 @@ async function create(): Promise<void> {
 		projectDetails.value == null ||
 		selectedTicketTypeId.value == null ||
 		selectedStatusId.value == null ||
-		isCreating.value
+		isCreating.value ||
+		isDisabled.value
 	) {
 		return;
 	}
@@ -144,7 +150,7 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 <template>
 	<Sheet v-model:open="isOpen">
 		<SheetTrigger as-child>
-			<Button>{{ title }}</Button>
+			<Button :disabled="isDisabled">{{ title }}</Button>
 		</SheetTrigger>
 		<SheetContent side="right" class="sm:max-w-lg">
 			<SheetHeader>
@@ -172,7 +178,7 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 								v-model="name"
 								required
 								placeholder="Titel"
-								:disabled="isCreating"
+								:disabled="isCreating || isDisabled"
 							/>
 						</div>
 
@@ -182,7 +188,7 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 								:id="`${formId}-description`"
 								v-model="description"
 								placeholder="Beschreibung"
-								:disabled="isCreating"
+								:disabled="isCreating || isDisabled"
 							/>
 						</div>
 
@@ -195,7 +201,7 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 											? undefined
 											: String(selectedTicketTypeId)
 									"
-									:disabled="isCreating"
+									:disabled="isCreating || isDisabled"
 									@update:model-value="selectTicketType"
 								>
 									<SelectTrigger :id="`${formId}-type`" class="w-full">
@@ -221,7 +227,9 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 											? undefined
 											: String(selectedStatusId)
 									"
-									:disabled="isCreating || availableStates.length === 0"
+									:disabled="
+										isCreating || isDisabled || availableStates.length === 0
+									"
 									@update:model-value="selectStatus"
 								>
 									<SelectTrigger :id="`${formId}-status`" class="w-full">
@@ -249,6 +257,7 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 						type="submit"
 						:disabled="
 							isCreating ||
+							isDisabled ||
 							!name.trim() ||
 							selectedTicketTypeId == null ||
 							selectedStatusId == null

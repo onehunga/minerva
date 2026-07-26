@@ -6,11 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/date";
 
-const props = defineProps<{
-	projectId: number;
-	ticketId: number;
-	canCreateComment: boolean;
-}>();
+const props = withDefaults(
+	defineProps<{
+		projectId: number;
+		ticketId: number;
+		canCreateComment: boolean;
+		disabled?: boolean;
+	}>(),
+	{ disabled: false },
+);
 
 const content = ref("");
 const { comments, isLoading, isCreating, hasLoadError, hasCreateError, createComment } =
@@ -23,6 +27,10 @@ const { comments, isLoading, isCreating, hasLoadError, hasCreateError, createCom
 const newestFirstComments = computed(() => [...comments.value].reverse());
 
 async function submitComment(): Promise<void> {
+	if (props.disabled) {
+		return;
+	}
+
 	if (await createComment(content.value)) {
 		content.value = "";
 	}
@@ -69,9 +77,13 @@ watch(
 				aria-label="Kommentar"
 				placeholder="Kommentar schreiben"
 				class="min-h-20 resize-y"
-				:disabled="isCreating"
+				:disabled="isCreating || disabled"
 			/>
-			<Button type="submit" class="self-start" :disabled="isCreating || !content.trim()">
+			<Button
+				type="submit"
+				class="self-start"
+				:disabled="isCreating || disabled || !content.trim()"
+			>
 				{{ isCreating ? "Kommentar wird gespeichert..." : "Kommentieren" }}
 			</Button>
 			<Alert v-if="hasCreateError" variant="destructive">

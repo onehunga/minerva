@@ -56,9 +56,13 @@ import type { ProjectRole, ProjectUser } from "../project.model";
 import { useProject } from "../composables/useProject";
 import { useProjectUsers } from "../composables/useProjectUsers";
 
-const props = defineProps<{
-	projectId: number;
-}>();
+const props = withDefaults(
+	defineProps<{
+		projectId: number;
+		disabled?: boolean;
+	}>(),
+	{ disabled: false },
+);
 
 const projectRoles: ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
 const projectRoleLabels: Record<ProjectRole, string> = {
@@ -128,6 +132,7 @@ function clearMessages(): void {
 
 function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
+		!props.disabled &&
 		isOwner.value &&
 		user.member &&
 		user.id !== userStore.userDetails?.id &&
@@ -136,7 +141,7 @@ function canUpdateProjectRole(user: ProjectUser): boolean {
 }
 
 function canAssignOwner(user: ProjectUser): boolean {
-	return isAdmin.value && user.member && user.projectRole !== "OWNER";
+	return !props.disabled && isAdmin.value && user.member && user.projectRole !== "OWNER";
 }
 
 function canManageUser(user: ProjectUser): boolean {
@@ -152,7 +157,7 @@ function selectRole(value: unknown): void {
 }
 
 async function submitProjectUser(): Promise<void> {
-	if (selectedUserId.value === null) {
+	if (props.disabled || selectedUserId.value === null) {
 		return;
 	}
 
@@ -183,7 +188,7 @@ function updateRoleEditOpen(open: boolean): void {
 }
 
 async function submitProjectUserRole(): Promise<void> {
-	if (roleCandidate.value === null || !hasSelectedRoleChanged.value) {
+	if (props.disabled || roleCandidate.value === null || !hasSelectedRoleChanged.value) {
 		return;
 	}
 
@@ -212,7 +217,7 @@ function updateDeleteOpen(open: boolean): void {
 }
 
 async function confirmRemove(): Promise<void> {
-	if (deleteCandidate.value === null) {
+	if (props.disabled || deleteCandidate.value === null) {
 		return;
 	}
 
@@ -332,7 +337,9 @@ async function confirmRemove(): Promise<void> {
 												? undefined
 												: String(selectedUserId)
 										"
-										:disabled="availableUsers.length === 0 || isAddingUser"
+										:disabled="
+											disabled || availableUsers.length === 0 || isAddingUser
+										"
 										@update:model-value="selectUser"
 									>
 										<SelectTrigger id="project-user" class="w-full">
@@ -360,7 +367,9 @@ async function confirmRemove(): Promise<void> {
 									<Label for="project-role">Projektrolle</Label>
 									<Select
 										:model-value="selectedRole"
-										:disabled="availableUsers.length === 0 || isAddingUser"
+										:disabled="
+											disabled || availableUsers.length === 0 || isAddingUser
+										"
 										@update:model-value="selectRole"
 									>
 										<SelectTrigger id="project-role" class="w-full">
@@ -382,6 +391,7 @@ async function confirmRemove(): Promise<void> {
 									type="submit"
 									:disabled="
 										selectedUserId === null ||
+										disabled ||
 										availableUsers.length === 0 ||
 										isAddingUser
 									"
@@ -410,7 +420,7 @@ async function confirmRemove(): Promise<void> {
 						<Label for="edit-project-role">Projektrolle</Label>
 						<Select
 							:model-value="selectedRole"
-							:disabled="updatingUserRoleId !== null"
+							:disabled="disabled || updatingUserRoleId !== null"
 							@update:model-value="selectRole"
 						>
 							<SelectTrigger id="edit-project-role" class="w-full">
@@ -443,7 +453,9 @@ async function confirmRemove(): Promise<void> {
 						</Button>
 						<Button
 							type="submit"
-							:disabled="updatingUserRoleId !== null || !hasSelectedRoleChanged"
+							:disabled="
+								disabled || updatingUserRoleId !== null || !hasSelectedRoleChanged
+							"
 						>
 							{{
 								updatingUserRoleId === null
@@ -473,7 +485,7 @@ async function confirmRemove(): Promise<void> {
 					</AlertDialogCancel>
 					<Button
 						variant="destructive"
-						:disabled="removingUserId !== null"
+						:disabled="disabled || removingUserId !== null"
 						@click="confirmRemove"
 					>
 						{{ removingUserId === null ? "Aus Projekt entfernen" : "Wird entfernt..." }}
