@@ -52,14 +52,16 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useUserStore } from "@/feature/user";
-import { type model, useProject, useProjectUsers } from "..";
+import type { ProjectRole, ProjectUser } from "../project.model";
+import { useProject } from "../composables/useProject";
+import { useProjectUsers } from "../composables/useProjectUsers";
 
 const props = defineProps<{
 	projectId: number;
 }>();
 
-const projectRoles: model.ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
-const projectRoleLabels: Record<model.ProjectRole, string> = {
+const projectRoles: ProjectRole[] = ["OWNER", "CONTRIBUTOR", "VIEWER"];
+const projectRoleLabels: Record<ProjectRole, string> = {
 	OWNER: "Owner",
 	CONTRIBUTOR: "Mitwirkender",
 	VIEWER: "Betrachter",
@@ -82,9 +84,9 @@ const {
 } = useProjectUsers(() => props.projectId);
 
 const selectedUserId = ref<number | null>(null);
-const selectedRole = ref<model.ProjectRole>("CONTRIBUTOR");
-const roleCandidate = ref<model.ProjectUser | null>(null);
-const deleteCandidate = ref<model.ProjectUser | null>(null);
+const selectedRole = ref<ProjectRole>("CONTRIBUTOR");
+const roleCandidate = ref<ProjectUser | null>(null);
+const deleteCandidate = ref<ProjectUser | null>(null);
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
@@ -108,11 +110,11 @@ watch(
 	{ immediate: true },
 );
 
-function formatProjectRole(role: model.ProjectRole | null): string {
+function formatProjectRole(role: ProjectRole | null): string {
 	return role === null ? "Kein Mitglied" : projectRoleLabels[role];
 }
 
-function canUpdateProjectRole(user: model.ProjectUser): boolean {
+function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
 		isOwner.value &&
 		user.member &&
@@ -121,11 +123,11 @@ function canUpdateProjectRole(user: model.ProjectUser): boolean {
 	);
 }
 
-function canAssignOwner(user: model.ProjectUser): boolean {
+function canAssignOwner(user: ProjectUser): boolean {
 	return isAdmin.value && user.member && user.projectRole !== "OWNER";
 }
 
-function canManageUser(user: model.ProjectUser): boolean {
+function canManageUser(user: ProjectUser): boolean {
 	return canUpdateProjectRole(user) || canAssignOwner(user);
 }
 
@@ -134,7 +136,7 @@ function selectUser(value: unknown): void {
 }
 
 function selectRole(value: unknown): void {
-	selectedRole.value = String(value) as model.ProjectRole;
+	selectedRole.value = String(value) as ProjectRole;
 }
 
 async function submitProjectUser(): Promise<void> {
@@ -148,7 +150,7 @@ async function submitProjectUser(): Promise<void> {
 	}
 }
 
-function openRoleEdit(user: model.ProjectUser): void {
+function openRoleEdit(user: ProjectUser): void {
 	if (!canManageUser(user)) {
 		return;
 	}
@@ -174,7 +176,7 @@ async function submitProjectUserRole(): Promise<void> {
 	}
 }
 
-function openDeleteDialog(user: model.ProjectUser): void {
+function openDeleteDialog(user: ProjectUser): void {
 	if (!canUpdateProjectRole(user)) {
 		return;
 	}

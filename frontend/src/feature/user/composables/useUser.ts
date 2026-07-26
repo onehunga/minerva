@@ -1,6 +1,7 @@
 import { clearTokens, getRefreshToken, setTokens } from "@/api";
-import { useUserStore, useUserRepository } from "..";
 import { storeToRefs } from "pinia";
+import { useUserStore } from "../user.store";
+import { useUserRepository } from "./useUserRepository";
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function useUser() {

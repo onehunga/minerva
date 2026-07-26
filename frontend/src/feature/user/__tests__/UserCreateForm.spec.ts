@@ -3,14 +3,15 @@ import { describe, expect, it } from "vitest";
 
 import { flushPromises, mount } from "@vue/test-utils";
 import { Select } from "@/components/ui/select";
-import { UserRepositoryKey, type IUserRepository, type model } from "..";
+import type { UserDetails, UserRecordList, UserRole } from "../user.model";
+import { UserRepositoryKey, type IUserRepository } from "../user.repository";
 import UserCreateForm from "../components/UserCreateForm.vue";
 import type { TokenPair } from "@/api/credentials.ts";
 
 type CreateUserCall = {
 	username: string;
 	password: string;
-	role: model.UserRole;
+	role: UserRole;
 };
 
 class RecordingUserRepository implements IUserRepository {
@@ -20,13 +21,13 @@ class RecordingUserRepository implements IUserRepository {
 	logout(refreshToken: string): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
-	details(): Promise<model.UserDetails> {
+	details(): Promise<UserDetails> {
 		throw new Error("Method not implemented.");
 	}
-	getAllUsers(): Promise<model.UserRecordList> {
+	getAllUsers(): Promise<UserRecordList> {
 		throw new Error("Method not implemented.");
 	}
-	updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+	updateUserRole(userId: number, role: UserRole): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
 	updateUsername(userId: number, username: string): Promise<void> {
@@ -40,7 +41,7 @@ class RecordingUserRepository implements IUserRepository {
 	}
 	calls: CreateUserCall[] = [];
 
-	async createUser(username: string, password: string, role: model.UserRole): Promise<void> {
+	async createUser(username: string, password: string, role: UserRole): Promise<void> {
 		this.calls.push({
 			username,
 			password,
@@ -56,13 +57,13 @@ class FailingCreateUserRepository implements IUserRepository {
 	logout(refreshToken: string): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
-	details(): Promise<model.UserDetails> {
+	details(): Promise<UserDetails> {
 		throw new Error("Method not implemented.");
 	}
-	getAllUsers(): Promise<model.UserRecordList> {
+	getAllUsers(): Promise<UserRecordList> {
 		throw new Error("Method not implemented.");
 	}
-	updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+	updateUserRole(userId: number, role: UserRole): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
 	updateUsername(userId: number, username: string): Promise<void> {

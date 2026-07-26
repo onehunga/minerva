@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
-import Button from "@/components/ui/button/Button.vue";
+import { Button } from "@/components/ui/button";
 import type { TicketWorkflow } from "@/feature/ticket";
 import { useProjectRepository } from "../composables/useProjectRepository";
 import { useProjects } from "../composables/useProjects";

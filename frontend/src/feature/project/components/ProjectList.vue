@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { useProjectRepository, type model } from "@/feature/project";
 import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
+import type { ProjectRecord } from "../project.model";
+import { useProjectRepository } from "../composables/useProjectRepository";
 
 const projectRepository = useProjectRepository();
 
-const projects = ref<model.ProjectRecord[]>([]);
+const projects = ref<ProjectRecord[]>([]);
 
 onMounted(async () => {
 	projects.value = await projectRepository.getAllProjects();

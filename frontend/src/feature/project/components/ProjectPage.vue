@@ -17,7 +17,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useProject, useProjectRepository } from "..";
+import { useProject } from "../composables/useProject";
+import { useProjectRepository } from "../composables/useProjectRepository";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
 import { Textarea } from "@/components/ui/textarea";
 

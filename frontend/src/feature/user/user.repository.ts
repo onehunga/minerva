@@ -1,5 +1,5 @@
 import type { TokenPair } from "@/api";
-import { api } from ".";
+import * as api from "./user.api";
 import type { UserDetails, UserRecordList, UserRole } from "./user.model";
 
 export const UserRepositoryKey = Symbol();

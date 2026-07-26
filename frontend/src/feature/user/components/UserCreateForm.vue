@@ -11,8 +11,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { SheetFooter } from "@/components/ui/sheet";
-import { useManageUsers } from "..";
 import type { UserRole } from "../user.model";
+import { useManageUsers } from "../composables/useManageUsers";
 
 const emit = defineEmits<{
 	cancel: [];

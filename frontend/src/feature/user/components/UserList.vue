@@ -41,8 +41,8 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useManageUsers } from "..";
 import type { UserRecord, UserRole } from "../user.model";
+import { useManageUsers } from "../composables/useManageUsers";
 import UserCreateForm from "./UserCreateForm.vue";
 import UserEditForm from "./UserEditForm.vue";
 

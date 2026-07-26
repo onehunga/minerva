@@ -1,4 +1,4 @@
-import { api } from ".";
+import * as api from "./activity.api";
 import type { ActivityEvent } from "./activity.model";
 
 export const ActivityRepositoryKey = Symbol("ActivityRepository");

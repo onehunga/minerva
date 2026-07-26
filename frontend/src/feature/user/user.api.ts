@@ -1,5 +1,5 @@
 import { client, type TokenPair } from "@/api";
-import type { model } from ".";
+import type { UserDetails, UserRecordList, UserRole } from "./user.model";
 
 export async function login(username: string, password: string): Promise<TokenPair> {
 	return client
@@ -14,14 +14,14 @@ export async function logout(refreshToken: string): Promise<void> {
 	return client.post("/v1/auth/logout", { refreshToken });
 }
 
-export async function details(): Promise<model.UserDetails> {
+export async function details(): Promise<UserDetails> {
 	return client.get("/v1/users/me").then((res) => res.data);
 }
 
 export async function createUser(
 	username: string,
 	password: string,
-	role: model.UserRole,
+	role: UserRole,
 ): Promise<void> {
 	return client.post("/v1/users", {
 		username: username,
@@ -30,11 +30,11 @@ export async function createUser(
 	});
 }
 
-export async function getAllUsers(): Promise<model.UserRecordList> {
+export async function getAllUsers(): Promise<UserRecordList> {
 	return client.get("/v1/users").then((res) => res.data);
 }
 
-export async function updateUserRole(userId: number, role: model.UserRole): Promise<void> {
+export async function updateUserRole(userId: number, role: UserRole): Promise<void> {
 	return client.patch(`/v1/users/${userId}/role`, {
 		role: role,
 	});

@@ -4,14 +4,17 @@ import { clearTokens, getAuthorizationHeader, setTokens, type TokenPair } from "
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, type Pinia } from "pinia";
 import { defineComponent } from "vue";
-import { UserRepository, UserRepositoryKey, useUser, useUserStore, type model } from "..";
+import type { UserDetails } from "../user.model";
+import { UserRepository, UserRepositoryKey } from "../user.repository";
+import { useUserStore } from "../user.store";
+import { useUser } from "../composables/useUser";
 
 const tokens: TokenPair = {
 	accessToken: "access-token",
 	refreshToken: "refresh-token",
 };
 
-const userDetails: model.UserDetails = {
+const userDetails: UserDetails = {
 	id: 1,
 	username: "admin",
 	role: "ADMIN",
@@ -30,7 +33,7 @@ class LoginUserRepository extends UserRepository {
 		return tokens;
 	}
 
-	override async details(): Promise<model.UserDetails> {
+	override async details(): Promise<UserDetails> {
 		return userDetails;
 	}
 

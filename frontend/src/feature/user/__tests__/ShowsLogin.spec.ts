@@ -4,7 +4,7 @@ import { mount } from "@vue/test-utils";
 import { createPinia, type Pinia } from "pinia";
 import LoginView from "@/views/LoginView.vue";
 import router from "@/router";
-import { UserRepository, UserRepositoryKey } from "..";
+import { UserRepository, UserRepositoryKey } from "../user.repository";
 
 describe("ShowsLogin", () => {
 	it("renders", async () => {

@@ -1,5 +1,5 @@
 export * as api from "./project.api";
-export * as model from "./project.model";
+export * from "./project.model";
 export * from "./project.repository";
 export * from "./project.store";
 

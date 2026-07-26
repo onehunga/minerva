@@ -1,8 +1,9 @@
 import { storeToRefs } from "pinia";
 import { toValue, watch, type MaybeRefOrGetter } from "vue";
 import { useTicketRepository } from "@/feature/ticket";
-import { useActiveProjectStore, useProjectRepository } from "..";
 import type { CreateTicketRequest, Ticket, TicketPriorityName } from "@/feature/ticket";
+import { useActiveProjectStore } from "../project.store";
+import { useProjectRepository } from "./useProjectRepository";
 
 /**
  * Management für das aktive Projekt.
