@@ -9,5 +9,6 @@ export { default as ProjectPage } from "./components/ProjectPage.vue";
 export { default as ProjectUserManagement } from "./components/ProjectUserManagement.vue";
 
 export * from "./composables/useProject";
+export * from "./composables/useProjects";
 export * from "./composables/useProjectRepository";
 export * from "./composables/useProjectUsers";
