@@ -9,6 +9,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/date";
 import type { DashboardRecentTicket, DashboardResponse } from "../dashboard.model";
 import TicketPriorityDistributionChart from "./TicketPriorityDistributionChart.vue";
 import TicketStatusDistributionChart from "./TicketStatusDistributionChart.vue";
@@ -28,17 +29,6 @@ function recent(): DashboardRecentTicket[] {
 
 function priorityLabel(priority: TicketPriorityName): string {
 	return TICKET_PRIORITY_LABELS[priority];
-}
-
-function formatDate(value: string | null): string {
-	if (value === null) {
-		return "-";
-	}
-
-	return new Intl.DateTimeFormat("de-DE", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value));
 }
 </script>
 

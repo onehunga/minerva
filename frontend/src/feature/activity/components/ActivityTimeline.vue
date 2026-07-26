@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useId } from "vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatDate } from "@/lib/date";
 import type { ActivityEvent, ActivityEventType } from "../activity.model";
 
 withDefaults(
@@ -47,17 +48,6 @@ const PRIORITY_LABELS: Record<string, string> = {
 
 function formatType(type: ActivityEventType): string {
 	return ACTIVITY_TYPE_LABELS[type] ?? type;
-}
-
-function formatDate(value: string | null): string {
-	if (value == null) {
-		return "-";
-	}
-
-	return new Intl.DateTimeFormat("de-DE", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value));
 }
 
 type Payload = Record<string, unknown>;

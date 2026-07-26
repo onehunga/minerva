@@ -5,6 +5,7 @@ import type { TicketComment } from "../ticket.model";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDate } from "@/lib/date";
 
 const props = defineProps<{
 	projectId: number;
@@ -68,17 +69,6 @@ async function createComment(): Promise<void> {
 	} finally {
 		isCreating.value = false;
 	}
-}
-
-function formatDate(value: string | null): string {
-	if (value == null) {
-		return "-";
-	}
-
-	return new Intl.DateTimeFormat("de-DE", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value));
 }
 
 onMounted(() => {

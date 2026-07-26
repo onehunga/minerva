@@ -24,6 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ActivityTimeline, useTicketActivities } from "@/feature/activity";
 import { useProject } from "@/feature/project";
+import { formatDate } from "@/lib/date";
 import CreateTicketForm from "./CreateTicketForm.vue";
 import TicketComments from "./TicketComments.vue";
 
@@ -255,17 +256,6 @@ function formatProjectUser(userId: number): string {
 
 function formatAssignee(userId: number | null): string {
 	return userId == null ? "Nicht zugewiesen" : formatProjectUser(userId);
-}
-
-function formatDate(value: string | null): string {
-	if (value == null) {
-		return "-";
-	}
-
-	return new Intl.DateTimeFormat("de-DE", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value));
 }
 </script>
 
