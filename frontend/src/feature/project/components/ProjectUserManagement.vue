@@ -71,18 +71,24 @@ const { details: projectDetails } = useProject();
 const userStore = useUserStore();
 const {
 	addProjectUser,
-	errorMessage,
+	hasLoadError,
 	isAddingUser,
 	isLoadingUsers,
 	loadUsers,
 	removeProjectUser,
 	removingUserId,
-	successMessage,
 	updateProjectUserRole,
 	updatingUserRoleId,
 	users,
 } = useProjectUsers(() => props.projectId);
 
+const errorMessage = ref("");
+const successMessage = ref("");
+const visibleErrorMessage = computed(
+	() =>
+		errorMessage.value ||
+		(hasLoadError.value ? "Projektbenutzer konnten nicht geladen werden." : ""),
+);
 const selectedUserId = ref<number | null>(null);
 const selectedRole = ref<ProjectRole>("CONTRIBUTOR");
 const roleCandidate = ref<ProjectUser | null>(null);
@@ -105,6 +111,7 @@ const hasSelectedRoleChanged = computed(
 watch(
 	() => props.projectId,
 	() => {
+		clearMessages();
 		loadUsers();
 	},
 	{ immediate: true },
@@ -112,6 +119,11 @@ watch(
 
 function formatProjectRole(role: ProjectRole | null): string {
 	return role === null ? "Kein Mitglied" : projectRoleLabels[role];
+}
+
+function clearMessages(): void {
+	errorMessage.value = "";
+	successMessage.value = "";
 }
 
 function canUpdateProjectRole(user: ProjectUser): boolean {
@@ -144,9 +156,13 @@ async function submitProjectUser(): Promise<void> {
 		return;
 	}
 
+	clearMessages();
 	if (await addProjectUser(selectedUserId.value, selectedRole.value)) {
 		selectedUserId.value = null;
 		selectedRole.value = "CONTRIBUTOR";
+		successMessage.value = "Benutzer wurde hinzugefügt.";
+	} else {
+		errorMessage.value = "Benutzer konnte nicht hinzugefügt werden.";
 	}
 }
 
@@ -155,7 +171,7 @@ function openRoleEdit(user: ProjectUser): void {
 		return;
 	}
 
-	errorMessage.value = "";
+	clearMessages();
 	roleCandidate.value = user;
 	selectedRole.value = canUpdateProjectRole(user) ? user.projectRole! : "OWNER";
 }
@@ -171,8 +187,12 @@ async function submitProjectUserRole(): Promise<void> {
 		return;
 	}
 
+	clearMessages();
 	if (await updateProjectUserRole(roleCandidate.value.id, selectedRole.value)) {
 		roleCandidate.value = null;
+		successMessage.value = "Projektrolle wurde aktualisiert.";
+	} else {
+		errorMessage.value = "Projektrolle konnte nicht aktualisiert werden.";
 	}
 }
 
@@ -181,7 +201,7 @@ function openDeleteDialog(user: ProjectUser): void {
 		return;
 	}
 
-	errorMessage.value = "";
+	clearMessages();
 	deleteCandidate.value = user;
 }
 
@@ -196,8 +216,12 @@ async function confirmRemove(): Promise<void> {
 		return;
 	}
 
+	clearMessages();
 	if (await removeProjectUser(deleteCandidate.value.id)) {
 		deleteCandidate.value = null;
+		successMessage.value = "Projektmitglied wurde entfernt.";
+	} else {
+		errorMessage.value = "Projektmitglied konnte nicht entfernt werden.";
 	}
 }
 </script>
@@ -206,8 +230,8 @@ async function confirmRemove(): Promise<void> {
 	<section class="flex min-h-0 flex-1 flex-col gap-3">
 		<h2 class="m-0 text-lg font-semibold">Projektbenutzer</h2>
 
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ errorMessage }}
+		<p v-if="visibleErrorMessage" class="m-0 text-sm text-destructive" role="alert">
+			{{ visibleErrorMessage }}
 		</p>
 		<p v-if="successMessage" class="m-0 text-sm text-muted-foreground" role="status">
 			{{ successMessage }}
