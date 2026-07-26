@@ -63,6 +63,7 @@ const isUpdatingStatus = ref(false);
 const isUpdatingPriority = ref(false);
 const isUpdatingDetails = ref(false);
 const isUpdatingAssignee = ref(false);
+const errorMessage = ref("");
 const editingField = ref<"name" | "description" | null>(null);
 const draftName = ref(props.ticket.name);
 const draftDescription = ref(props.ticket.description);
@@ -95,6 +96,7 @@ const ticketTypeName = computed(
 watch(
 	() => [props.ticket.id, props.ticket.name, props.ticket.description],
 	() => {
+		errorMessage.value = "";
 		if (editingField.value == null) {
 			draftName.value = props.ticket.name;
 			draftDescription.value = props.ticket.description;
@@ -138,11 +140,12 @@ async function submitDetailsUpdate(): Promise<void> {
 	}
 
 	isUpdatingDetails.value = true;
+	errorMessage.value = "";
 	try {
 		await updateTicketDetails(props.ticket.id, name, description);
 		editingField.value = null;
 	} catch {
-		alert("Die Ticketdetails konnten nicht aktualisiert werden.");
+		errorMessage.value = "Die Ticketdetails konnten nicht aktualisiert werden.";
 	} finally {
 		isUpdatingDetails.value = false;
 	}
@@ -157,15 +160,16 @@ async function submitStatusUpdate(value: unknown): Promise<void> {
 		(currentTransition) => currentTransition.id === Number(value),
 	);
 	if (transition === undefined) {
-		alert("Der gewählte Übergang ist nicht mehr verfügbar.");
+		errorMessage.value = "Der gewählte Übergang ist nicht mehr verfügbar.";
 		return;
 	}
 
 	isUpdatingStatus.value = true;
+	errorMessage.value = "";
 	try {
 		await updateTicketStatus(props.ticket.id, transition.id, transition.toStateId);
 	} catch {
-		alert("Der Status konnte nicht aktualisiert werden.");
+		errorMessage.value = "Der Status konnte nicht aktualisiert werden.";
 	} finally {
 		isUpdatingStatus.value = false;
 	}
@@ -182,10 +186,11 @@ async function submitPriorityUpdate(value: unknown): Promise<void> {
 	}
 
 	isUpdatingPriority.value = true;
+	errorMessage.value = "";
 	try {
 		await updateTicketPriority(props.ticket.id, priority);
 	} catch {
-		alert("Die Priorität konnte nicht aktualisiert werden.");
+		errorMessage.value = "Die Priorität konnte nicht aktualisiert werden.";
 	} finally {
 		isUpdatingPriority.value = false;
 	}
@@ -202,10 +207,11 @@ async function submitAssigneeUpdate(value: unknown): Promise<void> {
 	}
 
 	isUpdatingAssignee.value = true;
+	errorMessage.value = "";
 	try {
 		await updateTicketAssignee(props.ticket.id, assignedTo);
 	} catch {
-		alert("Der Bearbeiter konnte nicht aktualisiert werden.");
+		errorMessage.value = "Der Bearbeiter konnte nicht aktualisiert werden.";
 	} finally {
 		isUpdatingAssignee.value = false;
 	}
@@ -222,10 +228,11 @@ async function submitArchiveTicket(): Promise<void> {
 	}
 
 	isArchivingTicket.value = true;
+	errorMessage.value = "";
 	try {
 		await archiveTicket(props.ticket.id);
 	} catch {
-		alert("Das Ticket konnte nicht archiviert werden.");
+		errorMessage.value = "Das Ticket konnte nicht archiviert werden.";
 	} finally {
 		isArchivingTicket.value = false;
 	}
@@ -237,10 +244,11 @@ async function submitDeleteTicket(): Promise<void> {
 	}
 
 	isDeletingTicket.value = true;
+	errorMessage.value = "";
 	try {
 		await deleteTicket(props.ticket.id);
 	} catch {
-		alert("Das Ticket konnte nicht gelöscht werden.");
+		errorMessage.value = "Das Ticket konnte nicht gelöscht werden.";
 	} finally {
 		isDeletingTicket.value = false;
 	}
@@ -261,6 +269,9 @@ function formatAssignee(userId: number | null): string {
 			<AlertTitle>Archiviertes Ticket</AlertTitle>
 			<AlertDescription>Dieses Ticket ist archiviert.</AlertDescription>
 		</Alert>
+		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+			{{ errorMessage }}
+		</p>
 
 		<div class="ticket-detail__layout">
 			<div class="ticket-detail__main">

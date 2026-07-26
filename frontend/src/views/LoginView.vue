@@ -13,14 +13,17 @@ const { login } = useUser();
 
 const username: Ref<string> = ref("");
 const password: Ref<string> = ref("");
+const errorMessage = ref("");
 
 async function handleLogin(): Promise<void> {
+	errorMessage.value = "";
+
 	try {
 		await login(username.value, password.value);
 
 		await router.push("/");
 	} catch {
-		alert("Login failed");
+		errorMessage.value = "Login failed";
 	}
 }
 </script>
@@ -52,6 +55,9 @@ async function handleLogin(): Promise<void> {
 							autocomplete="current-password"
 						/>
 					</div>
+					<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+						{{ errorMessage }}
+					</p>
 					<Button type="submit" class="w-full">Login</Button>
 				</form>
 			</CardContent>

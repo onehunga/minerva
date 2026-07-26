@@ -35,6 +35,7 @@ const showArchived = ref(false);
 const isLoadingTickets = ref(false);
 const isArchivingProject = ref(false);
 const isUpdatingDetails = ref(false);
+const errorMessage = ref("");
 const draftName = ref("");
 const draftDescription = ref("");
 
@@ -65,6 +66,7 @@ const {
 watch(
 	() => props.id,
 	() => {
+		errorMessage.value = "";
 		showArchived.value = false;
 		selectedTicketId.value = null;
 	},
@@ -91,11 +93,12 @@ watch(
 
 watch(showArchived, async (archived) => {
 	isLoadingTickets.value = true;
+	errorMessage.value = "";
 
 	try {
 		await fetchTickets(archived);
 	} catch {
-		alert("Die Tickets konnten nicht geladen werden.");
+		errorMessage.value = "Die Tickets konnten nicht geladen werden.";
 	} finally {
 		isLoadingTickets.value = false;
 	}
@@ -123,11 +126,12 @@ async function submitDetailsUpdate(): Promise<void> {
 	}
 
 	isUpdatingDetails.value = true;
+	errorMessage.value = "";
 
 	try {
 		await updateProjectDetails(name, description);
 	} catch {
-		alert("Die Projektdetails konnten nicht aktualisiert werden.");
+		errorMessage.value = "Die Projektdetails konnten nicht aktualisiert werden.";
 	} finally {
 		isUpdatingDetails.value = false;
 	}
@@ -139,12 +143,13 @@ async function submitArchiveProject(): Promise<void> {
 	}
 
 	isArchivingProject.value = true;
+	errorMessage.value = "";
 
 	try {
 		await projectRepository.archiveProject(props.id);
 		await router.push({ name: "landing" });
 	} catch {
-		alert("Das Projekt konnte nicht archiviert werden.");
+		errorMessage.value = "Das Projekt konnte nicht archiviert werden.";
 	} finally {
 		isArchivingProject.value = false;
 	}
@@ -155,6 +160,9 @@ async function submitArchiveProject(): Promise<void> {
 	<main v-if="details != null" class="project-page">
 		<p v-if="details.archived" class="project-page__archive-banner" role="status">
 			Dieses Projekt ist archiviert.
+		</p>
+		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+			{{ errorMessage }}
 		</p>
 
 		<Tabs default-value="overview" class="flex-1">
