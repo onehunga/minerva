@@ -8,18 +8,27 @@ export function useProjectActivities(projectId: MaybeRefOrGetter<number>) {
 	const events = ref<ActivityEvent[]>([]);
 	const isLoading = ref(false);
 	const errorMessage = ref("");
+	let loadGeneration = 0;
 
 	async function load(currentProjectId: number): Promise<void> {
+		const generation = ++loadGeneration;
 		events.value = [];
 		isLoading.value = true;
 		errorMessage.value = "";
 
 		try {
-			events.value = await repository.getProjectActivities(currentProjectId);
+			const nextEvents = await repository.getProjectActivities(currentProjectId);
+			if (generation === loadGeneration) {
+				events.value = nextEvents;
+			}
 		} catch {
-			errorMessage.value = "Aktivitäten konnten nicht geladen werden.";
+			if (generation === loadGeneration) {
+				errorMessage.value = "Aktivitäten konnten nicht geladen werden.";
+			}
 		} finally {
-			isLoading.value = false;
+			if (generation === loadGeneration) {
+				isLoading.value = false;
+			}
 		}
 	}
 

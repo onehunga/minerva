@@ -13,22 +13,34 @@ export function useTicketComments(
 	const isCreating = ref(false);
 	const hasLoadError = ref(false);
 	const hasCreateError = ref(false);
+	let loadGeneration = 0;
 
 	async function load([currentProjectId, currentTicketId]: readonly [
 		number,
 		number,
 	]): Promise<void> {
+		const generation = ++loadGeneration;
 		comments.value = [];
 		isLoading.value = true;
 		hasLoadError.value = false;
 		hasCreateError.value = false;
 
 		try {
-			comments.value = await repository.getTicketComments(currentProjectId, currentTicketId);
+			const nextComments = await repository.getTicketComments(
+				currentProjectId,
+				currentTicketId,
+			);
+			if (generation === loadGeneration) {
+				comments.value = nextComments;
+			}
 		} catch {
-			hasLoadError.value = true;
+			if (generation === loadGeneration) {
+				hasLoadError.value = true;
+			}
 		} finally {
-			isLoading.value = false;
+			if (generation === loadGeneration) {
+				isLoading.value = false;
+			}
 		}
 	}
 
@@ -39,6 +51,7 @@ export function useTicketComments(
 
 		isCreating.value = true;
 		hasCreateError.value = false;
+		const generation = loadGeneration;
 
 		try {
 			const comment = await repository.createTicketComment(
@@ -46,6 +59,9 @@ export function useTicketComments(
 				toValue(ticketId),
 				{ content },
 			);
+			if (generation !== loadGeneration) {
+				return true;
+			}
 			comments.value = [
 				...comments.value,
 				{
@@ -55,7 +71,9 @@ export function useTicketComments(
 			];
 			return true;
 		} catch {
-			hasCreateError.value = true;
+			if (generation === loadGeneration) {
+				hasCreateError.value = true;
+			}
 			return false;
 		} finally {
 			isCreating.value = false;

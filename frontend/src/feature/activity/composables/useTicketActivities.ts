@@ -11,21 +11,33 @@ export function useTicketActivities(
 	const events = ref<ActivityEvent[]>([]);
 	const isLoading = ref(false);
 	const errorMessage = ref("");
+	let loadGeneration = 0;
 
 	async function load([currentProjectId, currentTicketId]: readonly [
 		number,
 		number,
 	]): Promise<void> {
+		const generation = ++loadGeneration;
 		events.value = [];
 		isLoading.value = true;
 		errorMessage.value = "";
 
 		try {
-			events.value = await repository.getTicketActivities(currentProjectId, currentTicketId);
+			const nextEvents = await repository.getTicketActivities(
+				currentProjectId,
+				currentTicketId,
+			);
+			if (generation === loadGeneration) {
+				events.value = nextEvents;
+			}
 		} catch {
-			errorMessage.value = "Aktivitäten konnten nicht geladen werden.";
+			if (generation === loadGeneration) {
+				errorMessage.value = "Aktivitäten konnten nicht geladen werden.";
+			}
 		} finally {
-			isLoading.value = false;
+			if (generation === loadGeneration) {
+				isLoading.value = false;
+			}
 		}
 	}
 

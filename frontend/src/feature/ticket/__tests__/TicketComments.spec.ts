@@ -1,5 +1,6 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
+import { nextTick } from "vue";
 import type { TicketComment } from "../ticket.model";
 import { TicketRepositoryKey, type ITicketRepository } from "../ticket.repository";
 import TicketComments from "../components/TicketComments.vue";
@@ -67,6 +68,41 @@ describe("TicketComments", () => {
 		await flushPromises();
 
 		expect(wrapper.text()).toContain("Kommentar konnte nicht gespeichert werden.");
+	});
+
+	it("keeps comments for the newest selected ticket", async () => {
+		let resolveFirstComments!: (comments: TicketComment[]) => void;
+		let resolveSecondComments!: (comments: TicketComment[]) => void;
+		const firstComments = new Promise<TicketComment[]>((resolve) => {
+			resolveFirstComments = resolve;
+		});
+		const secondComments = new Promise<TicketComment[]>((resolve) => {
+			resolveSecondComments = resolve;
+		});
+		const nextComment = {
+			...existingComment,
+			id: 2,
+			ticketId: 3,
+			content: "Kommentar des neuen Tickets",
+		};
+		const repository = {
+			getTicketComments: vi.fn<ITicketRepository["getTicketComments"]>(
+				async (_projectId, ticketId) => (ticketId === 2 ? firstComments : secondComments),
+			),
+		} satisfies Partial<ITicketRepository>;
+		const wrapper = mountComments(repository);
+
+		await wrapper.setProps({ ticketId: 3 });
+		await nextTick();
+
+		resolveSecondComments([nextComment]);
+		await flushPromises();
+		expect(wrapper.text()).toContain(nextComment.content);
+
+		resolveFirstComments([existingComment]);
+		await flushPromises();
+		expect(wrapper.text()).toContain(nextComment.content);
+		expect(wrapper.text()).not.toContain(existingComment.content);
 	});
 });
 

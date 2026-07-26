@@ -17,6 +17,8 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 	const store = useActiveProjectStore();
 	const projectRepository = useProjectRepository();
 	const ticketRepository = useTicketRepository();
+	let projectLoadGeneration = 0;
+	let ticketLoadGeneration = 0;
 
 	if (projectId !== undefined) {
 		watch(
@@ -35,7 +37,8 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 				store.setProjectUsers([]);
 				store.setTicketTypes([]);
 				store.setTickets([]);
-				void fetchProjectData(currentProjectId);
+				ticketLoadGeneration++;
+				void fetchProjectData(currentProjectId, ++projectLoadGeneration);
 			},
 			{ immediate: true },
 		);
@@ -44,11 +47,18 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 	}
 
 	async function fetchTickets(archived: boolean = false): Promise<void> {
-		const tickets = await ticketRepository.getTickets(Number(store.activeProject), archived);
+		const currentProjectId = store.activeProject;
+		const generation = ++ticketLoadGeneration;
+		const tickets = await ticketRepository.getTickets(Number(currentProjectId), archived);
+
+		if (generation !== ticketLoadGeneration || currentProjectId !== store.activeProject) {
+			return;
+		}
+
 		store.setTickets(tickets, archived);
 	}
 
-	async function fetchProjectData(projectId: string): Promise<void> {
+	async function fetchProjectData(projectId: string, generation: number): Promise<void> {
 		const numericProjectId = Number(projectId);
 		const [details, projectUsers, ticketTypes, tickets] = await Promise.all([
 			projectRepository.getProjectDetails(numericProjectId),
@@ -56,6 +66,10 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 			ticketRepository.getTicketTypes(numericProjectId),
 			ticketRepository.getTickets(numericProjectId),
 		]);
+
+		if (generation !== projectLoadGeneration) {
+			return;
+		}
 
 		store.setProjectDetails(details);
 		store.setProjectUsers(projectUsers);

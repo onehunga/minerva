@@ -8,18 +8,27 @@ export function useProjectDashboard(projectId: MaybeRefOrGetter<number>) {
 	const data = ref<DashboardResponse | null>(null);
 	const isLoading = ref(false);
 	const errorMessage = ref("");
+	let loadGeneration = 0;
 
 	async function load(currentProjectId: number): Promise<void> {
+		const generation = ++loadGeneration;
 		data.value = null;
 		isLoading.value = true;
 		errorMessage.value = "";
 
 		try {
-			data.value = await repository.getProjectDashboard(currentProjectId);
+			const nextData = await repository.getProjectDashboard(currentProjectId);
+			if (generation === loadGeneration) {
+				data.value = nextData;
+			}
 		} catch {
-			errorMessage.value = "Dashboard konnte nicht geladen werden.";
+			if (generation === loadGeneration) {
+				errorMessage.value = "Dashboard konnte nicht geladen werden.";
+			}
 		} finally {
-			isLoading.value = false;
+			if (generation === loadGeneration) {
+				isLoading.value = false;
+			}
 		}
 	}
 
