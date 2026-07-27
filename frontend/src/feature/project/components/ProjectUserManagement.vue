@@ -55,6 +55,7 @@ import { useUsers, useUserStore } from "@/feature/user";
 import type { ProjectRole, ProjectUser } from "../project.model";
 import { useProject } from "../composables/useProject";
 import { useProjectUsers } from "../composables/useProjectUsers";
+import { useProjectsStore } from "../project.store";
 
 const props = withDefaults(
 	defineProps<{
@@ -74,6 +75,7 @@ const projectRoleLabels: Record<ProjectRole, string> = {
 const { details: projectDetails } = useProject();
 const { users: allUsers, isLoadingUsers: isLoadingAllUsers } = useUsers();
 const userStore = useUserStore();
+const projectsStore = useProjectsStore();
 const {
 	addProjectUser,
 	hasLoadError,
@@ -101,15 +103,14 @@ const deleteCandidate = ref<ProjectUser | null>(null);
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
+const isOwnerLike = computed(() => isOwner.value || isAdmin.value);
 const availableUsers = computed(() =>
 	allUsers.value.filter(
 		(user) => users.value.some((projectUser) => projectUser.id === user.id) === false,
 	),
 );
 const isRoleEditOpen = computed(() => roleCandidate.value !== null);
-const availableProjectRoles = computed(() =>
-	isOwner.value ? projectRoles : projectRoles.filter((role) => role === "OWNER"),
-);
+const availableProjectRoles = computed(() => projectRoles);
 const hasSelectedRoleChanged = computed(
 	() =>
 		roleCandidate.value?.projectRole !== null &&
@@ -137,18 +138,22 @@ function clearMessages(): void {
 function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
 		!props.disabled &&
-		isOwner.value &&
+		isOwnerLike.value &&
 		user.id !== userStore.userDetails?.id &&
 		user.projectRole !== null
 	);
 }
 
-function canAssignOwner(user: ProjectUser): boolean {
-	return !props.disabled && isAdmin.value && user.projectRole !== "OWNER";
+function canRemoveProjectUser(user: ProjectUser): boolean {
+	return (
+		!props.disabled &&
+		isOwnerLike.value &&
+		(user.id !== userStore.userDetails?.id || isAdmin.value)
+	);
 }
 
 function canManageUser(user: ProjectUser): boolean {
-	return canUpdateProjectRole(user) || canAssignOwner(user);
+	return canUpdateProjectRole(user) || canRemoveProjectUser(user);
 }
 
 function selectUser(value: unknown): void {
@@ -166,6 +171,18 @@ async function submitProjectUser(): Promise<void> {
 
 	clearMessages();
 	if (await addProjectUser(selectedUserId.value, selectedRole.value)) {
+		if (selectedUserId.value === userStore.userDetails?.id) {
+			const project = projectsStore.adminProjects.find(({ id }) => id === props.projectId);
+			if (project !== undefined) {
+				projectsStore.setProjects([...projectsStore.projects, project]);
+				projectsStore.setAdminProjects(
+					projectsStore.adminProjects.filter(({ id }) => id !== props.projectId),
+				);
+			}
+			if (projectDetails.value != null) {
+				projectDetails.value.projectRole = selectedRole.value;
+			}
+		}
 		selectedUserId.value = null;
 		selectedRole.value = "CONTRIBUTOR";
 		successMessage.value = "Benutzer wurde hinzugefügt.";
@@ -181,7 +198,7 @@ function openRoleEdit(user: ProjectUser): void {
 
 	clearMessages();
 	roleCandidate.value = user;
-	selectedRole.value = canUpdateProjectRole(user) ? user.projectRole! : "OWNER";
+	selectedRole.value = user.projectRole!;
 }
 
 function updateRoleEditOpen(open: boolean): void {
@@ -205,7 +222,7 @@ async function submitProjectUserRole(): Promise<void> {
 }
 
 function openDeleteDialog(user: ProjectUser): void {
-	if (!canUpdateProjectRole(user)) {
+	if (!canRemoveProjectUser(user)) {
 		return;
 	}
 
@@ -226,6 +243,18 @@ async function confirmRemove(): Promise<void> {
 
 	clearMessages();
 	if (await removeProjectUser(deleteCandidate.value.id)) {
+		if (deleteCandidate.value.id === userStore.userDetails?.id) {
+			const project = projectsStore.projects.find(({ id }) => id === props.projectId);
+			if (project !== undefined) {
+				projectsStore.setAdminProjects([...projectsStore.adminProjects, project]);
+				projectsStore.setProjects(
+					projectsStore.projects.filter(({ id }) => id !== props.projectId),
+				);
+			}
+			if (projectDetails.value != null) {
+				projectDetails.value.projectRole = null;
+			}
+		}
 		deleteCandidate.value = null;
 		successMessage.value = "Projektmitglied wurde entfernt.";
 	} else {
@@ -282,6 +311,7 @@ async function confirmRemove(): Promise<void> {
 										</DropdownMenuTrigger>
 										<DropdownMenuContent align="end">
 											<DropdownMenuItem
+												v-if="canUpdateProjectRole(user)"
 												data-action="edit-role"
 												@select="openRoleEdit(user)"
 											>
@@ -289,7 +319,7 @@ async function confirmRemove(): Promise<void> {
 												Projektrolle ändern
 											</DropdownMenuItem>
 											<DropdownMenuSeparator
-												v-if="canUpdateProjectRole(user)"
+												v-if="canRemoveProjectUser(user)"
 											/>
 											<DropdownMenuItem
 												v-if="canUpdateProjectRole(user)"
@@ -307,13 +337,19 @@ async function confirmRemove(): Promise<void> {
 						</ContextMenuTrigger>
 
 						<ContextMenuContent>
-							<ContextMenuItem data-action="edit-role" @select="openRoleEdit(user)">
+							<ContextMenuItem
+								v-if="canUpdateProjectRole(user)"
+								data-action="edit-role"
+								@select="openRoleEdit(user)"
+							>
 								<PencilIcon />
 								Projektrolle ändern
 							</ContextMenuItem>
-							<ContextMenuSeparator v-if="canUpdateProjectRole(user)" />
+							<ContextMenuSeparator
+								v-if="canUpdateProjectRole(user) && canRemoveProjectUser(user)"
+							/>
 							<ContextMenuItem
-								v-if="canUpdateProjectRole(user)"
+								v-if="canRemoveProjectUser(user)"
 								data-action="remove"
 								variant="destructive"
 								@select="openDeleteDialog(user)"
@@ -325,7 +361,7 @@ async function confirmRemove(): Promise<void> {
 					</ContextMenu>
 				</TableBody>
 
-				<TableFooter v-if="isOwner" class="bg-card sticky bottom-0 z-10">
+				<TableFooter v-if="isOwnerLike" class="bg-card sticky bottom-0 z-10">
 					<TableRow>
 						<TableCell colspan="3">
 							<form

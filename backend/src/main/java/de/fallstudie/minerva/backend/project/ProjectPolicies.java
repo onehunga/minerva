@@ -36,6 +36,10 @@ public class ProjectPolicies {
 		log.trace("Checking if user {} can manage project users for project {}", identity,
 				projectId);
 
+		if (isAdmin(identity)) {
+			return true;
+		}
+
 		if (!projectMemberRepository.existsByProjectIdAndUserId(projectId, identity.userId())) {
 			return false;
 		}
@@ -52,11 +56,15 @@ public class ProjectPolicies {
 	}
 
 	public boolean canUpdateProjectUserRole(Identity identity, long projectId) {
-		return isAdmin(identity) || canManageProjectUsers(identity, projectId);
+		return canManageProjectUsers(identity, projectId);
 	}
 
 	public boolean canModifyTickets(Identity identity, long projectId) {
 		log.trace("Checking if user {} can modify tickets for project {}", identity, projectId);
+
+		if (isAdmin(identity)) {
+			return true;
+		}
 
 		if (!projectMemberRepository.existsByProjectIdAndUserId(projectId, identity.userId())) {
 			return false;

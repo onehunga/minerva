@@ -188,19 +188,26 @@ class ProjectUserManagementTests {
 	}
 
 	@Test
-	void adminCannotAssignNonOwnerProjectRole() {
+	void adminCanAssignNonOwnerProjectRole() {
 		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.CONTRIBUTOR_ROLE_ID);
+		final var contributorRole = TestProjects.projectRole(TestProjects.CONTRIBUTOR_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.CONTRIBUTOR);
+		final var viewerRole = TestProjects.projectRole(TestProjects.VIEWER_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.VIEWER);
 		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
-		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
-				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
-						WorkspaceRoleName.ADMIN, false)));
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(Optional.of(member));
+		when(projectRoleRepository.findByProjectIdAndName(TestProjects.PROJECT_ID,
+				ProjectRoleName.VIEWER)).thenReturn(Optional.of(viewerRole));
+		when(projectRoleRepository.findById(TestProjects.CONTRIBUTOR_ROLE_ID))
+				.thenReturn(Optional.of(contributorRole));
 
-		assertThrows(ValidationException.class,
-				() -> projectService.updateProjectUserRole(admin, TestProjects.PROJECT_ID,
-						TestProjects.CONTRIBUTOR_USER_ID,
-						new UpdateProjectUserRoleRequest("VIEWER")));
+		projectService.updateProjectUserRole(admin, TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID, new UpdateProjectUserRoleRequest("VIEWER"));
 
-		verify(projectMemberRepository, never()).save(any());
+		assertEquals(TestProjects.VIEWER_ROLE_ID, member.getRoleId());
 	}
 
 	@Test
@@ -300,6 +307,27 @@ class ProjectUserManagementTests {
 						TestProjects.OWNER_USER_ID));
 
 		verify(projectMemberRepository, never()).delete(any());
+	}
+
+	@Test
+	void adminCanRemoveOwnProjectMembership() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.OUTSIDER_USER_ID, TestProjects.OWNER_ROLE_ID);
+		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+		when(projectMemberRepository.findByProjectIdAndUserId(TestProjects.PROJECT_ID,
+				TestProjects.OUTSIDER_USER_ID)).thenReturn(Optional.of(member));
+
+		projectService.removeProjectUser(admin, TestProjects.PROJECT_ID,
+				TestProjects.OUTSIDER_USER_ID);
+
+		verify(projectMemberRepository).delete(member);
+		verify(eventPublisher)
+				.publishEvent(new ProjectEvent.UserRemoved(TestProjects.OUTSIDER_USER_ID,
+						TestProjects.PROJECT_ID, TestProjects.OUTSIDER_USER_ID));
 	}
 
 	@Test

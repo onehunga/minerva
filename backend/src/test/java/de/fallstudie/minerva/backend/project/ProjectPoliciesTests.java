@@ -68,6 +68,19 @@ class ProjectPoliciesTests {
 		assertTrue(projectPolicies.canUpdateProjectUserRole(admin, TestProjects.PROJECT_ID));
 	}
 
+	@Test
+	void adminCanManageProjectAndTicketsWithoutMembership() {
+		final var admin = new Identity(TestProjects.OUTSIDER_USER_ID);
+		when(userService.findActiveById(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(Optional.of(new UserDTO(TestProjects.OUTSIDER_USER_ID, "admin", "hash",
+						WorkspaceRoleName.ADMIN, false)));
+
+		assertTrue(projectPolicies.canManageProjectUsers(admin, TestProjects.PROJECT_ID));
+		assertTrue(projectPolicies.canModifyTickets(admin, TestProjects.PROJECT_ID));
+		assertFalse(projectPolicies.canBeAssigned(TestProjects.PROJECT_ID,
+				TestProjects.OUTSIDER_USER_ID));
+	}
+
 	@ParameterizedTest
 	@CsvSource({"OWNER,true", "CONTRIBUTOR,false", "VIEWER,false"})
 	void canManageProjectUsersAllowsExpectedRoles(ProjectRoleName roleName, boolean expected) {

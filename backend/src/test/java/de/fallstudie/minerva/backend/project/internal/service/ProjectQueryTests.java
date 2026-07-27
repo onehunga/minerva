@@ -59,6 +59,19 @@ class ProjectQueryTests {
 	}
 
 	@Test
+	void getAdminProjectsReturnsProjectsWithoutMembership() {
+		final var project = TestProjects.project(TestProjects.PROJECT_ID);
+		when(projectRepository.findAllWithoutUser(TestProjects.OUTSIDER_USER_ID))
+				.thenReturn(List.of(project));
+
+		final var response = projectService.getAdminProjects(
+				new de.fallstudie.minerva.backend.user.Identity(TestProjects.OUTSIDER_USER_ID));
+
+		assertEquals(List.of(TestProjects.PROJECT_ID),
+				response.projects().stream().map(projectRecord -> projectRecord.id()).toList());
+	}
+
+	@Test
 	void getProjectByIdReturnsProjectDetailsResponseWithRole() {
 		final var project = TestProjects.project(TestProjects.PROJECT_ID);
 		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,

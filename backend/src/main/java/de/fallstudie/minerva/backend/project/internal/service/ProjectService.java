@@ -47,10 +47,15 @@ public class ProjectService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	public ProjectRecordListResponse getAllProjects(Identity identity) {
-		final var projectModels = isAdmin(identity)
-				? projectRepository.findAllByArchivedAtIsNull()
-				: projectRepository.findAllByUserId(identity.userId());
-		final var projects = projectModels.stream()
+		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
+				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
+				.toList();
+
+		return new ProjectRecordListResponse(projects);
+	}
+
+	public ProjectRecordListResponse getAdminProjects(Identity identity) {
+		final var projects = projectRepository.findAllWithoutUser(identity.userId()).stream()
 				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
 				.toList();
 
@@ -196,10 +201,6 @@ public class ProjectService {
 		validateUpdateProjectUserRoleRequest(request);
 		final var projectRoleName = validateProjectRole(request.role());
 
-		if (isAdmin(identity) && projectRoleName != ProjectRoleName.OWNER) {
-			throw new ValidationException("Admins dürfen Projektmitglieder nur zu Ownern ernennen");
-		}
-
 		if (identity.userId() == userId) {
 			throw new ValidationException("Ein Owner kann seine eigene Rolle nicht aktualisieren");
 		}
@@ -225,7 +226,7 @@ public class ProjectService {
 	public void removeProjectUser(Identity identity, long projectId, long userId) {
 		validateProjectWritable(projectId);
 
-		if (identity.userId() == userId) {
+		if (identity.userId() == userId && !isAdmin(identity)) {
 			throw new ValidationException(
 					"Ein Owner kann sich nicht selbst aus dem Projekt entfernen");
 		}

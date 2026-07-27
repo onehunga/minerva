@@ -40,6 +40,22 @@ class ProjectRepositoryTests {
 		assertEquals(List.of(firstUserProject, sharedProject), projects);
 	}
 
+	@Test
+	void findAllWithoutUserReturnsActiveNonMemberAndEmptyProjects() {
+		final var memberProject = createProject("Member project", 1L);
+		final var otherProject = createProject("Other project", 2L);
+		final var emptyProject = createProject("Empty project", 2L);
+		final var archivedProject = createProject("Archived project", 2L);
+		archivedProject.setArchivedAt(Instant.now());
+		projectRepository.saveAndFlush(archivedProject);
+		createMembership(memberProject, 42L);
+		createMembership(otherProject, 84L);
+
+		final var projects = projectRepository.findAllWithoutUser(42L);
+
+		assertEquals(List.of(otherProject, emptyProject), projects);
+	}
+
 	private ProjectModel createProject(String name, long createdBy) {
 		final var project = new ProjectModel();
 		project.setName(name);

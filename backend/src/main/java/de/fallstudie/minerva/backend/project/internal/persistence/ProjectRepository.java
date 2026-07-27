@@ -19,4 +19,17 @@ public interface ProjectRepository extends JpaRepository<ProjectModel, Long> {
 				AND p.archivedAt IS NULL
 			""")
 	List<ProjectModel> findAllByUserId(@Param("userId") long userId);
+
+	@Query("""
+			SELECT p
+			FROM ProjectModel p
+			WHERE p.archivedAt IS NULL
+			AND NOT EXISTS (
+				SELECT pm.id
+				FROM ProjectMemberModel pm
+				WHERE pm.projectId = p.id
+				AND pm.userId = :userId
+			)
+			""")
+	List<ProjectModel> findAllWithoutUser(@Param("userId") long userId);
 }
