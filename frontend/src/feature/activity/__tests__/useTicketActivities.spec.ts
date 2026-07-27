@@ -63,8 +63,6 @@ function activity(id: number): ActivityEvent {
 		type: "TICKET_CREATED",
 		schemaVersion: 1,
 		actorUserId: null,
-		actorUsername: null,
-		actorDeleted: false,
 		occurredAt: "2026-07-26T10:00:00Z",
 		payload: {},
 	};

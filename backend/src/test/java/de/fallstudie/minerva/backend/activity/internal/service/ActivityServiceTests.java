@@ -17,7 +17,6 @@ import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityEvent
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityEventRepository;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScopeRepository;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
-import de.fallstudie.minerva.backend.user.UserService;
 import tools.jackson.databind.ObjectMapper;
 
 class ActivityServiceTests {
@@ -28,8 +27,7 @@ class ActivityServiceTests {
 	void setUp() {
 		activityEventRepository = Mockito.mock(ActivityEventRepository.class);
 		activityService = new ActivityService(activityEventRepository,
-				Mockito.mock(ActivityScopeRepository.class), new ObjectMapper(),
-				Mockito.mock(UserService.class));
+				Mockito.mock(ActivityScopeRepository.class), new ObjectMapper());
 	}
 
 	@Test

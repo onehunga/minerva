@@ -148,11 +148,7 @@ function describe(event: ActivityEvent): string {
 						{{ describe(event) }}
 					</p>
 					<small>
-						{{
-							event.actorDeleted
-								? "Gelöschter Nutzer"
-								: (event.actorUsername ?? `#${event.actorUserId}`)
-						}}
+						{{ userRef(event.actorUserId) }}
 						-
 						{{ formatDate(event.occurredAt) }}
 					</small>

@@ -25,8 +25,6 @@ export type ActivityEvent = {
 	type: ActivityEventType;
 	schemaVersion: number;
 	actorUserId: number | null;
-	actorUsername: string | null;
-	actorDeleted: boolean;
 	occurredAt: string;
 	payload: Record<string, unknown>;
 };
