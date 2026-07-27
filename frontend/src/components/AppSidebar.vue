@@ -16,6 +16,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/vue";
 import {
 	Activity,
+	BookOpen01Icon,
 	Computer,
 	Folder,
 	Home,
@@ -156,6 +157,12 @@ async function submitLogout(): Promise<void> {
 		</SidebarContent>
 		<SidebarFooter>
 			<SidebarMenu>
+				<SidebarMenuItem>
+					<SidebarMenuButton as="a" href="/docs/" tooltip="Dokumentation">
+						<HugeiconsIcon :icon="BookOpen01Icon" />
+						<span>Dokumentation</span>
+					</SidebarMenuButton>
+				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<DropdownMenu>
 						<DropdownMenuTrigger as-child>
