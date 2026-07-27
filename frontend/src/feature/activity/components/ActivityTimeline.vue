@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useId } from "vue";
+import { computed, useId } from "vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatTicketPriority } from "@/feature/ticket";
+import { useUsers } from "@/feature/user";
 import { formatDate } from "@/lib/date";
 import type { ActivityEvent, ActivityEventType } from "../activity.model";
 
@@ -20,6 +21,8 @@ withDefaults(
 );
 
 const headingId = useId();
+const { users } = useUsers();
+const usernames = computed(() => new Map(users.value.map((user) => [user.id, user.username])));
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_CREATED: "Projekt erstellt",
@@ -61,7 +64,7 @@ function num(payload: Payload, key: string): number | null {
 }
 
 function userRef(id: number | null): string {
-	return id == null ? "—" : `#${id}`;
+	return id == null ? "—" : (usernames.value.get(id) ?? `#${id}`);
 }
 
 function describeDetailsUpdated(payload: Payload): string {
