@@ -45,6 +45,7 @@ const ticket: Ticket = {
 	parentTicketId: null,
 	name: "Anmeldung reparieren",
 	description: "Die Anmeldung schlägt fehl.",
+	children: [],
 	createdBy: 1,
 	assignedTo: 1,
 	createdAt: "2026-07-23T10:00:00Z",
