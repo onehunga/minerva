@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
 import {
 	AlertDialog,
@@ -57,8 +57,6 @@ const selectedUser = ref<UserRecord | null>(null);
 const deleteCandidate = ref<UserRecord | null>(null);
 
 const isEditOpen = computed(() => selectedUser.value !== null);
-
-onMounted(loadUsers);
 
 function formatRole(role: UserRole): string {
 	return role === "ADMIN" ? "Administrator" : "Nutzer";

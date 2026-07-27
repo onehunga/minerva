@@ -1,6 +1,7 @@
 import { ref, type Ref } from "vue";
 import type { UserRecord, UserRole } from "../user.model";
 import { useUserRepository } from "./useUserRepository";
+import { useUsers } from "./useUsers";
 
 type ManageUsers = {
 	users: Ref<UserRecord[]>;
@@ -17,26 +18,12 @@ type ManageUsers = {
 export function useManageUsers(): ManageUsers {
 	const userRepository = useUserRepository();
 
-	const users = ref<UserRecord[]>([]);
-	const isLoadingUsers = ref(false);
+	const { users, isLoadingUsers, loadUsers } = useUsers();
+
 	const errorMessage = ref("");
 	const deletingUserId = ref<number | null>(null);
 	const isCreatingUser = ref(false);
 	const successMessage = ref("");
-
-	async function loadUsers(): Promise<void> {
-		isLoadingUsers.value = true;
-		errorMessage.value = "";
-
-		try {
-			const response = await userRepository.getAllUsers();
-			users.value = response.users;
-		} catch {
-			errorMessage.value = "Benutzer konnten nicht geladen werden.";
-		} finally {
-			isLoadingUsers.value = false;
-		}
-	}
 
 	async function createUser(
 		username: string,

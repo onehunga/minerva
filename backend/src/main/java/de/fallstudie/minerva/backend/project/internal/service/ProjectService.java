@@ -126,12 +126,14 @@ public class ProjectService {
 		final var projectRoles = projectRoleRepository.findAllByProjectId(projectId).stream()
 				.collect(Collectors.toMap(ProjectRoleModel::getId, ProjectRoleModel::getName));
 
-		final var users = userService.findAll().stream().map(user -> {
-			final var member = projectMembers.get(user.id());
-			final var projectRole = member == null ? null : projectRoles.get(member.getRoleId());
+		final var users = userService.findAll().parallelStream()
+				.filter(user -> projectMembers.containsKey(user.id())).map(user -> {
+					final var member = projectMembers.get(user.id());
+					assert member != null;
+					final var projectRole = projectRoles.get(member.getRoleId());
 
-			return new ProjectUserResponse(user.id(), user.username(), projectRole, member != null);
-		}).toList();
+					return new ProjectUserResponse(user.id(), user.username(), projectRole);
+				}).toList();
 
 		return new ProjectUserListResponse(users);
 	}

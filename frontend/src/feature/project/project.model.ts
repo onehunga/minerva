@@ -31,7 +31,6 @@ export type ProjectUser = {
 	id: number;
 	username: string;
 	projectRole: ProjectRole | null;
-	member: boolean;
 };
 
 export type ProjectUserListResponse = {

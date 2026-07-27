@@ -51,7 +51,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { useUserStore } from "@/feature/user";
+import { useUsers, useUserStore } from "@/feature/user";
 import type { ProjectRole, ProjectUser } from "../project.model";
 import { useProject } from "../composables/useProject";
 import { useProjectUsers } from "../composables/useProjectUsers";
@@ -72,6 +72,7 @@ const projectRoleLabels: Record<ProjectRole, string> = {
 };
 
 const { details: projectDetails } = useProject();
+const { users: allUsers, isLoadingUsers: isLoadingAllUsers } = useUsers();
 const userStore = useUserStore();
 const {
 	addProjectUser,
@@ -100,8 +101,11 @@ const deleteCandidate = ref<ProjectUser | null>(null);
 
 const isOwner = computed(() => projectDetails.value?.projectRole === "OWNER");
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
-const memberUsers = computed(() => users.value.filter((user) => user.member));
-const availableUsers = computed(() => users.value.filter((user) => !user.member));
+const availableUsers = computed(() =>
+	allUsers.value.filter(
+		(user) => users.value.some((projectUser) => projectUser.id === user.id) === false,
+	),
+);
 const isRoleEditOpen = computed(() => roleCandidate.value !== null);
 const availableProjectRoles = computed(() =>
 	isOwner.value ? projectRoles : projectRoles.filter((role) => role === "OWNER"),
@@ -134,14 +138,13 @@ function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
 		!props.disabled &&
 		isOwner.value &&
-		user.member &&
 		user.id !== userStore.userDetails?.id &&
 		user.projectRole !== null
 	);
 }
 
 function canAssignOwner(user: ProjectUser): boolean {
-	return !props.disabled && isAdmin.value && user.member && user.projectRole !== "OWNER";
+	return !props.disabled && isAdmin.value && user.projectRole !== "OWNER";
 }
 
 function canManageUser(user: ProjectUser): boolean {
@@ -256,11 +259,11 @@ async function confirmRemove(): Promise<void> {
 				</TableHeader>
 
 				<TableBody>
-					<TableEmpty v-if="memberUsers.length === 0" :colspan="3">
+					<TableEmpty v-if="users.length === 0" :colspan="3">
 						Es sind keine Projektmitglieder vorhanden.
 					</TableEmpty>
 
-					<ContextMenu v-for="user in memberUsers" :key="user.id">
+					<ContextMenu v-for="user in users" :key="user.id">
 						<ContextMenuTrigger as-child :disabled="!canManageUser(user)">
 							<TableRow>
 								<TableCell class="font-medium">{{ user.username }}</TableCell>
@@ -426,7 +429,7 @@ async function confirmRemove(): Promise<void> {
 							<SelectTrigger id="edit-project-role" class="w-full">
 								<SelectValue />
 							</SelectTrigger>
-							<SelectContent>
+							<SelectContent v-if="!isLoadingAllUsers">
 								<SelectItem
 									v-for="role in availableProjectRoles"
 									:key="role"
@@ -434,6 +437,9 @@ async function confirmRemove(): Promise<void> {
 								>
 									{{ formatProjectRole(role) }}
 								</SelectItem>
+							</SelectContent>
+							<SelectContent v-else>
+								<SelectItem :value="null" disabled> Lädt... </SelectItem>
 							</SelectContent>
 						</Select>
 
