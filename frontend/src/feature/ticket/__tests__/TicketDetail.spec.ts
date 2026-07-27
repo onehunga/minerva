@@ -100,6 +100,30 @@ describe("TicketDetail", () => {
 		);
 	});
 
+	it("navigates to the parent ticket", async () => {
+		const wrapper = shallowMount(TicketDetail, {
+			props: {
+				ticket: { ...ticket, parentTicketId: 3 },
+				ticketType,
+				parentTicketName: "Übergeordnetes Ticket",
+				childTickets: [],
+			},
+			global: {
+				stubs: {
+					Button: { template: "<button><slot /></button>" },
+				},
+			},
+		});
+
+		expect(wrapper.text()).toContain("Elternticket: Übergeordnetes Ticket");
+
+		await wrapper
+			.get('[aria-label="Elternticket Übergeordnetes Ticket öffnen"]')
+			.trigger("click");
+
+		expect(wrapper.emitted("selectTicket")).toEqual([[3]]);
+	});
+
 	it("archives and deletes only after confirmation", async () => {
 		const wrapper = mount(TicketDetail, {
 			attachTo: document.body,
