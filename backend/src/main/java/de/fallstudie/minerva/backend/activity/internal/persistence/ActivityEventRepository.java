@@ -1,12 +1,11 @@
 package de.fallstudie.minerva.backend.activity.internal.persistence;
 
-import java.util.List;
-
+import de.fallstudie.minerva.backend.activity.ActivityScopeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import de.fallstudie.minerva.backend.activity.ActivityScopeType;
+import java.util.List;
 
 public interface ActivityEventRepository extends JpaRepository<ActivityEventModel, Long> {
 	@Query("""
@@ -58,29 +57,20 @@ public interface ActivityEventRepository extends JpaRepository<ActivityEventMode
 				from ActivityScopeModel projectScope
 				join ProjectMemberModel member on member.projectId = projectScope.scopeId
 				where projectScope.eventId = event.id
-					and projectScope.scopeType = :scopeType
+					and projectScope.scopeType = PROJECT
 					and member.userId = :userId
 			)
+			or event.actorUserId = :userId
 			order by event.occurredAt desc, event.id desc
 			""")
-	List<ActivityEventModel> findAllForUserProjects(@Param("scopeType") ActivityScopeType scopeType,
-			@Param("userId") long userId);
+	List<ActivityEventModel> findAllForUser(@Param("userId") long userId);
 
 	/// Lädt alle Aktivitäten, welche ein Nutzer selbst durchgeführt hat.
 	@Query("""
 			select event
 			from ActivityEventModel event
 			where event.actorUserId = :userId
-				and exists (
-					select projectScope.id
-					from ActivityScopeModel projectScope
-					join ProjectMemberModel member on member.projectId = projectScope.scopeId
-					where projectScope.eventId = event.id
-						and projectScope.scopeType = :scopeType
-						and member.userId = :userId
-				)
 			order by event.occurredAt desc, event.id desc
 			""")
-	List<ActivityEventModel> findAllForUserActor(@Param("scopeType") ActivityScopeType scopeType,
-			@Param("userId") long userId);
+	List<ActivityEventModel> findAllForUserActor(@Param("userId") long userId);
 }

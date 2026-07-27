@@ -68,16 +68,14 @@ public class ActivityService {
 	}
 
 	public ActivityEventListResponse getUserActivities(long userId) {
-		final var events = activityEventRepository
-				.findAllForUserProjects(ActivityScopeType.PROJECT, userId).stream()
+		final var events = activityEventRepository.findAllForUser(userId).stream()
 				.map(this::toResponse).toList();
 
 		return new ActivityEventListResponse(events);
 	}
 
 	public ActivityEventListResponse getUserActorActivities(long userId) {
-		final var events = activityEventRepository
-				.findAllForUserActor(ActivityScopeType.PROJECT, userId).stream()
+		final var events = activityEventRepository.findAllForUserActor(userId).stream()
 				.map(this::toResponse).toList();
 
 		return new ActivityEventListResponse(events);

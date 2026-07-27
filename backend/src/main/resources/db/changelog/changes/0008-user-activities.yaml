@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0008-user-activities
+      author: julian
+      changes:
+        - sql:
+            sql: ALTER TABLE activity_scopes DROP CONSTRAINT chk_activity_scopes_scope_type;
+        - sql:
+            sql: ALTER TABLE activity_scopes ADD CONSTRAINT chk_activity_scopes_scope_type CHECK (scope_type IN ('PROJECT', 'TICKET', 'USER'));

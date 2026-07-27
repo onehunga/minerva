@@ -35,27 +35,29 @@ class ActivityServiceTests {
 	@Test
 	void getUserActivitiesReturnsEventsFromAccessibleProjects() {
 		when(activityEventRepository.findAllForUserProjects(ActivityScopeType.PROJECT,
-				TestProjects.OWNER_USER_ID)).thenReturn(List.of(activityEvent()));
+				ActivityScopeType.USER, TestProjects.OWNER_USER_ID))
+				.thenReturn(List.of(activityEvent()));
 
 		final var response = activityService.getUserActivities(TestProjects.OWNER_USER_ID);
 
 		assertEquals(1, response.events().size());
 		assertEquals(42L, response.events().getFirst().id());
 		verify(activityEventRepository).findAllForUserProjects(ActivityScopeType.PROJECT,
-				TestProjects.OWNER_USER_ID);
+				ActivityScopeType.USER, TestProjects.OWNER_USER_ID);
 	}
 
 	@Test
 	void getUserActorActivitiesReturnsOnlyEventsByTheCurrentUser() {
 		when(activityEventRepository.findAllForUserActor(ActivityScopeType.PROJECT,
-				TestProjects.OWNER_USER_ID)).thenReturn(List.of(activityEvent()));
+				ActivityScopeType.USER, TestProjects.OWNER_USER_ID))
+				.thenReturn(List.of(activityEvent()));
 
 		final var response = activityService.getUserActorActivities(TestProjects.OWNER_USER_ID);
 
 		assertEquals(1, response.events().size());
 		assertEquals(42L, response.events().getFirst().id());
 		verify(activityEventRepository).findAllForUserActor(ActivityScopeType.PROJECT,
-				TestProjects.OWNER_USER_ID);
+				ActivityScopeType.USER, TestProjects.OWNER_USER_ID);
 	}
 
 	private ActivityEventModel activityEvent() {

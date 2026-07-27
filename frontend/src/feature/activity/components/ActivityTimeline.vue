@@ -28,6 +28,11 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_USER_ADDED: "Nutzer hinzugefügt",
 	PROJECT_USER_ROLE_CHANGED: "Nutzerrolle geändert",
 	PROJECT_USER_REMOVED: "Nutzer entfernt",
+	USER_CREATED: "Nutzer erstellt",
+	USER_USERNAME_CHANGED: "Benutzername geändert",
+	USER_PASSWORD_CHANGED: "Passwort geändert",
+	USER_WORKSPACE_ROLE_CHANGED: "Nutzerrolle geändert",
+	USER_DELETED: "Nutzer gelöscht",
 	TICKET_CREATED: "Ticket erstellt",
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
 	TICKET_STATUS_CHANGED: "Status geändert",
@@ -90,6 +95,16 @@ function describe(event: ActivityEvent): string {
 			return `${userRef(num(payload, "userId"))}: ${str(payload, "oldRole") ?? "?"} → ${str(payload, "newRole") ?? "?"}`;
 		case "PROJECT_USER_REMOVED":
 			return userRef(num(payload, "userId"));
+		case "USER_CREATED":
+			return `„${str(payload, "username") ?? "?"}" (Rolle: ${str(payload, "role") ?? "?"})`;
+		case "USER_USERNAME_CHANGED":
+			return `„${str(payload, "previousUsername") ?? "?"}" → „${str(payload, "newUsername") ?? "?"}"`;
+		case "USER_PASSWORD_CHANGED":
+			return userRef(num(payload, "userId"));
+		case "USER_WORKSPACE_ROLE_CHANGED":
+			return `${userRef(num(payload, "userId"))}: ${str(payload, "oldRole") ?? "?"} → ${str(payload, "newRole") ?? "?"}`;
+		case "USER_DELETED":
+			return `„${str(payload, "username") ?? "?"}"`;
 		case "TICKET_COMMENT_CREATED":
 			return str(payload, "content") ?? "";
 		case "TICKET_STATUS_CHANGED": {

@@ -27,43 +27,45 @@ public class ManageUserController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void create(@RequestBody CreateUserRequest createUserRequest) {
+	public void create(@AuthenticationPrincipal Identity identity,
+			@RequestBody CreateUserRequest createUserRequest) {
 		log.trace("Creating user with username {} and workspace role {}",
 				createUserRequest.username(), createUserRequest.role());
 
-		userService.createUser(createUserRequest.username(), createUserRequest.password(),
-				createUserRequest.role());
+		userService.createUser(identity.userId(), createUserRequest.username(),
+				createUserRequest.password(), createUserRequest.role());
 	}
 
 	@PatchMapping("/{userId}/role")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void updateRole(@PathVariable long userId,
+	public void updateRole(@AuthenticationPrincipal Identity identity, @PathVariable long userId,
 			@RequestBody UpdateUserRoleRequest updateUserRoleRequest) {
 		log.trace("Updating user with id {} to workspace role {}", userId,
 				updateUserRoleRequest.role());
 
-		userService.updateUserRole(userId, updateUserRoleRequest.role());
+		userService.updateUserRole(identity.userId(), userId, updateUserRoleRequest.role());
 	}
 
 	@PatchMapping("/{userId}/username")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@userPolicies.isAdminOrSelf(principal, #userId)")
-	public void updateUsername(@PathVariable long userId,
-			@RequestBody UpdateUsernameRequest updateUsernameRequest) {
+	public void updateUsername(@AuthenticationPrincipal Identity identity,
+			@PathVariable long userId, @RequestBody UpdateUsernameRequest updateUsernameRequest) {
 		log.trace("Updating username for user with id {}", userId);
 
-		userService.updateUsername(userId, updateUsernameRequest.username());
+		userService.updateUsername(identity.userId(), userId, updateUsernameRequest.username());
 	}
 
 	@PatchMapping("/{userId}/password")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@userPolicies.isAdminOrSelf(principal, #userId)")
-	public void updatePassword(@PathVariable long userId,
+	public void updatePassword(@AuthenticationPrincipal Identity identity,
+			@PathVariable long userId,
 			@RequestBody UpdateUserPasswordRequest updateUserPasswordRequest) {
 		log.trace("Updating password for user with id {}", userId);
 
-		userService.updatePassword(userId, updateUserPasswordRequest.password());
+		userService.updatePassword(identity.userId(), userId, updateUserPasswordRequest.password());
 	}
 
 	@DeleteMapping("/{userId}")
