@@ -58,6 +58,7 @@ describe("UserEditForm", () => {
 
 		await wrapper.get("#edit-username-2").setValue("jane-new");
 		await wrapper.get("#edit-password-2").setValue("new-password");
+		await wrapper.get("#edit-password-confirmation-2").setValue("new-password");
 		wrapper.findComponent(Select).vm.$emit("update:modelValue", "ADMIN");
 		await wrapper.get("form").trigger("submit");
 		await flushPromises();
@@ -90,6 +91,20 @@ describe("UserEditForm", () => {
 		expect(wrapper.findComponent(Select).props("disabled")).toBe(true);
 		expect(wrapper.get("#edit-username-2").attributes("disabled")).toBeUndefined();
 		expect(wrapper.get("#edit-password-2").attributes("disabled")).toBeUndefined();
+		expect(wrapper.get("#edit-password-confirmation-2").attributes("disabled")).toBeUndefined();
+	});
+
+	it("rejects different passwords without updating the user", async () => {
+		const userRepository = new RecordingUserRepository();
+		const wrapper = mountForm(userRepository, { ...user });
+
+		await wrapper.get("#edit-password-2").setValue("new-password");
+		await wrapper.get("#edit-password-confirmation-2").setValue("other-password");
+		await wrapper.get("form").trigger("submit");
+
+		expect(userRepository.updatedPasswords).toEqual([]);
+		expect(wrapper.get("[role='alert']").text()).toBe("Die Passwörter stimmen nicht überein.");
+		expect(wrapper.emitted("saved")).toBeUndefined();
 	});
 });
 

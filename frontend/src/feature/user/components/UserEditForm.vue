@@ -24,9 +24,8 @@ const emit = defineEmits<{
 	saved: [];
 }>();
 
-const { errorMessage, isUpdatingUser, password, role, updateUser, username } = useEditUser(
-	props.user,
-);
+const { errorMessage, isUpdatingUser, password, passwordConfirmation, role, updateUser, username } =
+	useEditUser(props.user);
 
 async function submitUser(): Promise<void> {
 	const wasUpdated = await updateUser();
@@ -67,6 +66,22 @@ function selectRole(value: unknown): void {
 					name="password"
 					type="password"
 					minlength="8"
+					autocomplete="new-password"
+					:disabled="isUpdatingUser"
+				/>
+			</div>
+
+			<div class="flex flex-col gap-2">
+				<Label :for="`edit-password-confirmation-${user.id}`">
+					Neues Passwort bestätigen
+				</Label>
+				<Input
+					:id="`edit-password-confirmation-${user.id}`"
+					v-model="passwordConfirmation"
+					name="password-confirmation"
+					type="password"
+					:minlength="password.length > 0 ? 8 : undefined"
+					:required="password.length > 0"
 					autocomplete="new-password"
 					:disabled="isUpdatingUser"
 				/>

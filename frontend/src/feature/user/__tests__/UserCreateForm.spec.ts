@@ -93,6 +93,7 @@ describe("UserCreateForm", () => {
 
 		await wrapper.get("#username").setValue("new-user");
 		await wrapper.get("#password").setValue("secret-password");
+		await wrapper.get("#password-confirmation").setValue("secret-password");
 		wrapper.findComponent(Select).vm.$emit("update:modelValue", "ADMIN");
 		await wrapper.get("form").trigger("submit");
 		await flushPromises();
@@ -118,6 +119,7 @@ describe("UserCreateForm", () => {
 
 		await wrapper.get("#username").setValue("new-user");
 		await wrapper.get("#password").setValue("secret-password");
+		await wrapper.get("#password-confirmation").setValue("secret-password");
 		await wrapper.get("form").trigger("submit");
 		await flushPromises();
 
@@ -125,5 +127,20 @@ describe("UserCreateForm", () => {
 
 		expect(alert.text()).toBe("Benutzer konnte nicht erstellt werden.");
 		expect(wrapper.emitted("created")).toBeUndefined();
+	});
+
+	it("rejects different passwords", async () => {
+		const userRepository = new RecordingUserRepository();
+		const wrapper = mount(UserCreateForm, {
+			global: { provide: { [UserRepositoryKey]: userRepository } },
+		});
+
+		await wrapper.get("#username").setValue("new-user");
+		await wrapper.get("#password").setValue("secret-password");
+		await wrapper.get("#password-confirmation").setValue("different-password");
+		await wrapper.get("form").trigger("submit");
+
+		expect(userRepository.calls).toEqual([]);
+		expect(wrapper.get("[role='alert']").text()).toBe("Die Passwörter stimmen nicht überein.");
 	});
 });

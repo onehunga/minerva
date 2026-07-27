@@ -13,6 +13,7 @@ export function useEditUser(user: UserRecord) {
 
 	const username = ref(user.username);
 	const password = ref("");
+	const passwordConfirmation = ref("");
 	const role = ref<UserRole>(user.role);
 	const errorMessage = ref<string[]>([]);
 	const isUpdatingUser = ref(false);
@@ -27,6 +28,11 @@ export function useEditUser(user: UserRecord) {
 
 		if (password.value.length > 0 && password.value.length < MIN_PASSWORD_LENGTH) {
 			errorMessage.value = ["Passwort muss mindestens 8 Zeichen lang sein."];
+			return false;
+		}
+
+		if (password.value !== passwordConfirmation.value) {
+			errorMessage.value = ["Die Passwörter stimmen nicht überein."];
 			return false;
 		}
 
@@ -80,6 +86,7 @@ export function useEditUser(user: UserRecord) {
 			}
 
 			password.value = "";
+			passwordConfirmation.value = "";
 		} catch {
 			errorMessage.value.push(
 				`Passwort des Benutzers "${user.username}" konnte nicht aktualisiert werden.`,
@@ -94,6 +101,7 @@ export function useEditUser(user: UserRecord) {
 	return {
 		username,
 		password,
+		passwordConfirmation,
 		role,
 		errorMessage,
 		isUpdatingUser,

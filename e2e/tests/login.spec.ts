@@ -32,7 +32,8 @@ test("admin can create a user", async ({ page }) => {
 
 		const drawer = page.getByRole("dialog", { name: "Nutzer hinzufügen" });
 		await drawer.getByLabel("Benutzername").fill("test-user");
-		await drawer.getByLabel("Passwort").fill("test-password");
+		await drawer.getByLabel("Passwort", { exact: true }).fill("test-password");
+		await drawer.getByLabel("Passwort bestätigen").fill("test-password");
 		await drawer.getByLabel("Rolle").click();
 		await page.getByRole("option", { name: "Administrator" }).click();
 		await drawer.getByRole("button", { name: "Benutzer erstellen" }).click();
