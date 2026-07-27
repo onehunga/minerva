@@ -1,23 +1,21 @@
 package de.fallstudie.minerva.backend.activity.internal.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.time.Instant;
-import java.util.List;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import de.fallstudie.minerva.backend.activity.ActivityEventType;
-import de.fallstudie.minerva.backend.activity.ActivityScopeType;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityEventModel;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityEventRepository;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScopeRepository;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import tools.jackson.databind.ObjectMapper;
+
+import java.time.Instant;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class ActivityServiceTests {
 	private ActivityEventRepository activityEventRepository;
@@ -32,30 +30,26 @@ class ActivityServiceTests {
 
 	@Test
 	void getUserActivitiesReturnsEventsFromAccessibleProjects() {
-		when(activityEventRepository.findAllForUserProjects(ActivityScopeType.PROJECT,
-				ActivityScopeType.USER, TestProjects.OWNER_USER_ID))
+		when(activityEventRepository.findAllForUser(TestProjects.OWNER_USER_ID))
 				.thenReturn(List.of(activityEvent()));
 
 		final var response = activityService.getUserActivities(TestProjects.OWNER_USER_ID);
 
 		assertEquals(1, response.events().size());
 		assertEquals(42L, response.events().getFirst().id());
-		verify(activityEventRepository).findAllForUserProjects(ActivityScopeType.PROJECT,
-				ActivityScopeType.USER, TestProjects.OWNER_USER_ID);
+		verify(activityEventRepository).findAllForUser(TestProjects.OWNER_USER_ID);
 	}
 
 	@Test
 	void getUserActorActivitiesReturnsOnlyEventsByTheCurrentUser() {
-		when(activityEventRepository.findAllForUserActor(ActivityScopeType.PROJECT,
-				ActivityScopeType.USER, TestProjects.OWNER_USER_ID))
+		when(activityEventRepository.findAllForUserActor(TestProjects.OWNER_USER_ID))
 				.thenReturn(List.of(activityEvent()));
 
 		final var response = activityService.getUserActorActivities(TestProjects.OWNER_USER_ID);
 
 		assertEquals(1, response.events().size());
 		assertEquals(42L, response.events().getFirst().id());
-		verify(activityEventRepository).findAllForUserActor(ActivityScopeType.PROJECT,
-				ActivityScopeType.USER, TestProjects.OWNER_USER_ID);
+		verify(activityEventRepository).findAllForUserActor(TestProjects.OWNER_USER_ID);
 	}
 
 	private ActivityEventModel activityEvent() {
