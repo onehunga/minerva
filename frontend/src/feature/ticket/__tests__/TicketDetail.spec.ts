@@ -45,6 +45,7 @@ const ticket: Ticket = {
 	parentTicketId: null,
 	name: "Anmeldung reparieren",
 	description: "Die Anmeldung schlägt fehl.",
+	children: [],
 	createdBy: 1,
 	assignedTo: 1,
 	createdAt: "2026-07-23T10:00:00Z",
@@ -97,6 +98,30 @@ describe("TicketDetail", () => {
 		expect(wrapper.text().indexOf("Kindtickets")).toBeLessThan(
 			wrapper.text().indexOf("Kommentare"),
 		);
+	});
+
+	it("navigates to the parent ticket", async () => {
+		const wrapper = shallowMount(TicketDetail, {
+			props: {
+				ticket: { ...ticket, parentTicketId: 3 },
+				ticketType,
+				parentTicketName: "Übergeordnetes Ticket",
+				childTickets: [],
+			},
+			global: {
+				stubs: {
+					Button: { template: "<button><slot /></button>" },
+				},
+			},
+		});
+
+		expect(wrapper.text()).toContain("Elternticket: Übergeordnetes Ticket");
+
+		await wrapper
+			.get('[aria-label="Elternticket Übergeordnetes Ticket öffnen"]')
+			.trigger("click");
+
+		expect(wrapper.emitted("selectTicket")).toEqual([[3]]);
 	});
 
 	it("archives and deletes only after confirmation", async () => {

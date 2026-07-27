@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Objects;
 
 import de.fallstudie.minerva.backend.project.ProjectPolicies;
+import de.fallstudie.minerva.backend.ticket.internal.web.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -23,17 +24,6 @@ import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowReposit
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
-import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketRequest;
-import de.fallstudie.minerva.backend.ticket.internal.web.TicketListResponse;
-import de.fallstudie.minerva.backend.ticket.internal.web.TicketResponse;
-import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeListResponse;
-import de.fallstudie.minerva.backend.ticket.internal.web.TicketTypeResponse;
-import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketAssigneeRequest;
-import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketDetailsRequest;
-import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketPriorityRequest;
-import de.fallstudie.minerva.backend.ticket.internal.web.UpdateTicketStatusRequest;
-import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowStateResponse;
-import de.fallstudie.minerva.backend.ticket.internal.web.WorkflowTransitionResponse;
 import de.fallstudie.minerva.backend.user.Identity;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +46,8 @@ public class TicketService {
 		final var ticketModels = archived
 				? ticketRepository.findAllByProjectIdAndArchivedAtIsNotNullOrderByNameAsc(projectId)
 				: ticketRepository.findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(projectId);
-		final var tickets = ticketModels.stream().map(this::toTicketResponse).toList();
+		final var tickets = ticketModels.parallelStream()
+				.map(t -> this.toTicketResponse(ticketModels, t)).toList();
 
 		return new TicketListResponse(tickets);
 	}
@@ -165,7 +156,8 @@ public class TicketService {
 					savedTicket.getParentTicketId(), savedTicket.getId(), savedTicket.getName()));
 		}
 
-		return toTicketResponse(savedTicket);
+		// leere liste, da es keine Kinder geben kann
+		return toTicketResponse(List.of(), savedTicket);
 	}
 
 	@Transactional
@@ -282,10 +274,15 @@ public class TicketService {
 		}
 	}
 
-	private TicketResponse toTicketResponse(TicketModel ticket) {
+	private TicketResponse toTicketResponse(List<TicketModel> list, TicketModel ticket) {
+		final var children = list.stream().filter(t -> t.getParentTicketId() != null)
+				.filter(t -> t.getParentTicketId() == ticket.getId())
+				.map(t -> new TicketChildResponse(t.getId(), t.getName(), t.getDescription()))
+				.toList();
+
 		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
 				ticket.getStatusId(), ticket.getPriority(), ticket.getParentTicketId(),
-				ticket.getName(), ticket.getDescription(), ticket.getCreatedBy(),
+				ticket.getName(), ticket.getDescription(), children, ticket.getCreatedBy(),
 				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt(),
 				ticket.getArchivedAt() != null);
 	}
