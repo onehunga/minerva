@@ -28,14 +28,6 @@ public class TicketController {
 	private final TicketService ticketService;
 	private final TicketCommentService ticketCommentService;
 
-	@GetMapping("/ticket-types")
-	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
-	public TicketTypeListResponse getTicketTypes(@PathVariable long projectId) {
-		log.info("Requesting ticket types for project with ID {}", projectId);
-
-		return ticketService.getTicketTypes(projectId);
-	}
-
 	@GetMapping("/tickets")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
 	public TicketListResponse getTickets(@PathVariable long projectId,
@@ -43,6 +35,14 @@ public class TicketController {
 		log.info("Requesting tickets for project with ID {} (archived: {})", projectId, archived);
 
 		return ticketService.getTickets(projectId, archived);
+	}
+
+	@GetMapping("/ticket-types")
+	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
+	public TicketTypeListResponse getTicketTypes(@PathVariable long projectId) {
+		log.info("Requesting ticket types for project with ID {}", projectId);
+
+		return ticketService.getTicketTypes(projectId);
 	}
 
 	@PostMapping("/tickets")

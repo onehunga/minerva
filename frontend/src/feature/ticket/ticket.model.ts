@@ -78,12 +78,6 @@ export type UpdateTicketAssigneeRequest = {
 	assignedTo: number | null;
 };
 
-export type TicketChild = {
-	id: number;
-	name: string;
-	description: string;
-};
-
 export type Ticket = {
 	id: number;
 	projectId: number;
@@ -93,7 +87,6 @@ export type Ticket = {
 	parentTicketId: number | null;
 	name: string;
 	description: string;
-	children: TicketChild[];
 	createdBy: number;
 	assignedTo: number | null;
 	createdAt: string | null;

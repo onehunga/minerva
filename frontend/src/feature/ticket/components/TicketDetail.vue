@@ -40,7 +40,6 @@ import TicketComments from "./TicketComments.vue";
 const props = defineProps<{
 	ticket: Ticket;
 	ticketType?: TicketType;
-	parentTicketName?: string;
 	childTickets: Ticket[];
 }>();
 
@@ -306,21 +305,6 @@ function formatAssignee(userId: number | null): string {
 		<div class="ticket-detail__layout">
 			<div class="ticket-detail__main">
 				<header class="ticket-detail__header">
-					<Button
-						v-if="ticket.parentTicketId != null"
-						type="button"
-						variant="ghost"
-						size="sm"
-						class="-ml-2 w-fit text-muted-foreground"
-						:aria-label="
-							'Elternticket ' +
-							(parentTicketName ?? '#' + ticket.parentTicketId) +
-							' öffnen'
-						"
-						@click="emit('selectTicket', ticket.parentTicketId)"
-					>
-						← Elternticket: {{ parentTicketName ?? `#${ticket.parentTicketId}` }}
-					</Button>
 					<p class="ticket-detail__eyebrow">Ticket #{{ ticket.id }}</p>
 					<div v-if="editingField === 'name'" class="ticket-detail__inline-edit">
 						<Input

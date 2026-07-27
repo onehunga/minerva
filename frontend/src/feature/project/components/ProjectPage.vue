@@ -61,9 +61,6 @@ const selectedTicket = computed(() =>
 const selectedTicketType = computed(() =>
 	ticketTypes.value.find((ticketType) => ticketType.id === selectedTicket.value?.ticketTypeId),
 );
-const selectedTicketParentName = computed(
-	() => tickets.value.find((ticket) => ticket.id === selectedTicket.value?.parentTicketId)?.name,
-);
 const selectedTicketChildren = computed(() =>
 	tickets.value.filter((ticket) => ticket.parentTicketId === selectedTicket.value?.id),
 );
@@ -276,7 +273,6 @@ async function submitArchiveProject(): Promise<void> {
 								v-if="selectedTicket"
 								:ticket="selectedTicket"
 								:ticket-type="selectedTicketType"
-								:parent-ticket-name="selectedTicketParentName"
 								:child-tickets="selectedTicketChildren"
 								@select-ticket="selectedTicketId = $event"
 							/>

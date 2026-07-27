@@ -80,18 +80,6 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 	async function createTicket(req: CreateTicketRequest): Promise<Ticket> {
 		const newTicket = await ticketRepository.createTicket(Number(store.activeProject), req);
 		store.addTicket(newTicket);
-
-		if (req.parentTicketId != null) {
-			const parentTicket = store.tickets.find((t) => t.id === req.parentTicketId);
-			if (parentTicket) {
-				parentTicket.children.push({
-					id: newTicket.id,
-					name: newTicket.name,
-					description: newTicket.description,
-				});
-			}
-		}
-
 		return newTicket;
 	}
 
