@@ -79,10 +79,9 @@ const editingField = ref<"name" | "description" | null>(null);
 const draftName = ref(props.ticket.name);
 const draftDescription = ref(props.ticket.description);
 
-const projectMemberUsers = computed(() => projectUsers.value.filter((user) => user.member));
 const possibleAssignees = computed<Array<number | null>>(() => [
 	null,
-	...projectMemberUsers.value.map((user) => user.id),
+	...projectUsers.value.map((user) => user.id),
 ]);
 const hasTicketWritePermission = computed(
 	() => projectDetails.value != null && projectDetails.value.projectRole !== "VIEWER",
@@ -285,7 +284,7 @@ async function confirmTicketAction(): Promise<void> {
 }
 
 function formatProjectUser(userId: number): string {
-	return projectMemberUsers.value.find((user) => user.id === userId)?.username ?? `#${userId}`;
+	return projectUsers.value.find((user) => user.id === userId)?.username ?? `#${userId}`;
 }
 
 function formatAssignee(userId: number | null): string {

@@ -9,6 +9,7 @@ export function useUsers() {
 
 	const users = ref<UserRecord[]>([]);
 	const isLoadingUsers = ref(false);
+	const errorMessage = ref("");
 
 	onMounted(async () => {
 		await loadUsers();
@@ -16,16 +17,17 @@ export function useUsers() {
 
 	async function loadUsers(): Promise<void> {
 		isLoadingUsers.value = true;
+		errorMessage.value = "";
 
 		try {
 			const response = await userRepository.getAllUsers();
 			users.value = response.users;
 		} catch {
-			console.error("Benutzer konnten nicht geladen werden.");
+			errorMessage.value = "Benutzer konnten nicht geladen werden.";
 		} finally {
 			isLoadingUsers.value = false;
 		}
 	}
 
-	return { users, isLoadingUsers, loadUsers };
+	return { users, isLoadingUsers, errorMessage, loadUsers };
 }

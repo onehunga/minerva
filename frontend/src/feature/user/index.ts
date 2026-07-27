@@ -12,4 +12,5 @@ export * from "./composables/useUser";
 export * from "./composables/useUsers";
 export * from "./composables/useEditUser";
 export * from "./composables/useManageUsers";
+export * from "./composables/useProfile";
 export * from "./composables/useUserRepository";

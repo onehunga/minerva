@@ -199,6 +199,11 @@ async function submitLogout(): Promise<void> {
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent side="top" align="end">
+							<DropdownMenuItem @select="router.push({ name: 'profile' })">
+								<HugeiconsIcon :icon="User" class="mr-2" />
+								Profil
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
 							<DropdownMenuItem @select="submitLogout">
 								<HugeiconsIcon :icon="Logout" class="mr-2" />
 								Abmelden

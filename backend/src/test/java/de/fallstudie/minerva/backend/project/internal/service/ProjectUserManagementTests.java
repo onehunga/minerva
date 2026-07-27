@@ -53,7 +53,7 @@ class ProjectUserManagementTests {
 	}
 
 	@Test
-	void getProjectUsersMarksMembersAndTheirProjectRoles() {
+	void getProjectUsersReturnsMembersAndTheirProjectRoles() {
 		final var ownerMember = TestProjects.projectMember(TestProjects.PROJECT_ID,
 				TestProjects.OWNER_USER_ID, TestProjects.OWNER_ROLE_ID);
 		when(projectRepository.existsById(TestProjects.PROJECT_ID)).thenReturn(true);
@@ -69,15 +69,10 @@ class ProjectUserManagementTests {
 		final var response = projectService.getProjectUsers(TestProjects.OWNER,
 				TestProjects.PROJECT_ID);
 
-		assertEquals(2, response.users().size());
-		final var owner = response.users().get(0);
-		final var outsider = response.users().get(1);
+		assertEquals(1, response.users().size());
+		final var owner = response.users().getFirst();
 		assertEquals(TestProjects.OWNER_USER_ID, owner.id());
 		assertEquals(ProjectRoleName.OWNER, owner.projectRole());
-		assertTrue(owner.member());
-		assertEquals(TestProjects.OUTSIDER_USER_ID, outsider.id());
-		assertNull(outsider.projectRole());
-		assertFalse(outsider.member());
 	}
 
 	@Test

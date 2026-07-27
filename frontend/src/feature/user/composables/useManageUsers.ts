@@ -18,9 +18,8 @@ type ManageUsers = {
 export function useManageUsers(): ManageUsers {
 	const userRepository = useUserRepository();
 
-	const { users, isLoadingUsers, loadUsers } = useUsers();
+	const { users, isLoadingUsers, errorMessage, loadUsers } = useUsers();
 
-	const errorMessage = ref("");
 	const deletingUserId = ref<number | null>(null);
 	const isCreatingUser = ref(false);
 	const successMessage = ref("");

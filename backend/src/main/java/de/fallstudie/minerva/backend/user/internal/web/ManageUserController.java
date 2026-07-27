@@ -17,7 +17,7 @@ public class ManageUserController {
 	private final ManageUsersService userService;
 
 	@GetMapping
-	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	@PreAuthorize("isAuthenticated()")
 	public UserRecordListResponse get() {
 		log.trace("Getting all users for workspace");
 
@@ -48,7 +48,7 @@ public class ManageUserController {
 
 	@PatchMapping("/{userId}/username")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	@PreAuthorize("@userPolicies.isAdminOrSelf(principal, #userId)")
 	public void updateUsername(@PathVariable long userId,
 			@RequestBody UpdateUsernameRequest updateUsernameRequest) {
 		log.trace("Updating username for user with id {}", userId);
@@ -58,7 +58,7 @@ public class ManageUserController {
 
 	@PatchMapping("/{userId}/password")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	@PreAuthorize("@userPolicies.isAdminOrSelf(principal, #userId)")
 	public void updatePassword(@PathVariable long userId,
 			@RequestBody UpdateUserPasswordRequest updateUserPasswordRequest) {
 		log.trace("Updating password for user with id {}", userId);
