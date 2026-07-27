@@ -76,4 +76,18 @@ public class ManageUserController {
 
 		userService.deleteUser(identity.userId(), userId);
 	}
+
+	@PutMapping("/{userId}/deactivation")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	public void deactivate(@AuthenticationPrincipal Identity identity, @PathVariable long userId) {
+		userService.deactivateUser(identity.userId(), userId);
+	}
+
+	@DeleteMapping("/{userId}/deactivation")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	public void reactivate(@AuthenticationPrincipal Identity identity, @PathVariable long userId) {
+		userService.reactivateUser(identity.userId(), userId);
+	}
 }

@@ -232,7 +232,8 @@ class ManageUsersServiceTests {
 		assertEquals(adminRole, user.getWorkspaceRole());
 		verify(userRepository).save(user);
 		verify(userRepository).flush();
-		verify(userRepository, never()).findAllByWorkspaceRole_NameAndDeletedAtIsNull(any());
+		verify(userRepository, never())
+				.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(any());
 	}
 
 	@Test
@@ -242,8 +243,8 @@ class ManageUsersServiceTests {
 		final var userRole = createRole(WorkspaceRoleName.USER);
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN))
-				.thenReturn(List.of(user, otherAdmin));
+		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN)).thenReturn(List.of(user, otherAdmin));
 		when(workspaceRoleService.find(WorkspaceRoleName.USER)).thenReturn(Optional.of(userRole));
 
 		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER");
@@ -258,8 +259,8 @@ class ManageUsersServiceTests {
 		final var user = createUser("jane", WorkspaceRoleName.ADMIN);
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN))
-				.thenReturn(List.of(user));
+		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN)).thenReturn(List.of(user));
 
 		assertThrows(ValidationException.class,
 				() -> manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER"));
@@ -276,8 +277,8 @@ class ManageUsersServiceTests {
 		final var userRole = createRole(WorkspaceRoleName.USER);
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN))
-				.thenReturn(List.of(user, otherAdmin));
+		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN)).thenReturn(List.of(user, otherAdmin));
 		when(workspaceRoleService.find(WorkspaceRoleName.USER)).thenReturn(Optional.of(userRole));
 
 		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER");
@@ -293,7 +294,8 @@ class ManageUsersServiceTests {
 
 		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "ADMIN");
 
-		verify(userRepository, never()).findAllByWorkspaceRole_NameAndDeletedAtIsNull(any());
+		verify(userRepository, never())
+				.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(any());
 		verify(workspaceRoleService, never()).find(any());
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();
@@ -357,6 +359,41 @@ class ManageUsersServiceTests {
 		verify(eventPublisher, never()).publishEvent(any());
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();
+	}
+
+	@Test
+	void deactivateUserSetsStateAndPublishesEvent() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+		manageUsersService.deactivateUser(ACTOR_USER_ID, USER_ID);
+
+		assertNotNull(user.getDeactivatedAt());
+		verify(userRepository).save(user);
+		verify(userRepository).flush();
+		verify(eventPublisher).publishEvent(new UserEvent.Deactivated(ACTOR_USER_ID, USER_ID));
+	}
+
+	@Test
+	void deactivateUserRejectsSelfDeactivation() {
+		assertThrows(ValidationException.class,
+				() -> manageUsersService.deactivateUser(USER_ID, USER_ID));
+
+		verify(userRepository, never()).findById(anyLong());
+		verify(eventPublisher, never()).publishEvent(any());
+	}
+
+	@Test
+	void reactivateUserClearsStateAndPublishesEvent() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+		user.setDeactivatedAt(java.time.Instant.now());
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+		manageUsersService.reactivateUser(ACTOR_USER_ID, USER_ID);
+
+		assertNull(user.getDeactivatedAt());
+		verify(userRepository).save(user);
+		verify(eventPublisher).publishEvent(new UserEvent.Reactivated(ACTOR_USER_ID, USER_ID));
 	}
 
 	private void assertInvalidUser(String username, String password, String role) {

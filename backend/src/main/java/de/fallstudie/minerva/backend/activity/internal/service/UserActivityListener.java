@@ -21,6 +21,8 @@ public class UserActivityListener {
 			case UserEvent.UsernameChanged _ -> ActivityEventType.USER_USERNAME_CHANGED;
 			case UserEvent.PasswordChanged _ -> ActivityEventType.USER_PASSWORD_CHANGED;
 			case UserEvent.WorkspaceRoleChanged _ -> ActivityEventType.USER_WORKSPACE_ROLE_CHANGED;
+			case UserEvent.Deactivated _ -> ActivityEventType.USER_DEACTIVATED;
+			case UserEvent.Reactivated _ -> ActivityEventType.USER_REACTIVATED;
 			case UserEvent.Deleted _ -> ActivityEventType.USER_DELETED;
 		};
 

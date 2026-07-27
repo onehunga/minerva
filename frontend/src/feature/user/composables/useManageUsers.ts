@@ -9,10 +9,13 @@ type ManageUsers = {
 	errorMessage: Ref<string>;
 	deletingUserId: Ref<number | null>;
 	isCreatingUser: Ref<boolean>;
+	updatingUserStateId: Ref<number | null>;
 	successMessage: Ref<string>;
 	loadUsers(): Promise<void>;
 	createUser(username: string, password: string, role: UserRole): Promise<boolean>;
 	deleteUser(user: UserRecord): Promise<boolean>;
+	deactivateUser(user: UserRecord): Promise<boolean>;
+	reactivateUser(user: UserRecord): Promise<boolean>;
 };
 
 export function useManageUsers(): ManageUsers {
@@ -23,6 +26,7 @@ export function useManageUsers(): ManageUsers {
 	const deletingUserId = ref<number | null>(null);
 	const isCreatingUser = ref(false);
 	const successMessage = ref("");
+	const updatingUserStateId = ref<number | null>(null);
 
 	async function createUser(
 		username: string,
@@ -61,15 +65,36 @@ export function useManageUsers(): ManageUsers {
 		}
 	}
 
+	async function updateUserState(user: UserRecord, deactivated: boolean): Promise<boolean> {
+		errorMessage.value = "";
+		updatingUserStateId.value = user.id;
+
+		try {
+			await (deactivated
+				? userRepository.deactivateUser(user.id)
+				: userRepository.reactivateUser(user.id));
+			user.deactivated = deactivated;
+			return true;
+		} catch {
+			errorMessage.value = `Benutzer "${user.username}" konnte nicht ${deactivated ? "deaktiviert" : "reaktiviert"} werden.`;
+			return false;
+		} finally {
+			updatingUserStateId.value = null;
+		}
+	}
+
 	return {
 		users,
 		isLoadingUsers,
 		errorMessage,
 		deletingUserId,
 		isCreatingUser,
+		updatingUserStateId,
 		successMessage,
 		loadUsers,
 		createUser,
 		deleteUser,
+		deactivateUser: (user: UserRecord) => updateUserState(user, true),
+		reactivateUser: (user: UserRecord) => updateUserState(user, false),
 	};
 }

@@ -86,6 +86,10 @@ public class ProjectPolicies {
 	public boolean canBeAssigned(long projectId, long userId) {
 		log.trace("Checking if user {} can be assigned in project {}", userId, projectId);
 
+		if (!userService.existsById(userId)) {
+			return false;
+		}
+
 		if (!projectMemberRepository.existsByProjectIdAndUserId(projectId, userId)) {
 			return false;
 		}

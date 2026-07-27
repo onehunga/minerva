@@ -24,4 +24,16 @@ class UserActivityListenerTests {
 		verify(activityService).append(ActivityEventType.USER_WORKSPACE_ROLE_CHANGED, 1L, event,
 				List.of(new ActivityScopeCommand(ActivityScopeType.USER, 2L)));
 	}
+
+	@Test
+	void deactivatedAppendsUserScopedActivity() {
+		final var activityService = mock(ActivityService.class);
+		final var listener = new UserActivityListener(activityService);
+		final var event = new UserEvent.Deactivated(1L, 2L);
+
+		listener.on(event);
+
+		verify(activityService).append(ActivityEventType.USER_DEACTIVATED, 1L, event,
+				List.of(new ActivityScopeCommand(ActivityScopeType.USER, 2L)));
+	}
 }

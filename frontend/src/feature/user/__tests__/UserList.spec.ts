@@ -12,21 +12,26 @@ const testUsers: UserRecord[] = [
 		id: 1,
 		username: "admin",
 		role: "ADMIN",
+		deactivated: false,
 	},
 	{
 		id: 2,
 		username: "jane",
 		role: "USER",
+		deactivated: false,
 	},
 	{
 		id: 3,
 		username: "max",
 		role: "USER",
+		deactivated: true,
 	},
 ];
 
 class MockUserRepository extends UserRepository {
 	deletedUserIds: number[] = [];
+	deactivatedUserIds: number[] = [];
+	reactivatedUserIds: number[] = [];
 
 	override async getAllUsers(): Promise<UserRecordList> {
 		return {
@@ -36,6 +41,14 @@ class MockUserRepository extends UserRepository {
 
 	override async deleteUser(userId: number): Promise<void> {
 		this.deletedUserIds.push(userId);
+	}
+
+	override async deactivateUser(userId: number): Promise<void> {
+		this.deactivatedUserIds.push(userId);
+	}
+
+	override async reactivateUser(userId: number): Promise<void> {
+		this.reactivatedUserIds.push(userId);
 	}
 }
 
@@ -76,6 +89,8 @@ describe("UserList", () => {
 		expect(wrapper.text()).toContain("Administrator");
 		expect(wrapper.text()).toContain("jane");
 		expect(wrapper.text()).toContain("Nutzer");
+		expect(wrapper.text()).toContain("Aktiv");
+		expect(wrapper.text()).toContain("Deaktiviert");
 	});
 
 	it("provides an options button and a context menu for every user", async () => {
@@ -176,6 +191,28 @@ describe("UserList", () => {
 		const dialog = document.body.querySelector("[data-slot='alert-dialog-content']");
 		expect(dialog?.textContent).toContain('Benutzer "jane" konnte nicht gelöscht werden.');
 		expect(wrapper.text()).toContain("jane");
+	});
+
+	it("deactivates and reactivates users from the existing menu", async () => {
+		const userRepository = new MockUserRepository();
+		const wrapper = mountUserList(userRepository, 1);
+		await flushPromises();
+
+		await openActions(wrapper, "jane");
+		clickMenuAction("deactivate");
+		await nextTick();
+		clickDialogButton("Benutzer deaktivieren");
+		await flushPromises();
+
+		expect(userRepository.deactivatedUserIds).toEqual([2]);
+		expect(wrapper.findAll("tbody tr")[1]?.text()).toContain("Deaktiviert");
+
+		await openActions(wrapper, "max");
+		clickMenuAction("reactivate");
+		await flushPromises();
+
+		expect(userRepository.reactivatedUserIds).toEqual([3]);
+		expect(wrapper.findAll("tbody tr")[2]?.text()).toContain("Aktiv");
 	});
 
 	it("renders the empty table with the add action", async () => {

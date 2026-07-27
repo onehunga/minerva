@@ -35,6 +35,8 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	USER_USERNAME_CHANGED: "Benutzername geändert",
 	USER_PASSWORD_CHANGED: "Passwort geändert",
 	USER_WORKSPACE_ROLE_CHANGED: "Nutzerrolle geändert",
+	USER_DEACTIVATED: "Nutzer deaktiviert",
+	USER_REACTIVATED: "Nutzer reaktiviert",
 	USER_DELETED: "Nutzer gelöscht",
 	TICKET_CREATED: "Ticket erstellt",
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
@@ -106,6 +108,9 @@ function describe(event: ActivityEvent): string {
 			return userRef(num(payload, "userId"));
 		case "USER_WORKSPACE_ROLE_CHANGED":
 			return `${userRef(num(payload, "userId"))}: ${str(payload, "oldRole") ?? "?"} → ${str(payload, "newRole") ?? "?"}`;
+		case "USER_DEACTIVATED":
+		case "USER_REACTIVATED":
+			return userRef(num(payload, "userId"));
 		case "USER_DELETED":
 			return `„${str(payload, "username") ?? "?"}"`;
 		case "TICKET_COMMENT_CREATED":

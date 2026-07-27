@@ -39,6 +39,12 @@ class RecordingUserRepository implements IUserRepository {
 	deleteUser(userId: number): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
+	deactivateUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	reactivateUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
 	calls: CreateUserCall[] = [];
 
 	async createUser(username: string, password: string, role: UserRole): Promise<void> {
@@ -73,6 +79,12 @@ class FailingCreateUserRepository implements IUserRepository {
 		throw new Error("Method not implemented.");
 	}
 	deleteUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	deactivateUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	reactivateUser(userId: number): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
 	async createUser(): Promise<void> {

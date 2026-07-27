@@ -106,7 +106,9 @@ const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const isOwnerLike = computed(() => isOwner.value || isAdmin.value);
 const availableUsers = computed(() =>
 	allUsers.value.filter(
-		(user) => users.value.some((projectUser) => projectUser.id === user.id) === false,
+		(user) =>
+			!user.deactivated &&
+			users.value.some((projectUser) => projectUser.id === user.id) === false,
 	),
 );
 const isRoleEditOpen = computed(() => roleCandidate.value !== null);

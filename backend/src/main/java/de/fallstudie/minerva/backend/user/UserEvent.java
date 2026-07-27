@@ -20,6 +20,12 @@ public sealed interface UserEvent {
 			WorkspaceRoleName newRole) implements UserEvent {
 	}
 
+	record Deactivated(long actorUserId, long userId) implements UserEvent {
+	}
+
+	record Reactivated(long actorUserId, long userId) implements UserEvent {
+	}
+
 	record Deleted(long actorUserId, long userId, String username) implements UserEvent {
 		public Deleted(long actorUserId, long userId) {
 			this(actorUserId, userId, null);

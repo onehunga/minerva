@@ -118,10 +118,43 @@ public class ManageUsersService {
 	public UserRecordListResponse getAllUsers() {
 		final var users = userRepository.findAllByDeletedAtIsNull().stream()
 				.map(user -> new UserRecordResponse(user.getId(), user.getUsername(),
-						user.getWorkspaceRole().getName()))
+						user.getWorkspaceRole().getName(), user.getDeactivatedAt() != null))
 				.toList();
 
 		return new UserRecordListResponse(users);
+	}
+
+	@Transactional
+	public void deactivateUser(long actorUserId, long userId) {
+		if (actorUserId == userId) {
+			throw new ValidationException("Benutzer können sich nicht selbst deaktivieren");
+		}
+
+		final var user = findActiveUser(userId);
+		if (user.getDeactivatedAt() != null) {
+			return;
+		}
+		if (user.getWorkspaceRole().getName() == WorkspaceRoleName.ADMIN) {
+			validateAdminCanBeDeactivated();
+		}
+
+		user.setDeactivatedAt(Instant.now());
+		userRepository.save(user);
+		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.Deactivated(actorUserId, userId));
+	}
+
+	@Transactional
+	public void reactivateUser(long actorUserId, long userId) {
+		final var user = findActiveUser(userId);
+		if (user.getDeactivatedAt() == null) {
+			return;
+		}
+
+		user.setDeactivatedAt(null);
+		userRepository.save(user);
+		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.Reactivated(actorUserId, userId));
 	}
 
 	@Transactional
@@ -143,9 +176,19 @@ public class ManageUsersService {
 	}
 
 	private void validateAdminCanBeDemoted(UserModel user) {
-		if (userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN)
+		if (user.getDeactivatedAt() == null && userRepository
+				.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+						WorkspaceRoleName.ADMIN)
 				.size() <= 1) {
 			throw new ValidationException("Mindestens ein Admin-Benutzer muss erhalten bleiben");
+		}
+	}
+
+	private void validateAdminCanBeDeactivated() {
+		if (userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN).size() <= 1) {
+			throw new ValidationException(
+					"Mindestens ein aktiver Admin-Benutzer muss erhalten bleiben");
 		}
 	}
 

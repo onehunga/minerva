@@ -3,11 +3,13 @@ package de.fallstudie.minerva.backend.user;
 import de.fallstudie.minerva.backend.user.internal.persistence.UserModel;
 import de.fallstudie.minerva.backend.user.internal.persistence.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -18,11 +20,23 @@ public class UserService {
 	}
 
 	public Optional<UserDTO> findByUsername(String username) {
-		return userRepository.findByUsernameAndDeletedAtIsNull(username).map(this::toSnapshot);
+		return userRepository.findByUsername(username).flatMap(userModel -> {
+			if (userModel.getDeactivatedAt() != null) {
+				log.trace("tried finding deactivated user");
+				return Optional.empty();
+			}
+			if (userModel.getDeletedAt() != null) {
+				log.trace("tried finding deleted user");
+				return Optional.empty();
+			}
+
+			return Optional.of(this.toSnapshot(userModel));
+		});
 	}
 
 	public Optional<UserDTO> findActiveById(long id) {
-		return userRepository.findById(id).filter(user -> user.getDeletedAt() == null)
+		return userRepository.findById(id)
+				.filter(user -> user.getDeletedAt() == null && user.getDeactivatedAt() == null)
 				.map(this::toSnapshot);
 	}
 
@@ -31,7 +45,7 @@ public class UserService {
 	}
 
 	public boolean existsById(long id) {
-		return userRepository.existsByIdAndDeletedAtIsNull(id);
+		return this.userRepository.existsByIdAndDeletedAtIsNullAndDeactivatedAtIsNull(id);
 	}
 
 	private UserDTO toSnapshot(UserModel user) {

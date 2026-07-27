@@ -10,6 +10,7 @@ export type UserRecord = {
 	id: number;
 	username: string;
 	role: UserRole;
+	deactivated: boolean;
 };
 
 export type UserRecordList = {

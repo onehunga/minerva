@@ -42,12 +42,19 @@ class RecordingUserRepository implements IUserRepository {
 	deleteUser(userId: number): Promise<void> {
 		throw new Error("Method not implemented.");
 	}
+	deactivateUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
+	reactivateUser(userId: number): Promise<void> {
+		throw new Error("Method not implemented.");
+	}
 }
 
 const user: UserRecord = {
 	id: 2,
 	username: "jane",
 	role: "USER",
+	deactivated: false,
 };
 
 describe("UserEditForm", () => {
