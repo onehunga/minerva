@@ -1,6 +1,8 @@
 services:
   frontend:
-    build: ./frontend
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
     network_mode: host
     extra_hosts:
       - "backend:127.0.0.1"

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { HugeiconsIcon } from "@hugeicons/vue";
+import { BookOpen01Icon } from "@hugeicons/core-free-icons";
 
 const router: Router = useRouter();
 
@@ -62,5 +64,16 @@ async function handleLogin(): Promise<void> {
 				</form>
 			</CardContent>
 		</Card>
+		<Button
+			as="a"
+			href="/docs/"
+			variant="secondary"
+			size="icon-lg"
+			class="fixed right-6 bottom-6 rounded-full"
+			aria-label="Dokumentation öffnen"
+			title="Dokumentation"
+		>
+			<HugeiconsIcon :icon="BookOpen01Icon" />
+		</Button>
 	</div>
 </template>
