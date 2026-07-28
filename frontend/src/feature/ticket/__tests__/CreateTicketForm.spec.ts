@@ -1,6 +1,8 @@
-import { shallowMount } from "@vue/test-utils";
+import { flushPromises, shallowMount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import CreateTicketForm from "../components/CreateTicketForm.vue";
+
+const createTicket = vi.hoisted(() => vi.fn<() => Promise<void>>());
 
 vi.mock("@/feature/project", () => ({
 	useProject: () => ({
@@ -20,15 +22,21 @@ vi.mock("@/feature/project", () => ({
 				},
 			],
 		},
+		projectUsers: {
+			value: [
+				{ id: 1, username: "owner", projectRole: "OWNER" },
+				{ id: 2, username: "viewer", projectRole: "VIEWER" },
+			],
+		},
 		tickets: { value: [] },
-		createTicket: vi.fn<() => Promise<void>>(),
+		createTicket,
 	}),
 }));
 
 const slotStub = { template: "<div><slot /></div>" };
 
 describe("CreateTicketForm", () => {
-	it("renders the drawer form with default type and open state", () => {
+	it("creates a ticket with default priority and no assignee", async () => {
 		const wrapper = shallowMount(CreateTicketForm, {
 			props: { parentTicketId: null },
 			global: {
@@ -62,6 +70,24 @@ describe("CreateTicketForm", () => {
 		expect(wrapper.get(".create-ticket-form__selects").text()).toContain("Startzustand");
 		expect(
 			wrapper.findAll(".select-stub").map((select) => select.attributes("data-value")),
-		).toEqual(["10", "100"]);
+		).toEqual(["10", "100", "NORMAL", "unassigned"]);
+		expect(wrapper.text()).toContain("Priorität");
+		expect(wrapper.text()).toContain("Bearbeiter");
+		expect(wrapper.text()).toContain("owner");
+		expect(wrapper.text()).not.toContain("viewer");
+
+		wrapper.findComponent({ name: "Input" }).vm.$emit("update:modelValue", "Ticket");
+		await wrapper.get("form").trigger("submit");
+		await flushPromises();
+
+		expect(createTicket).toHaveBeenCalledWith({
+			name: "Ticket",
+			description: "",
+			ticketTypeId: 10,
+			statusId: 100,
+			parentTicketId: null,
+			priority: "NORMAL",
+			assignedTo: null,
+		});
 	});
 });

@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/feature/project";
+import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
+import type { TicketPriorityName } from "../ticket.model";
 
 const props = withDefaults(
 	defineProps<{
@@ -31,13 +33,15 @@ const props = withDefaults(
 	{ disabled: false },
 );
 
-const { details: projectDetails, ticketTypes, tickets, createTicket } = useProject();
+const { details: projectDetails, projectUsers, ticketTypes, tickets, createTicket } = useProject();
 const formId = useId();
 const isOpen = ref(false);
 const name = ref("");
 const description = ref("");
 const selectedTicketTypeId = ref<number | null>(null);
 const selectedStatusId = ref<number | null>(null);
+const selectedPriority = ref<TicketPriorityName>("NORMAL");
+const selectedAssigneeId = ref<number | null>(null);
 const isCreating = ref(false);
 const errorMessage = ref("");
 
@@ -72,6 +76,11 @@ const title = computed(() =>
 	props.parentTicketId == null ? "Ticket erstellen" : "Kindticket erstellen",
 );
 const isDisabled = computed(() => props.disabled || projectDetails.value?.archived === true);
+const possibleAssignees = computed(() =>
+	projectUsers.value.filter(
+		(user) => user.projectRole === "OWNER" || user.projectRole === "CONTRIBUTOR",
+	),
+);
 
 function selectDefaultTicketType(): void {
 	if (
@@ -99,9 +108,19 @@ function selectStatus(value: unknown): void {
 	selectedStatusId.value = Number(value);
 }
 
+function selectPriority(value: unknown): void {
+	selectedPriority.value = String(value) as TicketPriorityName;
+}
+
+function selectAssignee(value: unknown): void {
+	selectedAssigneeId.value = value === "unassigned" ? null : Number(value);
+}
+
 function resetTicketFields(): void {
 	name.value = "";
 	description.value = "";
+	selectedPriority.value = "NORMAL";
+	selectedAssigneeId.value = null;
 	selectDefaultTicketType();
 	selectDefaultStatus();
 }
@@ -126,6 +145,8 @@ async function create(): Promise<void> {
 			ticketTypeId: selectedTicketTypeId.value,
 			statusId: selectedStatusId.value,
 			parentTicketId: props.parentTicketId,
+			priority: selectedPriority.value,
+			assignedTo: selectedAssigneeId.value,
 		});
 		resetTicketFields();
 		isOpen.value = false;
@@ -242,6 +263,55 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 											:value="String(state.id)"
 										>
 											{{ state.name }}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div class="create-ticket-form__field">
+								<Label :for="`${formId}-priority`">Priorität</Label>
+								<Select
+									:model-value="selectedPriority"
+									:disabled="isCreating || isDisabled"
+									@update:model-value="selectPriority"
+								>
+									<SelectTrigger :id="`${formId}-priority`" class="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem
+											v-for="priority in TICKET_PRIORITY_ORDER"
+											:key="priority"
+											:value="priority"
+										>
+											{{ formatTicketPriority(priority) }}
+										</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+
+							<div class="create-ticket-form__field">
+								<Label :for="`${formId}-assignee`">Bearbeiter</Label>
+								<Select
+									:model-value="
+										selectedAssigneeId == null
+											? 'unassigned'
+											: String(selectedAssigneeId)
+									"
+									:disabled="isCreating || isDisabled"
+									@update:model-value="selectAssignee"
+								>
+									<SelectTrigger :id="`${formId}-assignee`" class="w-full">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
+										<SelectItem
+											v-for="user in possibleAssignees"
+											:key="user.id"
+											:value="String(user.id)"
+										>
+											{{ user.username }}
 										</SelectItem>
 									</SelectContent>
 								</Select>

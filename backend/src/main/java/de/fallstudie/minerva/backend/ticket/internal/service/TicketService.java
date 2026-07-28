@@ -14,6 +14,7 @@ import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
+import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
@@ -124,6 +125,11 @@ public class TicketService {
 				.orElseThrow(() -> new ValidationException(
 						"Status gehört nicht zur ausgewählten Ticketart"));
 
+		if (request.assignedTo() != null
+				&& !projectPolicies.canBeAssigned(projectId, request.assignedTo())) {
+			throw new ValidationException("Der Nutzer kann diesem Projekt nicht zugewiesen werden");
+		}
+
 		if (request.parentTicketId() != null) {
 			final var parentTicket = ticketRepository
 					.findByIdAndProjectId(request.parentTicketId(), projectId)
@@ -146,6 +152,9 @@ public class TicketService {
 		ticket.setName(request.name().trim());
 		ticket.setDescription(request.description() == null ? "" : request.description().trim());
 		ticket.setCreatedBy(identity.userId());
+		ticket.setPriority(
+				request.priority() == null ? TicketPriorityName.NORMAL : request.priority());
+		ticket.setAssignedTo(request.assignedTo());
 
 		final var savedTicket = ticketRepository.save(ticket);
 		eventPublisher.publishEvent(new TicketEvent.TicketCreated(identity.userId(), projectId,
@@ -334,6 +343,10 @@ public class TicketService {
 
 		if (request.parentTicketId() != null && request.parentTicketId() <= 0) {
 			throw new ValidationException("Parent-Ticket ist ungültig");
+		}
+
+		if (request.assignedTo() != null && request.assignedTo() <= 0) {
+			throw new ValidationException("Bearbeiter ist ungültig");
 		}
 	}
 

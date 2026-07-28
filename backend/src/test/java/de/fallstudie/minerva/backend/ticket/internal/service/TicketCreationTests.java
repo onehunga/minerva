@@ -79,27 +79,71 @@ class TicketCreationTests {
 				.thenReturn(Optional.of(status));
 		when(ticketRepository.save(any(TicketModel.class)))
 				.thenAnswer(invocation -> invocation.getArgument(0));
+		when(projectPolicies.canBeAssigned(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID)).thenReturn(true);
 
 		final var response = ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
 				new CreateTicketRequest("  Root ticket  ", "  Beschreibung  ", ticketType.getId(),
-						status.getId(), null));
+						status.getId(), null, TicketPriorityName.HIGH,
+						TestProjects.CONTRIBUTOR_USER_ID));
 
 		assertEquals(TestProjects.PROJECT_ID, response.projectId());
 		assertEquals(ticketType.getId(), response.ticketTypeId());
 		assertEquals(status.getId(), response.statusId());
-		assertEquals(TicketPriorityName.NORMAL, response.priority());
+		assertEquals(TicketPriorityName.HIGH, response.priority());
 		assertEquals(null, response.parentTicketId());
 		final var ticketCaptor = ArgumentCaptor.forClass(TicketModel.class);
 		verify(ticketRepository).save(ticketCaptor.capture());
 		final var savedTicket = ticketCaptor.getValue();
 		assertEquals("Root ticket", savedTicket.getName());
 		assertEquals("Beschreibung", savedTicket.getDescription());
-		assertEquals(TicketPriorityName.NORMAL, savedTicket.getPriority());
+		assertEquals(TicketPriorityName.HIGH, savedTicket.getPriority());
 		assertEquals(TestProjects.OWNER_USER_ID, savedTicket.getCreatedBy());
+		assertEquals(TestProjects.CONTRIBUTOR_USER_ID, savedTicket.getAssignedTo());
 		assertEquals(null, savedTicket.getParentTicketId());
 		verify(eventPublisher).publishEvent(
 				new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
 						savedTicket.getId(), ticketType.getId(), status.getId(), "Root ticket"));
+		verify(projectPolicies).canBeAssigned(TestProjects.PROJECT_ID,
+				TestProjects.CONTRIBUTOR_USER_ID);
+	}
+
+	@Test
+	void createTicketUsesDefaultsWithoutPriorityOrAssignee() {
+		final var ticketType = TestProjects.ticketType(TestProjects.PARENT_TICKET_TYPE_ID, "Epic");
+		final var workflow = TestProjects.workflow(TestProjects.WORKFLOW_ID,
+				TestProjects.PROJECT_ID, ticketType.getId());
+		final var status = TestProjects.openStatus(workflow.getId());
+		stubValidTypeWorkflowAndStatus(ticketType, workflow);
+		when(workflowStatusRepository.findByIdAndWorkflowId(status.getId(), workflow.getId()))
+				.thenReturn(Optional.of(status));
+		when(ticketRepository.save(any(TicketModel.class)))
+				.thenAnswer(invocation -> invocation.getArgument(0));
+
+		final var response = ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+				createTicketRequest(ticketType.getId(), status.getId(), null));
+
+		assertEquals(TicketPriorityName.NORMAL, response.priority());
+		assertEquals(null, response.assignedTo());
+	}
+
+	@Test
+	void createTicketRejectsIneligibleAssignee() {
+		final var ticketType = TestProjects.ticketType(TestProjects.PARENT_TICKET_TYPE_ID, "Epic");
+		final var workflow = TestProjects.workflow(TestProjects.WORKFLOW_ID,
+				TestProjects.PROJECT_ID, ticketType.getId());
+		stubValidTypeWorkflowAndStatus(ticketType, workflow);
+		when(workflowStatusRepository.findByIdAndWorkflowId(TestProjects.OPEN_STATUS_ID,
+				workflow.getId()))
+				.thenReturn(Optional.of(TestProjects.openStatus(workflow.getId())));
+
+		assertThrows(ValidationException.class,
+				() -> ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						new CreateTicketRequest("Ticket", "Beschreibung", ticketType.getId(),
+								TestProjects.OPEN_STATUS_ID, null, TicketPriorityName.NORMAL,
+								TestProjects.VIEWER_USER_ID)));
+
+		verify(ticketRepository, never()).save(any());
 	}
 
 	@Test
@@ -110,7 +154,7 @@ class TicketCreationTests {
 				() -> ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						new CreateTicketRequest("Ticket", "Beschreibung",
 								TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID,
-								null)));
+								null, null, null)));
 
 		verify(ticketRepository, never()).save(any());
 		verify(eventPublisher, never()).publishEvent(any());
@@ -136,7 +180,7 @@ class TicketCreationTests {
 		assertThrows(ReadOnlyException.class,
 				() -> ticketService.createTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
 						new CreateTicketRequest("Kind", "Beschreibung", childTicketType.getId(),
-								TestProjects.OPEN_STATUS_ID, parentTicket.getId())));
+								TestProjects.OPEN_STATUS_ID, parentTicket.getId(), null, null)));
 
 		verify(ticketRepository, never()).save(any());
 		verify(eventPublisher, never()).publishEvent(any());
@@ -288,24 +332,31 @@ class TicketCreationTests {
 	private static CreateTicketRequest createTicketRequest(long ticketTypeId, long statusId,
 			Long parentTicketId) {
 		return new CreateTicketRequest("Ticket", "Beschreibung", ticketTypeId, statusId,
-				parentTicketId);
+				parentTicketId, null, null);
 	}
 
 	private static Stream<CreateTicketRequest> invalidCreateTicketRequests() {
 		return Stream.of(
 				new CreateTicketRequest(" ", "Beschreibung", TestProjects.PARENT_TICKET_TYPE_ID,
-						TestProjects.OPEN_STATUS_ID, null),
+						TestProjects.OPEN_STATUS_ID, null, null, null),
 				new CreateTicketRequest("a".repeat(256), "Beschreibung",
-						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, null),
+						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, null, null,
+						null),
 				new CreateTicketRequest("Ticket", "a".repeat(256),
-						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, null),
+						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, null, null,
+						null),
 				new CreateTicketRequest("Ticket", "Beschreibung", 0, TestProjects.OPEN_STATUS_ID,
+						null, null, null),
+				new CreateTicketRequest("Ticket", "Beschreibung",
+						TestProjects.PARENT_TICKET_TYPE_ID, 0, null, null, null),
+				new CreateTicketRequest("Ticket", "Beschreibung",
+						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, 0L, null,
 						null),
 				new CreateTicketRequest("Ticket", "Beschreibung",
-						TestProjects.PARENT_TICKET_TYPE_ID, 0, null),
+						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, -1L, null,
+						null),
 				new CreateTicketRequest("Ticket", "Beschreibung",
-						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, 0L),
-				new CreateTicketRequest("Ticket", "Beschreibung",
-						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, -1L));
+						TestProjects.PARENT_TICKET_TYPE_ID, TestProjects.OPEN_STATUS_ID, null, null,
+						0L));
 	}
 }

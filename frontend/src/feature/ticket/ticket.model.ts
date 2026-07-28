@@ -62,6 +62,8 @@ export type CreateTicketRequest = {
 	ticketTypeId: number;
 	statusId: number;
 	parentTicketId: number | null;
+	priority: TicketPriorityName;
+	assignedTo: number | null;
 };
 
 export type UpdateTicketStatusRequest = {
