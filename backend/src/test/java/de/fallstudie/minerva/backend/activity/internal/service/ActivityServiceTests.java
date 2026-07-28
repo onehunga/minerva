@@ -1,6 +1,7 @@
 package de.fallstudie.minerva.backend.activity.internal.service;
 
 import de.fallstudie.minerva.backend.activity.ActivityEventType;
+import de.fallstudie.minerva.backend.activity.ActivityScopeType;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityEventModel;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityEventRepository;
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScopeRepository;
@@ -26,6 +27,14 @@ class ActivityServiceTests {
 		activityEventRepository = Mockito.mock(ActivityEventRepository.class);
 		activityService = new ActivityService(activityEventRepository,
 				Mockito.mock(ActivityScopeRepository.class), new ObjectMapper());
+	}
+
+	@Test
+	void deleteProjectActivitiesDeletesEveryEventWithTheProjectScope() {
+		activityService.deleteProjectActivities(TestProjects.PROJECT_ID);
+
+		verify(activityEventRepository).deleteByScope(ActivityScopeType.PROJECT,
+				TestProjects.PROJECT_ID);
 	}
 
 	@Test

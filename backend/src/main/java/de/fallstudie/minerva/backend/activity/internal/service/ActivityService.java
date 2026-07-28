@@ -10,6 +10,7 @@ import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventListResp
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventResponse;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
@@ -18,6 +19,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ActivityService {
@@ -63,6 +65,12 @@ public class ActivityService {
 				.stream().map(this::toResponse).toList();
 
 		return new ActivityEventListResponse(events);
+	}
+
+	public void deleteProjectActivities(long projectId) {
+		log.trace("called deleteProjectActivities");
+
+		activityEventRepository.deleteByScope(ActivityScopeType.PROJECT, projectId);
 	}
 
 	public ActivityEventListResponse getUserActivities(long userId) {

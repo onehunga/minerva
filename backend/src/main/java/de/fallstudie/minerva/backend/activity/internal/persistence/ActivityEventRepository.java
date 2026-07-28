@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.activity.internal.persistence;
 
 import de.fallstudie.minerva.backend.activity.ActivityScopeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -73,4 +74,9 @@ public interface ActivityEventRepository extends JpaRepository<ActivityEventMode
 			order by event.occurredAt desc, event.id desc
 			""")
 	List<ActivityEventModel> findAllForUserActor(@Param("userId") long userId);
+
+	@Modifying
+	@Query("delete from ActivityEventModel e where e.id in (select s.eventId from ActivityScopeModel s where s.scopeType = :scopeType and s.scopeId = :scopeId)")
+	int deleteByScope(@Param("scopeType") ActivityScopeType scopeType,
+			@Param("scopeId") long scopeId);
 }

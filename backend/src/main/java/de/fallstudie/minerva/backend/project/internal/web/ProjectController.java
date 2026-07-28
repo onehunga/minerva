@@ -104,4 +104,13 @@ public class ProjectController {
 
 		projectService.removeProjectUser(identity, id, userId);
 	}
+
+	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void deleteProject(@PathVariable long id) {
+		log.info("Deleting project with ID {}", id);
+
+		projectService.deleteProject(id);
+	}
 }

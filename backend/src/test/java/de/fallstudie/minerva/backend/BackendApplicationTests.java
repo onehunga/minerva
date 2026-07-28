@@ -3,6 +3,7 @@ package de.fallstudie.minerva.backend;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.modulith.core.ApplicationModules;
+import org.springframework.modulith.docs.Documenter;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest(classes = ActiveProfiles.class)
@@ -15,6 +16,7 @@ class BackendApplicationTests {
 
 	@Test
 	void verifyModules() {
-		ApplicationModules.of(BackendApplication.class).verify();
+		new Documenter(ApplicationModules.of(BackendApplication.class).verify())
+				.writeModulesAsPlantUml();
 	}
 }
