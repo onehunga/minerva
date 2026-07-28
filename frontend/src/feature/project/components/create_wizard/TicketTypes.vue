@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import type { TicketWorkflow } from "@/feature/ticket";
+import TicketLibraryDialog from "./TicketLibraryDialog.vue";
 
 const props = defineProps<{ tickets: TicketWorkflow[] }>();
 const emit = defineEmits<{
@@ -28,6 +29,7 @@ const ticketName = ref("");
 const ticketDescription = ref("");
 const deleteCandidate = ref<string | null>(null);
 const errorMessage = ref("");
+const showLibrary = ref(false);
 
 function addTicket() {
 	const name = ticketName.value.trim();
@@ -67,6 +69,14 @@ function confirmDelete(): void {
 	emit("remove", deleteCandidate.value);
 	deleteCandidate.value = null;
 }
+
+function onImportSelected(items: TicketWorkflow[]) {
+	for (const item of items) {
+		if (!props.tickets.some((t) => t.name === item.name)) {
+			emit("add", item);
+		}
+	}
+}
 </script>
 
 <template>
@@ -90,6 +100,13 @@ function confirmDelete(): void {
 					</p>
 					<Button type="submit">Hinzufügen</Button>
 				</form>
+
+				<Separator class="my-4" />
+				<div class="flex flex-col gap-2">
+					<Button type="button" variant="outline" @click="showLibrary = true">
+						Aus Bibliothek importieren
+					</Button>
+				</div>
 			</CardContent>
 		</Card>
 
@@ -151,4 +168,10 @@ function confirmDelete(): void {
 			</AlertDialogFooter>
 		</AlertDialogContent>
 	</AlertDialog>
+
+	<TicketLibraryDialog
+		v-model:open="showLibrary"
+		:tickets="tickets"
+		@import-selected="onImportSelected"
+	/>
 </template>

@@ -5,10 +5,9 @@ import de.fallstudie.minerva.backend.ticket.internal.WorkflowConfigurationsValid
 import de.fallstudie.minerva.backend.ticket.internal.persistence.*;
 import jakarta.transaction.Transactional;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import lombok.RequiredArgsConstructor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -25,6 +24,7 @@ public class TicketConfigurationService {
 
 	@Transactional
 	public void createTicketConfiguration(long projectId, WorkflowConfigurationsCreateRequest req) {
+		log.trace("called createTicketConfiguration with {}", projectId);
 		new WorkflowConfigurationsValidator(req).validate();
 
 		if (ticketTypeRepository.existsByProjectId(projectId)) {

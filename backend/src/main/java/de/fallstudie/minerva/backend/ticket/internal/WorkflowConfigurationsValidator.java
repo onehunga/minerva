@@ -22,13 +22,18 @@ import java.util.stream.Collectors;
 // FE geben?
 public class WorkflowConfigurationsValidator {
 	private final WorkflowConfigurationsCreateRequest req;
+	private TicketTypeConfigurationRequest current = null;
 
 	public void validate() {
 		req.tickets().forEach(this::validateTicketConfiguration);
 	}
 
 	private void validateTicketConfiguration(TicketTypeConfigurationRequest ticket) {
+		this.current = ticket;
+
+		log.trace("called validate for {}", ticket.name());
 		if (ticket.name() == null || ticket.name().isBlank()) {
+			log.error("ticket type name is empty");
 			throw new IllegalArgumentException("Ticket type name must not be empty");
 		}
 		assert ticket.description() != null : "Ticket type description must not be null";
@@ -44,6 +49,7 @@ public class WorkflowConfigurationsValidator {
 	private Set<String> validateTicketStates(
 			@NonNull List<@NonNull TicketStateConfigurationRequest> states) {
 		if (states.isEmpty()) {
+			log.error("No Ticket state");
 			throw new IllegalArgumentException("Ticket states must not be empty");
 		}
 
@@ -51,6 +57,8 @@ public class WorkflowConfigurationsValidator {
 				.collect(Collectors.toSet());
 
 		if (states.size() != stateSet.size()) {
+			log.error("No unique ticket states");
+
 			throw new DuplicateResourceException(
 					"Ticketzustände müssen einen Eindeutigen Namen haben");
 		}
@@ -76,20 +84,31 @@ public class WorkflowConfigurationsValidator {
 			assert transition.to() != null : "Transition to state must not be null";
 
 			if (transition.from() != null && !stateNames.contains(transition.from())) {
+				log.error("transition {} from state {} is invalid", transition.name(),
+						transition.from());
+
 				throw new ValidationException(
 						"Übergangszustand " + transition.from() + " ist kein gültiger Zustand");
 			}
 			if (!stateNames.contains(transition.to())) {
+				log.error("transition {} to state {} is invalid", transition.name(),
+						transition.to());
+
 				throw new ValidationException(
 						"Übergangszustand " + transition.to() + " ist kein gültiger Zustand");
 			}
 			if (Objects.equals(transition.from(), transition.to())) {
+				log.error("transition {} cant have the same from and to state", transition.name());
+
 				throw new ValidationException(
 						"Übergang von und zu demselben Zustand ist nicht erlaubt");
 			}
 
 			final var transitionKey = transition.from() + "->" + transition.to();
 			if (!seenTransitions.add(transitionKey)) {
+				log.error("transition key: {} exists already for {}", transitionKey,
+						current.name());
+
 				throw new DuplicateResourceException(
 						"Übergang " + transitionKey + " ist bereits definiert");
 			}
@@ -99,8 +118,12 @@ public class WorkflowConfigurationsValidator {
 	private void validateChildren(List<String> children) {
 		for (final var child : children) {
 			req.tickets().stream().filter(t -> t.name().equals(child)).findFirst()
-					.orElseThrow(() -> new ValidationException(
-							"Ticket " + child + " ist kein Gültiges Ticket für Kind"));
+					.orElseThrow(() -> {
+						log.error("{} is not a valid child ticket", child);
+
+						return new ValidationException(
+								"Ticket " + child + " ist kein Gültiges Ticket für Kind");
+					});
 		}
 	}
 }
