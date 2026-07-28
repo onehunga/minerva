@@ -33,4 +33,8 @@ public class UserModel {
 	@Setter
 	@Column(name = "deleted_at")
 	private Instant deletedAt;
+
+	@Setter
+	@Column(name = "deactivated_at")
+	private Instant deactivatedAt;
 }

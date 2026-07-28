@@ -49,12 +49,13 @@ const errorMessage = ref("");
 const draftName = ref("");
 const draftDescription = ref("");
 
-const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER");
+const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
+const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER" || isAdmin.value);
 const canModifyProject = computed(
 	() => canUpdateDetails.value && details.value?.archived === false,
 );
-const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
-const canOpenSettings = computed(() => details.value?.projectRole === "OWNER" || isAdmin.value);
+const canModifyTickets = computed(() => isAdmin.value || details.value?.projectRole !== null);
+const canOpenSettings = canUpdateDetails;
 const selectedTicket = computed(() =>
 	tickets.value.find((ticket) => ticket.id === selectedTicketId.value),
 );
@@ -200,9 +201,7 @@ async function submitArchiveProject(): Promise<void> {
 			<div class="project-page__tabs-scroll">
 				<TabsList>
 					<TabsTrigger value="overview">Übersicht</TabsTrigger>
-					<TabsTrigger v-if="details.projectRole !== null" value="tickets">
-						Tickets
-					</TabsTrigger>
+					<TabsTrigger v-if="canModifyTickets" value="tickets"> Tickets </TabsTrigger>
 					<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
 					<TabsTrigger v-if="canOpenSettings" value="settings">
 						Einstellungen
@@ -228,13 +227,9 @@ async function submitArchiveProject(): Promise<void> {
 				/>
 			</TabsContent>
 
-			<TabsContent
-				v-if="details.projectRole !== null"
-				value="tickets"
-				class="project-page__tab-content"
-			>
+			<TabsContent v-if="canModifyTickets" value="tickets" class="project-page__tab-content">
 				<CreateTicketForm
-					v-if="details.projectRole !== 'VIEWER'"
+					v-if="isAdmin || details.projectRole !== 'VIEWER'"
 					:parent-ticket-id="null"
 					:disabled="details.archived"
 				/>
@@ -278,6 +273,7 @@ async function submitArchiveProject(): Promise<void> {
 								:ticket-type="selectedTicketType"
 								:parent-ticket-name="selectedTicketParentName"
 								:child-tickets="selectedTicketChildren"
+								:is-admin="isAdmin"
 								@select-ticket="selectedTicketId = $event"
 							/>
 							<p v-else>Wähle ein Ticket aus.</p>
@@ -348,7 +344,7 @@ async function submitArchiveProject(): Promise<void> {
 						<ProjectUserManagement :project-id="id" :disabled="details.archived" />
 					</CardContent>
 				</Card>
-				<Card v-if="details.projectRole === 'OWNER'">
+				<Card v-if="canUpdateDetails">
 					<CardHeader>
 						<CardTitle>Projektverwaltung</CardTitle>
 					</CardHeader>

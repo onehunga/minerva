@@ -12,6 +12,8 @@ import {
 	SidebarGroupContent,
 	SidebarGroupLabel,
 	SidebarRail,
+	SidebarMenuSub,
+	SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { HugeiconsIcon } from "@hugeicons/vue";
 import {
@@ -25,6 +27,7 @@ import {
 	Plus,
 	Sun,
 	User,
+	ChevronRight,
 } from "@hugeicons/core-free-icons";
 import { useProjects } from "@/feature/project";
 import { useUser } from "@/feature/user";
@@ -38,8 +41,9 @@ import {
 	DropdownMenuTrigger,
 	DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const { projects } = useProjects();
+const { adminProjects, projects } = useProjects();
 const { logout, userDetails } = useUser();
 const route = useRoute();
 const router = useRouter();
@@ -150,6 +154,40 @@ async function submitLogout(): Promise<void> {
 								<span>Benutzer</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
+						<Collapsible as-child class="group/collapsible">
+							<SidebarMenuItem v-if="adminProjects.length > 0">
+								<CollapsibleTrigger as-child>
+									<SidebarMenuButton>
+										<HugeiconsIcon
+											:icon="ChevronRight"
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+										<span>Andere Projekte</span>
+									</SidebarMenuButton>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<SidebarMenuSub>
+										<SidebarMenuSubItem
+											v-for="project in adminProjects"
+											:key="project.id"
+										>
+											<SidebarMenuButton
+												:tooltip="project.name"
+												@click="
+													$router.push({
+														name: 'project',
+														params: { id: project.id },
+													})
+												"
+											>
+												<HugeiconsIcon :icon="Folder" />
+												<span>{{ project.name }}</span>
+											</SidebarMenuButton>
+										</SidebarMenuSubItem>
+									</SidebarMenuSub>
+								</CollapsibleContent>
+							</SidebarMenuItem>
+						</Collapsible>
 					</SidebarMenu>
 				</SidebarGroupContent>
 			</SidebarGroup>
@@ -199,6 +237,11 @@ async function submitLogout(): Promise<void> {
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent side="top" align="end">
+							<DropdownMenuItem @select="router.push({ name: 'profile' })">
+								<HugeiconsIcon :icon="User" class="mr-2" />
+								Profil
+							</DropdownMenuItem>
+							<DropdownMenuSeparator />
 							<DropdownMenuItem @select="submitLogout">
 								<HugeiconsIcon :icon="Logout" class="mr-2" />
 								Abmelden

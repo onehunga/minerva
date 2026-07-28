@@ -14,6 +14,8 @@ export interface IUserRepository {
 	updateUsername(userId: number, username: string): Promise<void>;
 	updateUserPassword(userId: number, password: string): Promise<void>;
 	deleteUser(userId: number): Promise<void>;
+	deactivateUser(userId: number): Promise<void>;
+	reactivateUser(userId: number): Promise<void>;
 }
 
 /**
@@ -54,5 +56,13 @@ export class UserRepository implements IUserRepository {
 
 	async deleteUser(userId: number): Promise<void> {
 		return api.deleteUser(userId);
+	}
+
+	async deactivateUser(userId: number): Promise<void> {
+		return api.deactivateUser(userId);
+	}
+
+	async reactivateUser(userId: number): Promise<void> {
+		return api.reactivateUser(userId);
 	}
 }

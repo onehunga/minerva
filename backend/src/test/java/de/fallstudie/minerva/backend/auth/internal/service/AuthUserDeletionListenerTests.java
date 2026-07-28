@@ -18,4 +18,14 @@ class AuthUserDeletionListenerTests {
 
 		verify(repository).deleteByUserId(2L);
 	}
+
+	@Test
+	void deletesAllRefreshTokensForDeactivatedUser() {
+		final var repository = mock(RefreshTokenRepository.class);
+		final var listener = new AuthUserDeletionListener(repository);
+
+		listener.on(new UserEvent.Deactivated(1L, 2L));
+
+		verify(repository).deleteByUserId(2L);
+	}
 }

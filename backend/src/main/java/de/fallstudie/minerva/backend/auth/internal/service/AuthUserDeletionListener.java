@@ -16,4 +16,9 @@ public class AuthUserDeletionListener {
 	public void on(UserEvent.Deleted event) {
 		refreshTokenRepository.deleteByUserId(event.userId());
 	}
+
+	@EventListener
+	public void on(UserEvent.Deactivated event) {
+		refreshTokenRepository.deleteByUserId(event.userId());
+	}
 }

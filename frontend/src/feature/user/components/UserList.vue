@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
+import { computed, ref } from "vue";
+import {
+	BanIcon,
+	EllipsisIcon,
+	PencilIcon,
+	RotateCcwIcon,
+	Trash2Icon,
+	UserPlusIcon,
+} from "@lucide/vue";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -50,15 +57,23 @@ const props = defineProps<{
 	currentUserId?: number;
 }>();
 
-const { deletingUserId, deleteUser, errorMessage, isLoadingUsers, loadUsers, users } =
-	useManageUsers();
+const {
+	deactivateUser,
+	deletingUserId,
+	deleteUser,
+	errorMessage,
+	isLoadingUsers,
+	loadUsers,
+	reactivateUser,
+	updatingUserStateId,
+	users,
+} = useManageUsers();
 const isCreateOpen = ref(false);
 const selectedUser = ref<UserRecord | null>(null);
 const deleteCandidate = ref<UserRecord | null>(null);
+const deactivateCandidate = ref<UserRecord | null>(null);
 
 const isEditOpen = computed(() => selectedUser.value !== null);
-
-onMounted(loadUsers);
 
 function formatRole(role: UserRole): string {
 	return role === "ADMIN" ? "Administrator" : "Nutzer";
@@ -108,6 +123,24 @@ async function confirmDelete(): Promise<void> {
 		deleteCandidate.value = null;
 	}
 }
+
+function openDeactivateDialog(user: UserRecord): void {
+	if (!isCurrentUser(user)) {
+		deactivateCandidate.value = user;
+	}
+}
+
+function updateDeactivateOpen(open: boolean): void {
+	if (!open && updatingUserStateId.value === null) {
+		deactivateCandidate.value = null;
+	}
+}
+
+async function confirmDeactivate(): Promise<void> {
+	if (deactivateCandidate.value !== null && (await deactivateUser(deactivateCandidate.value))) {
+		deactivateCandidate.value = null;
+	}
+}
 </script>
 
 <template>
@@ -123,6 +156,7 @@ async function confirmDelete(): Promise<void> {
 					<TableRow>
 						<TableHead>Benutzername</TableHead>
 						<TableHead>Rolle</TableHead>
+						<TableHead>Status</TableHead>
 						<TableHead class="w-12">
 							<span class="sr-only">Aktionen</span>
 						</TableHead>
@@ -131,7 +165,7 @@ async function confirmDelete(): Promise<void> {
 
 				<TableBody>
 					<TableRow v-if="users.length === 0">
-						<TableCell colspan="3" class="h-24 text-center text-muted-foreground">
+						<TableCell colspan="4" class="h-24 text-center text-muted-foreground">
 							Es sind noch keine Benutzer vorhanden.
 						</TableCell>
 					</TableRow>
@@ -141,6 +175,9 @@ async function confirmDelete(): Promise<void> {
 							<TableRow>
 								<TableCell class="font-medium">{{ user.username }}</TableCell>
 								<TableCell>{{ formatRole(user.role) }}</TableCell>
+								<TableCell>{{
+									user.deactivated ? "Deaktiviert" : "Aktiv"
+								}}</TableCell>
 								<TableCell class="text-right">
 									<DropdownMenu>
 										<DropdownMenuTrigger as-child>
@@ -160,6 +197,28 @@ async function confirmDelete(): Promise<void> {
 											>
 												<PencilIcon />
 												Benutzer bearbeiten
+											</DropdownMenuItem>
+											<DropdownMenuSeparator />
+											<DropdownMenuItem
+												v-if="user.deactivated"
+												data-action="reactivate"
+												:disabled="updatingUserStateId !== null"
+												@select="reactivateUser(user)"
+											>
+												<RotateCcwIcon />
+												Benutzer reaktivieren
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												v-else
+												data-action="deactivate"
+												:disabled="
+													isCurrentUser(user) ||
+													updatingUserStateId !== null
+												"
+												@select="openDeactivateDialog(user)"
+											>
+												<BanIcon />
+												Benutzer deaktivieren
 											</DropdownMenuItem>
 											<DropdownMenuSeparator />
 											<DropdownMenuItem
@@ -184,6 +243,25 @@ async function confirmDelete(): Promise<void> {
 							</ContextMenuItem>
 							<ContextMenuSeparator />
 							<ContextMenuItem
+								v-if="user.deactivated"
+								data-action="reactivate"
+								:disabled="updatingUserStateId !== null"
+								@select="reactivateUser(user)"
+							>
+								<RotateCcwIcon />
+								Benutzer reaktivieren
+							</ContextMenuItem>
+							<ContextMenuItem
+								v-else
+								data-action="deactivate"
+								:disabled="isCurrentUser(user) || updatingUserStateId !== null"
+								@select="openDeactivateDialog(user)"
+							>
+								<BanIcon />
+								Benutzer deaktivieren
+							</ContextMenuItem>
+							<ContextMenuSeparator />
+							<ContextMenuItem
 								data-action="delete"
 								variant="destructive"
 								:disabled="user.role === 'ADMIN'"
@@ -198,7 +276,7 @@ async function confirmDelete(): Promise<void> {
 
 				<TableFooter class="bg-card sticky bottom-0 z-10">
 					<TableRow>
-						<TableCell colspan="3" class="p-0">
+						<TableCell colspan="4" class="p-0">
 							<Button
 								variant="ghost"
 								class="h-11 w-full justify-start rounded-none px-3"
@@ -264,6 +342,37 @@ async function confirmDelete(): Promise<void> {
 						@click="confirmDelete"
 					>
 						{{ deletingUserId === null ? "Benutzer löschen" : "Wird gelöscht..." }}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+
+		<AlertDialog :open="deactivateCandidate !== null" @update:open="updateDeactivateOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Benutzer deaktivieren?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Der Benutzer „{{ deactivateCandidate?.username }}“ wird abgemeldet und kann
+						sich bis zur Reaktivierung nicht mehr anmelden.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="updatingUserStateId !== null"
+						>Abbrechen</AlertDialogCancel
+					>
+					<Button
+						variant="destructive"
+						:disabled="updatingUserStateId !== null"
+						@click="confirmDeactivate"
+					>
+						{{
+							updatingUserStateId === null
+								? "Benutzer deaktivieren"
+								: "Wird deaktiviert..."
+						}}
 					</Button>
 				</AlertDialogFooter>
 			</AlertDialogContent>

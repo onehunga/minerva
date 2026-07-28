@@ -8,7 +8,6 @@ import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScope
 import de.fallstudie.minerva.backend.activity.internal.persistence.ActivityScopeRepository;
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventListResponse;
 import de.fallstudie.minerva.backend.activity.internal.web.ActivityEventResponse;
-import de.fallstudie.minerva.backend.user.UserService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,7 +26,6 @@ public class ActivityService {
 	private final ActivityEventRepository activityEventRepository;
 	private final ActivityScopeRepository activityScopeRepository;
 	private final ObjectMapper objectMapper;
-	private final UserService userService;
 
 	@Transactional
 	public void append(ActivityEventType type, long actorUserId, Object payload,
@@ -68,16 +66,14 @@ public class ActivityService {
 	}
 
 	public ActivityEventListResponse getUserActivities(long userId) {
-		final var events = activityEventRepository
-				.findAllForUserProjects(ActivityScopeType.PROJECT, userId).stream()
+		final var events = activityEventRepository.findAllForUser(userId).stream()
 				.map(this::toResponse).toList();
 
 		return new ActivityEventListResponse(events);
 	}
 
 	public ActivityEventListResponse getUserActorActivities(long userId) {
-		final var events = activityEventRepository
-				.findAllForUserActor(ActivityScopeType.PROJECT, userId).stream()
+		final var events = activityEventRepository.findAllForUserActor(userId).stream()
 				.map(this::toResponse).toList();
 
 		return new ActivityEventListResponse(events);
@@ -94,13 +90,8 @@ public class ActivityService {
 	}
 
 	private ActivityEventResponse toResponse(ActivityEventModel event) {
-		final var actor = event.getActorUserId() == null
-				? null
-				: userService.findById(event.getActorUserId()).orElse(null);
 		return new ActivityEventResponse(event.getId(), event.getType(), event.getSchemaVersion(),
-				event.getActorUserId(), actor == null ? null : actor.username(),
-				actor != null && actor.deleted(), event.getOccurredAt(),
-				toJsonNode(event.getPayloadJson()));
+				event.getActorUserId(), event.getOccurredAt(), toJsonNode(event.getPayloadJson()));
 	}
 
 	private String toJson(Object payload) {

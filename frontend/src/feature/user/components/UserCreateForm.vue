@@ -23,14 +23,23 @@ const { createUser, errorMessage, isCreatingUser } = useManageUsers();
 
 const username = ref("");
 const password = ref("");
+const passwordConfirmation = ref("");
+const passwordError = ref("");
 const role = ref<UserRole>("USER");
 
 async function submitUser(): Promise<void> {
+	passwordError.value = "";
+	if (password.value !== passwordConfirmation.value) {
+		passwordError.value = "Die Passwörter stimmen nicht überein.";
+		return;
+	}
+
 	const wasCreated = await createUser(username.value, password.value, role.value);
 
 	if (wasCreated) {
 		username.value = "";
 		password.value = "";
+		passwordConfirmation.value = "";
 		role.value = "USER";
 		emit("created");
 	}
@@ -74,6 +83,20 @@ function selectRole(value: unknown): void {
 			</div>
 
 			<div class="flex flex-col gap-2">
+				<Label for="password-confirmation">Passwort bestätigen</Label>
+				<Input
+					id="password-confirmation"
+					v-model="passwordConfirmation"
+					name="password-confirmation"
+					type="password"
+					required
+					minlength="8"
+					autocomplete="new-password"
+					:disabled="isCreatingUser"
+				/>
+			</div>
+
+			<div class="flex flex-col gap-2">
 				<Label for="role">Rolle</Label>
 				<Select
 					:model-value="role"
@@ -90,8 +113,12 @@ function selectRole(value: unknown): void {
 				</Select>
 			</div>
 
-			<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-				{{ errorMessage }}
+			<p
+				v-if="passwordError || errorMessage"
+				class="m-0 text-sm text-destructive"
+				role="alert"
+			>
+				{{ passwordError || errorMessage }}
 			</p>
 		</div>
 

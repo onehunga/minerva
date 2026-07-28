@@ -12,6 +12,7 @@ export const ProjectRepositoryKey = Symbol("ProjectRepository");
 
 export interface IProjectRepository {
 	getAllProjects(): Promise<Array<ProjectRecord>>;
+	getAdminProjects(): Promise<Array<ProjectRecord>>;
 	getProjectDetails(id: number): Promise<ProjectDetails>;
 	createProject(request: CreateProjectRequest): Promise<number>;
 	archiveProject(id: number): Promise<void>;
@@ -25,6 +26,12 @@ export interface IProjectRepository {
 export class ProjectRepository implements IProjectRepository {
 	async getAllProjects(): Promise<Array<ProjectRecord>> {
 		const response = await api.getAllProjects();
+
+		return response.projects;
+	}
+
+	async getAdminProjects(): Promise<Array<ProjectRecord>> {
+		const response = await api.getAdminProjects();
 
 		return response.projects;
 	}

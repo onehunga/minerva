@@ -37,12 +37,16 @@ import { formatDate } from "@/lib/date";
 import CreateTicketForm from "./CreateTicketForm.vue";
 import TicketComments from "./TicketComments.vue";
 
-const props = defineProps<{
-	ticket: Ticket;
-	ticketType?: TicketType;
-	parentTicketName?: string;
-	childTickets: Ticket[];
-}>();
+const props = withDefaults(
+	defineProps<{
+		ticket: Ticket;
+		ticketType?: TicketType;
+		parentTicketName?: string;
+		childTickets: Ticket[];
+		isAdmin?: boolean;
+	}>(),
+	{ isAdmin: false },
+);
 
 const emit = defineEmits<{
 	selectTicket: [ticketId: number];
@@ -79,13 +83,17 @@ const editingField = ref<"name" | "description" | null>(null);
 const draftName = ref(props.ticket.name);
 const draftDescription = ref(props.ticket.description);
 
-const projectMemberUsers = computed(() => projectUsers.value.filter((user) => user.member));
 const possibleAssignees = computed<Array<number | null>>(() => [
 	null,
-	...projectMemberUsers.value.map((user) => user.id),
+	...projectUsers.value
+		.filter((user) => user.projectRole === "OWNER" || user.projectRole === "CONTRIBUTOR")
+		.map((user) => user.id),
 ]);
 const hasTicketWritePermission = computed(
-	() => projectDetails.value != null && projectDetails.value.projectRole !== "VIEWER",
+	() =>
+		props.isAdmin ||
+		projectDetails.value?.projectRole === "OWNER" ||
+		projectDetails.value?.projectRole === "CONTRIBUTOR",
 );
 const isReadOnly = computed(() => projectDetails.value?.archived === true || props.ticket.archived);
 const canModifyTickets = computed(() => hasTicketWritePermission.value && !isReadOnly.value);
@@ -285,7 +293,7 @@ async function confirmTicketAction(): Promise<void> {
 }
 
 function formatProjectUser(userId: number): string {
-	return projectMemberUsers.value.find((user) => user.id === userId)?.username ?? `#${userId}`;
+	return projectUsers.value.find((user) => user.id === userId)?.username ?? `#${userId}`;
 }
 
 function formatAssignee(userId: number | null): string {

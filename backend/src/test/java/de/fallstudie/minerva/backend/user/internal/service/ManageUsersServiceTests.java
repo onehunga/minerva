@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 
 class ManageUsersServiceTests {
 	private static final long USER_ID = 42L;
+	private static final long ACTOR_USER_ID = 1L;
 
 	private PasswordEncoder passwordEncoder;
 	private WorkspaceRoleService workspaceRoleService;
@@ -51,8 +52,11 @@ class ManageUsersServiceTests {
 		when(userRepository.existsByUsernameAndDeletedAtIsNull("valid-user")).thenReturn(false);
 		when(workspaceRoleService.find(WorkspaceRoleName.USER)).thenReturn(Optional.of(userRole));
 		when(passwordEncoder.encode("password1")).thenReturn("encoded-password");
+		final var savedUserWithId = mock(UserModel.class);
+		when(savedUserWithId.getId()).thenReturn(USER_ID);
+		when(userRepository.save(any(UserModel.class))).thenReturn(savedUserWithId);
 
-		manageUsersService.createUser(" valid-user ", "password1", "USER");
+		manageUsersService.createUser(ACTOR_USER_ID, " valid-user ", "password1", "USER");
 
 		ArgumentCaptor<UserModel> userCaptor = ArgumentCaptor.forClass(UserModel.class);
 		verify(userRepository).save(userCaptor.capture());
@@ -109,8 +113,8 @@ class ManageUsersServiceTests {
 	void createUserRejectsDuplicateUsername() {
 		when(userRepository.existsByUsernameAndDeletedAtIsNull("valid-user")).thenReturn(true);
 
-		assertThrows(DuplicateResourceException.class,
-				() -> manageUsersService.createUser("valid-user", "password1", "USER"));
+		assertThrows(DuplicateResourceException.class, () -> manageUsersService
+				.createUser(ACTOR_USER_ID, "valid-user", "password1", "USER"));
 
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();
@@ -123,7 +127,7 @@ class ManageUsersServiceTests {
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 		when(userRepository.existsByUsernameAndDeletedAtIsNull("new-jane")).thenReturn(false);
 
-		manageUsersService.updateUsername(USER_ID, " new-jane ");
+		manageUsersService.updateUsername(ACTOR_USER_ID, USER_ID, " new-jane ");
 
 		assertEquals("new-jane", user.getUsername());
 		verify(userRepository).save(user);
@@ -133,7 +137,7 @@ class ManageUsersServiceTests {
 	@Test
 	void updateUsernameRejectsInvalidUsername() {
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.updateUsername(USER_ID, "ab"));
+				() -> manageUsersService.updateUsername(ACTOR_USER_ID, USER_ID, "ab"));
 
 		verify(userRepository, never()).findById(anyLong());
 		verify(userRepository, never()).save(any());
@@ -148,7 +152,7 @@ class ManageUsersServiceTests {
 		when(userRepository.existsByUsernameAndDeletedAtIsNull("max")).thenReturn(true);
 
 		assertThrows(DuplicateResourceException.class,
-				() -> manageUsersService.updateUsername(USER_ID, "max"));
+				() -> manageUsersService.updateUsername(ACTOR_USER_ID, USER_ID, "max"));
 
 		assertEquals("jane", user.getUsername());
 		verify(userRepository, never()).save(any());
@@ -160,7 +164,7 @@ class ManageUsersServiceTests {
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> manageUsersService.updateUsername(USER_ID, "new-jane"));
+				() -> manageUsersService.updateUsername(ACTOR_USER_ID, USER_ID, "new-jane"));
 
 		verify(userRepository, never()).existsByUsernameAndDeletedAtIsNull(anyString());
 		verify(userRepository, never()).save(any());
@@ -174,7 +178,7 @@ class ManageUsersServiceTests {
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 		when(passwordEncoder.encode("password2")).thenReturn("encoded-password-2");
 
-		manageUsersService.updatePassword(USER_ID, "password2");
+		manageUsersService.updatePassword(ACTOR_USER_ID, USER_ID, "password2");
 
 		assertEquals("encoded-password-2", user.getPassword());
 		verify(userRepository).save(user);
@@ -184,9 +188,9 @@ class ManageUsersServiceTests {
 	@Test
 	void updatePasswordRejectsMissingPassword() {
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.updatePassword(USER_ID, null));
+				() -> manageUsersService.updatePassword(ACTOR_USER_ID, USER_ID, null));
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.updatePassword(USER_ID, "  "));
+				() -> manageUsersService.updatePassword(ACTOR_USER_ID, USER_ID, "  "));
 
 		verify(userRepository, never()).findById(anyLong());
 		verify(userRepository, never()).save(any());
@@ -196,7 +200,7 @@ class ManageUsersServiceTests {
 	@Test
 	void updatePasswordRejectsShortPassword() {
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.updatePassword(USER_ID, "short"));
+				() -> manageUsersService.updatePassword(ACTOR_USER_ID, USER_ID, "short"));
 
 		verify(userRepository, never()).findById(anyLong());
 		verify(userRepository, never()).save(any());
@@ -208,7 +212,7 @@ class ManageUsersServiceTests {
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> manageUsersService.updatePassword(USER_ID, "password2"));
+				() -> manageUsersService.updatePassword(ACTOR_USER_ID, USER_ID, "password2"));
 
 		verify(passwordEncoder, never()).encode(anyString());
 		verify(userRepository, never()).save(any());
@@ -223,12 +227,13 @@ class ManageUsersServiceTests {
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 		when(workspaceRoleService.find(WorkspaceRoleName.ADMIN)).thenReturn(Optional.of(adminRole));
 
-		manageUsersService.updateUserRole(USER_ID, "ADMIN");
+		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "ADMIN");
 
 		assertEquals(adminRole, user.getWorkspaceRole());
 		verify(userRepository).save(user);
 		verify(userRepository).flush();
-		verify(userRepository, never()).findAllByWorkspaceRole_NameAndDeletedAtIsNull(any());
+		verify(userRepository, never())
+				.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(any());
 	}
 
 	@Test
@@ -238,11 +243,11 @@ class ManageUsersServiceTests {
 		final var userRole = createRole(WorkspaceRoleName.USER);
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN))
-				.thenReturn(List.of(user, otherAdmin));
+		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN)).thenReturn(List.of(user, otherAdmin));
 		when(workspaceRoleService.find(WorkspaceRoleName.USER)).thenReturn(Optional.of(userRole));
 
-		manageUsersService.updateUserRole(USER_ID, "USER");
+		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER");
 
 		assertEquals(userRole, user.getWorkspaceRole());
 		verify(userRepository).save(user);
@@ -254,11 +259,11 @@ class ManageUsersServiceTests {
 		final var user = createUser("jane", WorkspaceRoleName.ADMIN);
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN))
-				.thenReturn(List.of(user));
+		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN)).thenReturn(List.of(user));
 
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.updateUserRole(USER_ID, "USER"));
+				() -> manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER"));
 
 		verify(workspaceRoleService, never()).find(any());
 		verify(userRepository, never()).save(any());
@@ -272,11 +277,11 @@ class ManageUsersServiceTests {
 		final var userRole = createRole(WorkspaceRoleName.USER);
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
-		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN))
-				.thenReturn(List.of(user, otherAdmin));
+		when(userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN)).thenReturn(List.of(user, otherAdmin));
 		when(workspaceRoleService.find(WorkspaceRoleName.USER)).thenReturn(Optional.of(userRole));
 
-		manageUsersService.updateUserRole(USER_ID, "USER");
+		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER");
 
 		assertEquals(userRole, user.getWorkspaceRole());
 	}
@@ -287,9 +292,10 @@ class ManageUsersServiceTests {
 
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-		manageUsersService.updateUserRole(USER_ID, "ADMIN");
+		manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "ADMIN");
 
-		verify(userRepository, never()).findAllByWorkspaceRole_NameAndDeletedAtIsNull(any());
+		verify(userRepository, never())
+				.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(any());
 		verify(workspaceRoleService, never()).find(any());
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();
@@ -298,7 +304,7 @@ class ManageUsersServiceTests {
 	@Test
 	void updateUserRoleRejectsInvalidRole() {
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.updateUserRole(USER_ID, "SUPERADMIN"));
+				() -> manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "SUPERADMIN"));
 
 		verify(userRepository, never()).findById(anyLong());
 		verify(userRepository, never()).save(any());
@@ -310,7 +316,7 @@ class ManageUsersServiceTests {
 		when(userRepository.findById(USER_ID)).thenReturn(Optional.empty());
 
 		assertThrows(ResourceNotFoundException.class,
-				() -> manageUsersService.updateUserRole(USER_ID, "USER"));
+				() -> manageUsersService.updateUserRole(ACTOR_USER_ID, USER_ID, "USER"));
 
 		verify(workspaceRoleService, never()).find(any());
 		verify(userRepository, never()).save(any());
@@ -329,7 +335,7 @@ class ManageUsersServiceTests {
 		assertNotNull(user.getDeletedAt());
 		verify(userRepository).save(user);
 		verify(userRepository).flush();
-		verify(eventPublisher).publishEvent(new UserEvent.Deleted(1L, USER_ID));
+		verify(eventPublisher).publishEvent(new UserEvent.Deleted(1L, USER_ID, "jane"));
 	}
 
 	@Test
@@ -355,9 +361,44 @@ class ManageUsersServiceTests {
 		verify(userRepository, never()).flush();
 	}
 
+	@Test
+	void deactivateUserSetsStateAndPublishesEvent() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+		manageUsersService.deactivateUser(ACTOR_USER_ID, USER_ID);
+
+		assertNotNull(user.getDeactivatedAt());
+		verify(userRepository).save(user);
+		verify(userRepository).flush();
+		verify(eventPublisher).publishEvent(new UserEvent.Deactivated(ACTOR_USER_ID, USER_ID));
+	}
+
+	@Test
+	void deactivateUserRejectsSelfDeactivation() {
+		assertThrows(ValidationException.class,
+				() -> manageUsersService.deactivateUser(USER_ID, USER_ID));
+
+		verify(userRepository, never()).findById(anyLong());
+		verify(eventPublisher, never()).publishEvent(any());
+	}
+
+	@Test
+	void reactivateUserClearsStateAndPublishesEvent() {
+		final var user = createUser("jane", WorkspaceRoleName.USER);
+		user.setDeactivatedAt(java.time.Instant.now());
+		when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+		manageUsersService.reactivateUser(ACTOR_USER_ID, USER_ID);
+
+		assertNull(user.getDeactivatedAt());
+		verify(userRepository).save(user);
+		verify(eventPublisher).publishEvent(new UserEvent.Reactivated(ACTOR_USER_ID, USER_ID));
+	}
+
 	private void assertInvalidUser(String username, String password, String role) {
 		assertThrows(ValidationException.class,
-				() -> manageUsersService.createUser(username, password, role));
+				() -> manageUsersService.createUser(ACTOR_USER_ID, username, password, role));
 
 		verify(userRepository, never()).save(any());
 		verify(userRepository, never()).flush();

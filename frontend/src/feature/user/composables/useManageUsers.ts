@@ -1,6 +1,7 @@
 import { ref, type Ref } from "vue";
 import type { UserRecord, UserRole } from "../user.model";
 import { useUserRepository } from "./useUserRepository";
+import { useUsers } from "./useUsers";
 
 type ManageUsers = {
 	users: Ref<UserRecord[]>;
@@ -8,35 +9,24 @@ type ManageUsers = {
 	errorMessage: Ref<string>;
 	deletingUserId: Ref<number | null>;
 	isCreatingUser: Ref<boolean>;
+	updatingUserStateId: Ref<number | null>;
 	successMessage: Ref<string>;
 	loadUsers(): Promise<void>;
 	createUser(username: string, password: string, role: UserRole): Promise<boolean>;
 	deleteUser(user: UserRecord): Promise<boolean>;
+	deactivateUser(user: UserRecord): Promise<boolean>;
+	reactivateUser(user: UserRecord): Promise<boolean>;
 };
 
 export function useManageUsers(): ManageUsers {
 	const userRepository = useUserRepository();
 
-	const users = ref<UserRecord[]>([]);
-	const isLoadingUsers = ref(false);
-	const errorMessage = ref("");
+	const { users, isLoadingUsers, errorMessage, loadUsers } = useUsers();
+
 	const deletingUserId = ref<number | null>(null);
 	const isCreatingUser = ref(false);
 	const successMessage = ref("");
-
-	async function loadUsers(): Promise<void> {
-		isLoadingUsers.value = true;
-		errorMessage.value = "";
-
-		try {
-			const response = await userRepository.getAllUsers();
-			users.value = response.users;
-		} catch {
-			errorMessage.value = "Benutzer konnten nicht geladen werden.";
-		} finally {
-			isLoadingUsers.value = false;
-		}
-	}
+	const updatingUserStateId = ref<number | null>(null);
 
 	async function createUser(
 		username: string,
@@ -75,15 +65,36 @@ export function useManageUsers(): ManageUsers {
 		}
 	}
 
+	async function updateUserState(user: UserRecord, deactivated: boolean): Promise<boolean> {
+		errorMessage.value = "";
+		updatingUserStateId.value = user.id;
+
+		try {
+			await (deactivated
+				? userRepository.deactivateUser(user.id)
+				: userRepository.reactivateUser(user.id));
+			user.deactivated = deactivated;
+			return true;
+		} catch {
+			errorMessage.value = `Benutzer "${user.username}" konnte nicht ${deactivated ? "deaktiviert" : "reaktiviert"} werden.`;
+			return false;
+		} finally {
+			updatingUserStateId.value = null;
+		}
+	}
+
 	return {
 		users,
 		isLoadingUsers,
 		errorMessage,
 		deletingUserId,
 		isCreatingUser,
+		updatingUserStateId,
 		successMessage,
 		loadUsers,
 		createUser,
 		deleteUser,
+		deactivateUser: (user: UserRecord) => updateUserState(user, true),
+		reactivateUser: (user: UserRecord) => updateUserState(user, false),
 	};
 }

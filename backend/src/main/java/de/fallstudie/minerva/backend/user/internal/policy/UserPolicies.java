@@ -22,4 +22,10 @@ public class UserPolicies {
 				.orElseThrow(IllegalStateException::new);
 		return user.workspaceRole().equals(WorkspaceRoleName.ADMIN);
 	}
+
+	public boolean isAdminOrSelf(Identity identity, long userId) {
+		assert identity != null;
+
+		return identity.userId() == userId || isAdmin(identity);
+	}
 }

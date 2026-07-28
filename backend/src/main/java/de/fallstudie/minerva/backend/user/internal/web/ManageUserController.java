@@ -17,7 +17,7 @@ public class ManageUserController {
 	private final ManageUsersService userService;
 
 	@GetMapping
-	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	@PreAuthorize("isAuthenticated()")
 	public UserRecordListResponse get() {
 		log.trace("Getting all users for workspace");
 
@@ -27,43 +27,45 @@ public class ManageUserController {
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void create(@RequestBody CreateUserRequest createUserRequest) {
+	public void create(@AuthenticationPrincipal Identity identity,
+			@RequestBody CreateUserRequest createUserRequest) {
 		log.trace("Creating user with username {} and workspace role {}",
 				createUserRequest.username(), createUserRequest.role());
 
-		userService.createUser(createUserRequest.username(), createUserRequest.password(),
-				createUserRequest.role());
+		userService.createUser(identity.userId(), createUserRequest.username(),
+				createUserRequest.password(), createUserRequest.role());
 	}
 
 	@PatchMapping("/{userId}/role")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void updateRole(@PathVariable long userId,
+	public void updateRole(@AuthenticationPrincipal Identity identity, @PathVariable long userId,
 			@RequestBody UpdateUserRoleRequest updateUserRoleRequest) {
 		log.trace("Updating user with id {} to workspace role {}", userId,
 				updateUserRoleRequest.role());
 
-		userService.updateUserRole(userId, updateUserRoleRequest.role());
+		userService.updateUserRole(identity.userId(), userId, updateUserRoleRequest.role());
 	}
 
 	@PatchMapping("/{userId}/username")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void updateUsername(@PathVariable long userId,
-			@RequestBody UpdateUsernameRequest updateUsernameRequest) {
+	@PreAuthorize("@userPolicies.isAdminOrSelf(principal, #userId)")
+	public void updateUsername(@AuthenticationPrincipal Identity identity,
+			@PathVariable long userId, @RequestBody UpdateUsernameRequest updateUsernameRequest) {
 		log.trace("Updating username for user with id {}", userId);
 
-		userService.updateUsername(userId, updateUsernameRequest.username());
+		userService.updateUsername(identity.userId(), userId, updateUsernameRequest.username());
 	}
 
 	@PatchMapping("/{userId}/password")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
-	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public void updatePassword(@PathVariable long userId,
+	@PreAuthorize("@userPolicies.isAdminOrSelf(principal, #userId)")
+	public void updatePassword(@AuthenticationPrincipal Identity identity,
+			@PathVariable long userId,
 			@RequestBody UpdateUserPasswordRequest updateUserPasswordRequest) {
 		log.trace("Updating password for user with id {}", userId);
 
-		userService.updatePassword(userId, updateUserPasswordRequest.password());
+		userService.updatePassword(identity.userId(), userId, updateUserPasswordRequest.password());
 	}
 
 	@DeleteMapping("/{userId}")
@@ -73,5 +75,19 @@ public class ManageUserController {
 		log.trace("Deleting user with id {}", userId);
 
 		userService.deleteUser(identity.userId(), userId);
+	}
+
+	@PutMapping("/{userId}/deactivation")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	public void deactivate(@AuthenticationPrincipal Identity identity, @PathVariable long userId) {
+		userService.deactivateUser(identity.userId(), userId);
+	}
+
+	@DeleteMapping("/{userId}/deactivation")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@userPolicies.isAdmin(principal)")
+	public void reactivate(@AuthenticationPrincipal Identity identity, @PathVariable long userId) {
+		userService.reactivateUser(identity.userId(), userId);
 	}
 }

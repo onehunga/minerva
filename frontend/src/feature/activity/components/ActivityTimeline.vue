@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { useId } from "vue";
+import { computed, useId } from "vue";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatTicketPriority } from "@/feature/ticket";
+import { useUsers } from "@/feature/user";
 import { formatDate } from "@/lib/date";
 import type { ActivityEvent, ActivityEventType } from "../activity.model";
 
@@ -20,6 +21,8 @@ withDefaults(
 );
 
 const headingId = useId();
+const { users } = useUsers();
+const usernames = computed(() => new Map(users.value.map((user) => [user.id, user.username])));
 
 const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_CREATED: "Projekt erstellt",
@@ -28,6 +31,13 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_USER_ADDED: "Nutzer hinzugefügt",
 	PROJECT_USER_ROLE_CHANGED: "Nutzerrolle geändert",
 	PROJECT_USER_REMOVED: "Nutzer entfernt",
+	USER_CREATED: "Nutzer erstellt",
+	USER_USERNAME_CHANGED: "Benutzername geändert",
+	USER_PASSWORD_CHANGED: "Passwort geändert",
+	USER_WORKSPACE_ROLE_CHANGED: "Nutzerrolle geändert",
+	USER_DEACTIVATED: "Nutzer deaktiviert",
+	USER_REACTIVATED: "Nutzer reaktiviert",
+	USER_DELETED: "Nutzer gelöscht",
 	TICKET_CREATED: "Ticket erstellt",
 	TICKET_COMMENT_CREATED: "Kommentar erstellt",
 	TICKET_STATUS_CHANGED: "Status geändert",
@@ -56,7 +66,7 @@ function num(payload: Payload, key: string): number | null {
 }
 
 function userRef(id: number | null): string {
-	return id == null ? "—" : `#${id}`;
+	return id == null ? "—" : (usernames.value.get(id) ?? `#${id}`);
 }
 
 function describeDetailsUpdated(payload: Payload): string {
@@ -90,6 +100,19 @@ function describe(event: ActivityEvent): string {
 			return `${userRef(num(payload, "userId"))}: ${str(payload, "oldRole") ?? "?"} → ${str(payload, "newRole") ?? "?"}`;
 		case "PROJECT_USER_REMOVED":
 			return userRef(num(payload, "userId"));
+		case "USER_CREATED":
+			return `„${str(payload, "username") ?? "?"}" (Rolle: ${str(payload, "role") ?? "?"})`;
+		case "USER_USERNAME_CHANGED":
+			return `„${str(payload, "previousUsername") ?? "?"}" → „${str(payload, "newUsername") ?? "?"}"`;
+		case "USER_PASSWORD_CHANGED":
+			return userRef(num(payload, "userId"));
+		case "USER_WORKSPACE_ROLE_CHANGED":
+			return `${userRef(num(payload, "userId"))}: ${str(payload, "oldRole") ?? "?"} → ${str(payload, "newRole") ?? "?"}`;
+		case "USER_DEACTIVATED":
+		case "USER_REACTIVATED":
+			return userRef(num(payload, "userId"));
+		case "USER_DELETED":
+			return `„${str(payload, "username") ?? "?"}"`;
 		case "TICKET_COMMENT_CREATED":
 			return str(payload, "content") ?? "";
 		case "TICKET_STATUS_CHANGED": {
@@ -130,11 +153,7 @@ function describe(event: ActivityEvent): string {
 						{{ describe(event) }}
 					</p>
 					<small>
-						{{
-							event.actorDeleted
-								? "Gelöschter Nutzer"
-								: (event.actorUsername ?? `#${event.actorUserId}`)
-						}}
+						{{ userRef(event.actorUserId) }}
 						-
 						{{ formatDate(event.occurredAt) }}
 					</small>

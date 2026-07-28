@@ -55,3 +55,11 @@ export async function updateUserPassword(userId: number, password: string): Prom
 export async function deleteUser(userId: number): Promise<void> {
 	return client.delete(`/v1/users/${userId}`);
 }
+
+export async function deactivateUser(userId: number): Promise<void> {
+	return client.put(`/v1/users/${userId}/deactivation`);
+}
+
+export async function reactivateUser(userId: number): Promise<void> {
+	return client.delete(`/v1/users/${userId}/deactivation`);
+}

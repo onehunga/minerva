@@ -32,7 +32,8 @@ public class ManageUsersService {
 	private final ApplicationEventPublisher eventPublisher;
 
 	@Transactional
-	public void createUser(String username, String password, String workspaceRole) {
+	public void createUser(long actorUserId, String username, String password,
+			String workspaceRole) {
 		final var validatedUsername = validateUsername(username);
 		validatePassword(password);
 		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
@@ -50,12 +51,14 @@ public class ManageUsersService {
 
 		user.setWorkspaceRole(role);
 
-		userRepository.save(user);
+		final var savedUser = userRepository.save(user);
 		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.Created(actorUserId, savedUser.getId(),
+				validatedUsername, workspaceRoleName));
 	}
 
 	@Transactional
-	public void updateUserRole(long userId, String workspaceRole) {
+	public void updateUserRole(long actorUserId, long userId, String workspaceRole) {
 		final var workspaceRoleName = validateWorkspaceRole(workspaceRole);
 		final var user = findActiveUser(userId);
 
@@ -76,10 +79,12 @@ public class ManageUsersService {
 		user.setWorkspaceRole(role);
 		userRepository.save(user);
 		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.WorkspaceRoleChanged(actorUserId, userId,
+				currentRoleName, workspaceRoleName));
 	}
 
 	@Transactional
-	public void updateUsername(long userId, String username) {
+	public void updateUsername(long actorUserId, long userId, String username) {
 		final var validatedUsername = validateUsername(username);
 		final var user = findActiveUser(userId);
 
@@ -91,33 +96,71 @@ public class ManageUsersService {
 			throw new DuplicateResourceException("Benutzername ist bereits vergeben");
 		}
 
+		final var previousUsername = user.getUsername();
 		user.setUsername(validatedUsername);
 		userRepository.save(user);
 		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.UsernameChanged(actorUserId, userId,
+				previousUsername, validatedUsername));
 	}
 
 	@Transactional
-	public void updatePassword(long userId, String password) {
+	public void updatePassword(long actorUserId, long userId, String password) {
 		validatePassword(password);
 		final var user = findActiveUser(userId);
 
 		user.setPassword(passwordEncoder.encode(password));
 		userRepository.save(user);
 		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.PasswordChanged(actorUserId, userId));
 	}
 
 	public UserRecordListResponse getAllUsers() {
 		final var users = userRepository.findAllByDeletedAtIsNull().stream()
 				.map(user -> new UserRecordResponse(user.getId(), user.getUsername(),
-						user.getWorkspaceRole().getName()))
+						user.getWorkspaceRole().getName(), user.getDeactivatedAt() != null))
 				.toList();
 
 		return new UserRecordListResponse(users);
 	}
 
 	@Transactional
+	public void deactivateUser(long actorUserId, long userId) {
+		if (actorUserId == userId) {
+			throw new ValidationException("Benutzer können sich nicht selbst deaktivieren");
+		}
+
+		final var user = findActiveUser(userId);
+		if (user.getDeactivatedAt() != null) {
+			return;
+		}
+		if (user.getWorkspaceRole().getName() == WorkspaceRoleName.ADMIN) {
+			validateAdminCanBeDeactivated();
+		}
+
+		user.setDeactivatedAt(Instant.now());
+		userRepository.save(user);
+		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.Deactivated(actorUserId, userId));
+	}
+
+	@Transactional
+	public void reactivateUser(long actorUserId, long userId) {
+		final var user = findActiveUser(userId);
+		if (user.getDeactivatedAt() == null) {
+			return;
+		}
+
+		user.setDeactivatedAt(null);
+		userRepository.save(user);
+		userRepository.flush();
+		eventPublisher.publishEvent(new UserEvent.Reactivated(actorUserId, userId));
+	}
+
+	@Transactional
 	public void deleteUser(long actorUserId, long userId) {
 		final var user = findActiveUser(userId);
+		final var username = user.getUsername();
 
 		if (user.getWorkspaceRole().getName() == WorkspaceRoleName.ADMIN) {
 			throw new ValidationException(
@@ -129,13 +172,23 @@ public class ManageUsersService {
 		user.setDeletedAt(Instant.now());
 		userRepository.save(user);
 		userRepository.flush();
-		eventPublisher.publishEvent(new UserEvent.Deleted(actorUserId, userId));
+		eventPublisher.publishEvent(new UserEvent.Deleted(actorUserId, userId, username));
 	}
 
 	private void validateAdminCanBeDemoted(UserModel user) {
-		if (userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNull(WorkspaceRoleName.ADMIN)
+		if (user.getDeactivatedAt() == null && userRepository
+				.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+						WorkspaceRoleName.ADMIN)
 				.size() <= 1) {
 			throw new ValidationException("Mindestens ein Admin-Benutzer muss erhalten bleiben");
+		}
+	}
+
+	private void validateAdminCanBeDeactivated() {
+		if (userRepository.findAllByWorkspaceRole_NameAndDeletedAtIsNullAndDeactivatedAtIsNull(
+				WorkspaceRoleName.ADMIN).size() <= 1) {
+			throw new ValidationException(
+					"Mindestens ein aktiver Admin-Benutzer muss erhalten bleiben");
 		}
 	}
 
