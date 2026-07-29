@@ -105,24 +105,28 @@ test("admin can restore an archived project", async ({ api, authenticatedPage: p
 	await archiveDialog.getByRole("button", { name: "Projekt archivieren" }).click();
 	await expect(page).toHaveURL("/");
 
-	await page.getByRole("button", { name: "Archivierte Projekte", exact: true }).click();
+	const navigation = page.getByText("Navigation", { exact: true }).locator("..");
+	await navigation.getByRole("button", { name: "Archivierte Projekte", exact: true }).click();
 	await expect(page).toHaveURL("/projects/archived");
-	await page.goto("/");
+	await expect(page.getByRole("cell", { name: projectName, exact: true })).toBeVisible();
+	await navigation.getByRole("button", { name: "Übersicht", exact: true }).click();
+	await expect(page).toHaveURL("/");
 
-	await page.getByRole("button", { name: "Archivierte Projekte aufklappen" }).click();
-	await page.getByRole("button", { name: projectName, exact: true }).click();
+	await navigation.getByRole("button", { name: "Archivierte Projekte aufklappen" }).click();
+	await navigation.getByRole("button", { name: projectName, exact: true }).click();
 	await expect(page.getByText("Dieses Projekt ist archiviert.")).toBeVisible();
 
 	await page.getByRole("tab", { name: "Einstellungen" }).click();
 	await page.getByRole("button", { name: "Projekt wiederherstellen" }).click();
 	await expect(page.getByText("Dieses Projekt ist archiviert.")).toBeHidden();
 	await expect(
-		page.getByRole("button", { name: "Archivierte Projekte", exact: true }),
+		navigation.getByRole("button", { name: "Archivierte Projekte", exact: true }),
 	).toBeVisible();
-	await expect(page.getByRole("button", { name: projectName, exact: true })).toBeVisible();
+	await navigation.getByRole("button", { name: "Projekte aufklappen" }).click();
+	await expect(navigation.getByRole("button", { name: projectName, exact: true })).toBeVisible();
 
-	await page.getByRole("button", { name: "Übersicht", exact: true }).click();
-	await page.getByRole("button", { name: projectName, exact: true }).click();
+	await navigation.getByRole("button", { name: "Übersicht", exact: true }).click();
+	await navigation.getByRole("button", { name: projectName, exact: true }).click();
 	await page.getByRole("tab", { name: "Aktivitäten" }).click();
 	await expect(page.getByText("Projekt wiederhergestellt")).toBeVisible();
 });
