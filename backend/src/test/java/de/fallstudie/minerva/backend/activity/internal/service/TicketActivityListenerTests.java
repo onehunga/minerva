@@ -86,6 +86,21 @@ class TicketActivityListenerTests {
 	}
 
 	@Test
+	void ticketRestoredAppendsTicketAndProjectScopedActivity() {
+		final var event = new TicketEvent.TicketRestored(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");
+
+		listener.on(event);
+
+		verify(activityService).append(ActivityEventType.TICKET_RESTORED,
+				TestProjects.OWNER_USER_ID, event,
+				List.of(new ActivityScopeCommand(ActivityScopeType.PROJECT,
+						TestProjects.PROJECT_ID),
+						new ActivityScopeCommand(ActivityScopeType.TICKET,
+								TestProjects.CHILD_TICKET_ID)));
+	}
+
+	@Test
 	void ticketDeletedAppendsOnlyProjectScopedActivity() {
 		final var event = new TicketEvent.TicketDeleted(TestProjects.OWNER_USER_ID,
 				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");

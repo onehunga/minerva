@@ -74,3 +74,22 @@ test("admin can update ticket priority and status", async ({ api, authenticatedP
 	await page.getByRole("option", { name: "Start → In Arbeit", exact: true }).click();
 	await expect(page.getByLabel("Status")).toContainText("In Arbeit");
 });
+
+test("admin can restore an archived ticket", async ({ api, authenticatedPage: page }) => {
+	const projectId = await api.createProject();
+	const ticket = await api.createTicket(projectId, { name: "Archiviertes Ticket" });
+	await api.archiveTicket(projectId, ticket.id);
+
+	await page.goto(`/project/${projectId}`);
+	await page.getByRole("tab", { name: "Tickets" }).click();
+	await page.getByLabel("Ticketansicht").click();
+	await page.getByRole("option", { name: "Archivierte Tickets" }).click();
+	await expect(page.getByRole("button", { name: ticket.name, exact: true })).toBeVisible();
+
+	await page.getByRole("button", { name: "Ticket wiederherstellen" }).click();
+	await expect(page.getByRole("button", { name: ticket.name, exact: true })).toBeHidden();
+
+	await page.getByLabel("Ticketansicht").click();
+	await page.getByRole("option", { name: "Aktive Tickets" }).click();
+	await expect(page.getByRole("button", { name: ticket.name, exact: true })).toBeVisible();
+});

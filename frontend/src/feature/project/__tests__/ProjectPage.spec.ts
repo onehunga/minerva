@@ -2,6 +2,7 @@ import { createPinia, type Pinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import { nextTick } from "vue";
+import type { Ticket } from "@/feature/ticket";
 import ProjectPage from "../components/ProjectPage.vue";
 import { useProject } from "../composables/useProject";
 import { ProjectRepositoryKey, type IProjectRepository } from "../project.repository";
@@ -39,7 +40,11 @@ vi.mock("@/feature/ticket", () => ({
 		props: ["disabled"],
 		template: '<button data-testid="create-ticket" :disabled="disabled" />',
 	},
-	TicketDetail: { template: "<div />" },
+	TicketDetail: {
+		emits: ["restorePending"],
+		template:
+			'<button data-testid="restore-pending" @click="$emit(\'restorePending\', true)" />',
+	},
 	TicketList: { template: "<div />" },
 }));
 
@@ -56,11 +61,12 @@ vi.mock("../composables/useProject", async () => {
 		projectRole: "OWNER" as const,
 		archived: false,
 	});
+	const tickets = ref<Ticket[]>([]);
 
 	return {
 		useProject: () => ({
 			details,
-			tickets: ref([]),
+			tickets,
 			ticketTypes: ref([]),
 			fetchTickets: async () => undefined,
 			updateProjectDetails: async () => undefined,
@@ -114,9 +120,16 @@ function mountProjectPage({
 			stubs: {
 				Tabs: slotStub,
 				TabsList: slotStub,
-				TabsTrigger: slotStub,
+				TabsTrigger: {
+					props: ["value", "disabled"],
+					template: '<button :data-tab="value" :disabled="disabled"><slot /></button>',
+				},
 				TabsContent: slotStub,
-				Select: slotStub,
+				Select: {
+					props: ["disabled"],
+					template:
+						'<div data-testid="ticket-view-select" :data-disabled="String(disabled)"><slot /></div>',
+				},
 				SelectTrigger: slotStub,
 				SelectValue: slotStub,
 				SelectContent: slotStub,
@@ -132,10 +145,11 @@ function mountProjectPage({
 describe("ProjectPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		const { details } = useProject();
+		const { details, tickets } = useProject();
 		if (details.value != null) {
 			details.value.archived = false;
 		}
+		tickets.value = [];
 	});
 
 	it("archives the project only after confirmation", async () => {
@@ -207,6 +221,31 @@ describe("ProjectPage", () => {
 		await flushPromises();
 
 		expect(repository.deletedProjectIds).toEqual([7]);
+	});
+
+	it("re-enables the ticket view after the restored ticket leaves the list", async () => {
+		const { tickets } = useProject();
+		tickets.value = [ticket];
+		const { wrapper } = mountProjectPage();
+		await nextTick();
+
+		await wrapper.get("[data-testid='restore-pending']").trigger("click");
+		expect(wrapper.get("[data-testid='ticket-view-select']").attributes("data-disabled")).toBe(
+			"true",
+		);
+		expect(
+			wrapper.findAll("[data-tab]").every((tab) => tab.attributes("disabled") != null),
+		).toBe(true);
+
+		tickets.value = [];
+		await nextTick();
+
+		expect(wrapper.get("[data-testid='ticket-view-select']").attributes("data-disabled")).toBe(
+			"false",
+		);
+		expect(
+			wrapper.findAll("[data-tab]").every((tab) => tab.attributes("disabled") == null),
+		).toBe(true);
 	});
 
 	it("clears store state and navigates on successful deletion", async () => {
@@ -295,6 +334,23 @@ describe("ProjectPage", () => {
 		expect(routerActions.replace).not.toHaveBeenCalled();
 	});
 });
+
+const ticket: Ticket = {
+	id: 1,
+	projectId: 7,
+	ticketTypeId: 1,
+	statusId: 1,
+	priority: "NORMAL",
+	parentTicketId: null,
+	name: "Archiviertes Ticket",
+	description: "",
+	children: [],
+	createdBy: 1,
+	assignedTo: null,
+	createdAt: null,
+	updatedAt: null,
+	archived: true,
+};
 
 function getDialog(): Element | null {
 	return document.body.querySelector("[data-slot='alert-dialog-content']");

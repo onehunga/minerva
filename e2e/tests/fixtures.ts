@@ -34,6 +34,7 @@ type TicketResponse = TicketInput & { id: number; projectId: number };
 type ApiFixture = {
 	createProject(input?: Partial<Pick<ProjectInput, "name" | "description">>): Promise<number>;
 	createTicket(projectId: number, input?: Partial<TicketInput>): Promise<TicketResponse>;
+	archiveTicket(projectId: number, ticketId: number): Promise<void>;
 };
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -237,6 +238,13 @@ const test = baseTest.extend<{
 				});
 				await requireOk(response);
 				return response.json() as Promise<TicketResponse>;
+			},
+			async archiveTicket(projectId, ticketId) {
+				const response = await request.patch(
+					`/api/v1/projects/${projectId}/tickets/${ticketId}/archive`,
+					{ headers },
+				);
+				await requireOk(response);
 			},
 		});
 	},
