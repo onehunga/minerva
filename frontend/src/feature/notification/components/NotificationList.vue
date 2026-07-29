@@ -8,7 +8,7 @@ import { formatDate } from "@/lib/date";
 import type { Notification, NotificationType } from "../notification.model";
 import { useNotifications } from "../composables/useNotifications";
 
-const { notifications, unreadCount, markAsRead } = useNotifications();
+const { notifications, unreadCount, isLoading, errorMessage, markAsRead } = useNotifications();
 
 function titleFor(type: NotificationType): string {
 	switch (type) {
@@ -49,8 +49,14 @@ function descriptionFor(notification: Notification): string {
 		</DropdownMenuLabel>
 		<DropdownMenuSeparator />
 		<div class="max-h-80 overflow-y-auto p-1">
+			<p v-if="isLoading" class="text-muted-foreground px-3 py-6 text-center text-sm">
+				Benachrichtigungen werden geladen...
+			</p>
+			<p v-else-if="errorMessage" class="text-destructive px-3 py-6 text-center text-sm">
+				{{ errorMessage }}
+			</p>
 			<DropdownMenuItem
-				v-for="notification in notifications"
+				v-for="notification in isLoading || errorMessage ? [] : notifications"
 				:key="notification.id"
 				class="items-start gap-3 px-2 py-2.5"
 				@select.prevent="markAsRead(notification.id)"
@@ -78,7 +84,7 @@ function descriptionFor(notification: Notification): string {
 				</span>
 			</DropdownMenuItem>
 			<p
-				v-if="notifications.length === 0"
+				v-if="!isLoading && !errorMessage && notifications.length === 0"
 				class="text-muted-foreground px-3 py-6 text-center text-sm"
 			>
 				Keine Benachrichtigungen

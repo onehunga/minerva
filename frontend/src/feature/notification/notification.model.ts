@@ -26,3 +26,7 @@ export type Notification = {
 	createdAt: string;
 	readAt: string | null;
 };
+
+export type NotificationListResponse = {
+	notifications: Notification[];
+};

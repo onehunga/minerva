@@ -13,10 +13,12 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class NotificationTests {
 	@Test
@@ -61,5 +63,22 @@ class NotificationTests {
 		final var payload = objectMapper.readTree(model.getPayloadJson());
 		assertEquals(TestProjects.CONTRIBUTOR_USER_ID, payload.get("previousAssigneeId").asLong());
 		assertEquals(TestProjects.VIEWER_USER_ID, payload.get("newAssigneeId").asLong());
+	}
+
+	@Test
+	void serviceMarksOnlyTheRecipientsNotificationAsRead() {
+		final var repository = Mockito.mock(NotificationRepository.class);
+		final var service = new NotificationService(repository, new ObjectMapper());
+		final var notification = new NotificationModel();
+		notification.setId(12L);
+		notification.setRecipientUserId(TestProjects.VIEWER_USER_ID);
+		when(repository.findByIdAndRecipientUserId(12L, TestProjects.VIEWER_USER_ID))
+				.thenReturn(Optional.of(notification));
+
+		service.markAsRead(TestProjects.VIEWER_USER_ID, 12L);
+
+		assertNotNull(notification.getReadAt());
+		verify(repository).findByIdAndRecipientUserId(12L, TestProjects.VIEWER_USER_ID);
+		verify(repository).save(notification);
 	}
 }

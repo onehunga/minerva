@@ -4,6 +4,9 @@ import de.fallstudie.minerva.backend.notification.internal.Notification;
 import de.fallstudie.minerva.backend.notification.internal.NotificationType;
 import de.fallstudie.minerva.backend.notification.internal.persistence.NotificationModel;
 import de.fallstudie.minerva.backend.notification.internal.persistence.NotificationRepository;
+import de.fallstudie.minerva.backend.notification.internal.web.NotificationListResponse;
+import de.fallstudie.minerva.backend.notification.internal.web.NotificationResponse;
+import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,24 @@ public class NotificationService {
 		final var createdAt = Instant.now();
 		notificationRepository.saveAll(notifications.stream()
 				.map(notification -> toModel(notification, createdAt)).toList());
+	}
+
+	public NotificationListResponse getAll(long recipientUserId) {
+		final var notifications = notificationRepository
+				.findAllByRecipientUserIdOrderByCreatedAtDescIdDesc(recipientUserId).stream()
+				.map(this::toResponse).toList();
+		return new NotificationListResponse(notifications);
+	}
+
+	@Transactional
+	public void markAsRead(long recipientUserId, long notificationId) {
+		final var notification = notificationRepository
+				.findByIdAndRecipientUserId(notificationId, recipientUserId).orElseThrow(
+						() -> new ResourceNotFoundException("Benachrichtigung nicht gefunden"));
+		if (notification.getReadAt() == null) {
+			notification.setReadAt(Instant.now());
+			notificationRepository.save(notification);
+		}
 	}
 
 	private NotificationModel toModel(Notification notification, Instant createdAt) {
@@ -70,6 +91,17 @@ public class NotificationService {
 			return objectMapper.writeValueAsString(notification);
 		} catch (JacksonException exception) {
 			throw new IllegalStateException("Could not serialize notification payload", exception);
+		}
+	}
+
+	private NotificationResponse toResponse(NotificationModel notification) {
+		try {
+			return new NotificationResponse(notification.getId(), notification.getType(),
+					objectMapper.readTree(notification.getPayloadJson()),
+					notification.getCreatedAt(), notification.getReadAt());
+		} catch (JacksonException exception) {
+			throw new IllegalStateException("Could not deserialize notification payload",
+					exception);
 		}
 	}
 }

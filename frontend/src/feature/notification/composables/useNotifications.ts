@@ -1,17 +1,39 @@
 import { storeToRefs } from "pinia";
-import type { ComputedRef, Ref } from "vue";
 import { useNotificationStore } from "../notification.store";
-import type { Notification } from "../notification.model";
+import { useNotificationRepository } from "./useNotificationRepository";
+import { onMounted } from "vue";
 
-type UseNotificationsResult = {
-	notifications: Ref<Notification[]>;
-	unreadCount: ComputedRef<number>;
-	markAsRead: (id: number) => void;
-};
-
-export function useNotifications(): UseNotificationsResult {
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export function useNotifications() {
 	const store = useNotificationStore();
-	const { notifications, unreadCount } = storeToRefs(store);
+	const repository = useNotificationRepository();
+	const { notifications, unreadCount, isLoading, errorMessage } = storeToRefs(store);
 
-	return { notifications, unreadCount, markAsRead: store.markAsRead };
+	async function load(): Promise<void> {
+		store.setNotifications([]);
+		store.setErrorMessage("");
+		store.setLoading(true);
+		try {
+			store.setNotifications(await repository.getAll());
+		} catch {
+			store.setErrorMessage("Benachrichtigungen konnten nicht geladen werden.");
+		} finally {
+			store.setLoading(false);
+		}
+	}
+
+	async function markAsRead(id: number): Promise<void> {
+		const notification = notifications.value.find((item) => item.id === id);
+		if (notification === undefined || notification.readAt !== null) {
+			return;
+		}
+		await repository.markAsRead(id);
+		store.markAsRead(id);
+	}
+
+	onMounted(async () => {
+		await load();
+	});
+
+	return { notifications, unreadCount, isLoading, errorMessage, load, markAsRead };
 }
