@@ -33,6 +33,16 @@ const router: Router = createRouter({
 					name: "admin-users",
 					component: () => import("@/views/admin/UserManagementView.vue"),
 				},
+				{
+					path: "projects",
+					name: "admin-projects",
+					component: () => import("@/views/admin/AdminProjectsView.vue"),
+				},
+				{
+					path: "projects/archived",
+					name: "admin-archived-projects",
+					component: () => import("@/views/admin/ArchivedAdminProjectsView.vue"),
+				},
 			],
 			meta: {
 				requiresAuth: true,
@@ -51,6 +61,14 @@ const router: Router = createRouter({
 			path: "/projects",
 			name: "projects",
 			component: () => import("@/views/ProjectsView.vue"),
+			meta: {
+				requiresAuth: true,
+			},
+		},
+		{
+			path: "/projects/archived",
+			name: "archived-projects",
+			component: () => import("@/views/ArchivedProjectsView.vue"),
 			meta: {
 				requiresAuth: true,
 			},
