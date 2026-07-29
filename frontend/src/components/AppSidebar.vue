@@ -20,6 +20,7 @@ import { HugeiconsIcon } from "@hugeicons/vue";
 import {
 	Activity,
 	BookOpen01Icon,
+	Bell,
 	Computer,
 	Folder,
 	Home,
@@ -32,6 +33,7 @@ import {
 	ChevronRight,
 } from "@hugeicons/core-free-icons";
 import { useProjects } from "@/feature/project";
+import { NotificationList, useNotifications } from "@/feature/notification";
 import { useUser } from "@/feature/user";
 import { useColorMode } from "@vueuse/core";
 import { useRoute, useRouter } from "vue-router";
@@ -42,11 +44,15 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	DropdownMenuItem,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const { adminProjects, archivedAdminProjects, archivedProjects, projects } = useProjects();
 const { logout, userDetails } = useUser();
+const { unreadCount } = useNotifications();
 const route = useRoute();
 const router = useRouter();
 
@@ -346,7 +352,23 @@ async function submitLogout(): Promise<void> {
 								<span>{{ userDetails?.username }}</span>
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
-						<DropdownMenuContent side="top" align="end">
+						<DropdownMenuContent side="top" align="end" class="w-fit">
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger>
+									<HugeiconsIcon :icon="Bell" class="mr-2" />
+									Benachrichtigungen
+									<span
+										v-if="unreadCount > 0"
+										class="bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs tabular-nums"
+									>
+										{{ unreadCount }}
+									</span>
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent class="p-0">
+									<NotificationList />
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+							<DropdownMenuSeparator />
 							<DropdownMenuItem @select="router.push({ name: 'profile' })">
 								<HugeiconsIcon :icon="User" class="mr-2" />
 								Profil
