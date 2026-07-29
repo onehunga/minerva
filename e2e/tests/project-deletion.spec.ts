@@ -46,7 +46,7 @@ test("admin can delete a project via UI and all data is removed", async ({
 
 		await expect(page).toHaveURL("/projects");
 		await expect(page.getByText("Zu löschendes Projekt")).not.toBeVisible();
-		await expect(page.getByText("Kontrollprojekt")).toBeVisible();
+		await expect(page.getByRole("link", { name: /^Kontrollprojekt/ })).toBeVisible();
 
 		const projectResult = await client.query("SELECT id FROM projects WHERE id = $1", [
 			projectId,
