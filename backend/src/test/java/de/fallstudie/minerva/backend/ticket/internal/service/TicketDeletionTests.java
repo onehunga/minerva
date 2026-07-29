@@ -71,7 +71,7 @@ class TicketDeletionTests {
 		verify(ticketRepository).delete(ticket);
 		verify(eventPublisher)
 				.publishEvent(new TicketEvent.TicketDeleted(TestProjects.OWNER_USER_ID,
-						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
+						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName(), null));
 	}
 
 	@Test

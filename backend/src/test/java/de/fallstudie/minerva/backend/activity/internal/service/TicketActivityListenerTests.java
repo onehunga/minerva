@@ -30,7 +30,7 @@ class TicketActivityListenerTests {
 		final var event = new TicketEvent.StatusChanged(TestProjects.OWNER_USER_ID,
 				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, TestProjects.OPEN_STATUS_ID,
 				"Open", TestProjects.IN_PROGRESS_STATUS_ID, "In Progress",
-				TestProjects.START_PROGRESS_TRANSITION_ID, "Start");
+				TestProjects.START_PROGRESS_TRANSITION_ID, "Start", null);
 
 		listener.on(event);
 
@@ -54,7 +54,7 @@ class TicketActivityListenerTests {
 	void subticketAddedAppendsActivityToTheParentTicket() {
 		final var event = new TicketEvent.SubticketAdded(TestProjects.OWNER_USER_ID,
 				TestProjects.PROJECT_ID, TestProjects.PARENT_TICKET_ID,
-				TestProjects.CHILD_TICKET_ID, "Child ticket");
+				TestProjects.CHILD_TICKET_ID, "Child ticket", null);
 
 		listener.on(event);
 
@@ -73,7 +73,7 @@ class TicketActivityListenerTests {
 	@Test
 	void ticketArchivedAppendsTicketAndProjectScopedActivity() {
 		final var event = new TicketEvent.TicketArchived(TestProjects.OWNER_USER_ID,
-				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket", null);
 
 		listener.on(event);
 
@@ -88,7 +88,7 @@ class TicketActivityListenerTests {
 	@Test
 	void ticketRestoredAppendsTicketAndProjectScopedActivity() {
 		final var event = new TicketEvent.TicketRestored(TestProjects.OWNER_USER_ID,
-				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket", null);
 
 		listener.on(event);
 
@@ -103,7 +103,7 @@ class TicketActivityListenerTests {
 	@Test
 	void ticketDeletedAppendsOnlyProjectScopedActivity() {
 		final var event = new TicketEvent.TicketDeleted(TestProjects.OWNER_USER_ID,
-				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket");
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, "Ticket", null);
 
 		listener.on(event);
 

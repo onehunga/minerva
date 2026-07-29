@@ -63,7 +63,7 @@ class TicketArchivalTests {
 		verify(ticketRepository).flush();
 		verify(eventPublisher)
 				.publishEvent(new TicketEvent.TicketArchived(TestProjects.OWNER_USER_ID,
-						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
+						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName(), null));
 	}
 
 	@Test
@@ -123,7 +123,7 @@ class TicketArchivalTests {
 		verify(ticketRepository).flush();
 		verify(eventPublisher)
 				.publishEvent(new TicketEvent.TicketRestored(TestProjects.OWNER_USER_ID,
-						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
+						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName(), null));
 	}
 
 	@Test

@@ -80,7 +80,7 @@ class TicketDetailsUpdateTests {
 		assertEquals("Neue Beschreibung", ticketCaptor.getValue().getDescription());
 		verify(eventPublisher).publishEvent(new TicketEvent.DetailsUpdated(
 				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID, ticket.getId(), "Ticket 41",
-				"Neuer Name", "Description 41", "Neue Beschreibung"));
+				"Neuer Name", "Description 41", "Neue Beschreibung", null));
 	}
 
 	@Test
