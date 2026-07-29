@@ -45,6 +45,7 @@ const showArchived = ref(false);
 const isLoadingTickets = ref(false);
 const isRestoringTicket = ref(false);
 const isArchivingProject = ref(false);
+const isRestoringProject = ref(false);
 const isArchiveDialogOpen = ref(false);
 const isDeletingProject = ref(false);
 const isDeleteDialogOpen = ref(false);
@@ -186,12 +187,51 @@ async function submitArchiveProject(): Promise<void> {
 
 	try {
 		await projectRepository.archiveProject(props.id);
+		const projectsStore = useProjectsStore();
+		const project = { id: props.id, name: details.value.name };
+		projectsStore.setProjects(projectsStore.projects.filter((item) => item.id !== props.id));
+		projectsStore.setAdminProjects(
+			projectsStore.adminProjects.filter((item) => item.id !== props.id),
+		);
+		projectsStore.setArchivedProjects([
+			...projectsStore.archivedProjects.filter((item) => item.id !== props.id),
+			project,
+		]);
+		details.value.archived = true;
 		isArchiveDialogOpen.value = false;
 		await router.push({ name: "landing" });
 	} catch {
 		errorMessage.value = "Das Projekt konnte nicht archiviert werden.";
 	} finally {
 		isArchivingProject.value = false;
+	}
+}
+
+async function submitRestoreProject(): Promise<void> {
+	if (isRestoringProject.value || details.value?.archived !== true || !canUpdateDetails.value) {
+		return;
+	}
+
+	isRestoringProject.value = true;
+	errorMessage.value = "";
+
+	try {
+		await projectRepository.restoreProject(props.id);
+		const projectsStore = useProjectsStore();
+		const project = { id: props.id, name: details.value.name };
+		projectsStore.setArchivedProjects(
+			projectsStore.archivedProjects.filter((item) => item.id !== props.id),
+		);
+		if (details.value.projectRole === null) {
+			projectsStore.setAdminProjects([...projectsStore.adminProjects, project]);
+		} else {
+			projectsStore.setProjects([...projectsStore.projects, project]);
+		}
+		details.value.archived = false;
+	} catch {
+		errorMessage.value = "Das Projekt konnte nicht wiederhergestellt werden.";
+	} finally {
+		isRestoringProject.value = false;
 	}
 }
 
@@ -221,6 +261,9 @@ async function submitDeleteProject(): Promise<void> {
 		projectsStore.setProjects(projectsStore.projects.filter((p) => p.id !== props.id));
 		projectsStore.setAdminProjects(
 			projectsStore.adminProjects.filter((p) => p.id !== props.id),
+		);
+		projectsStore.setArchivedProjects(
+			projectsStore.archivedProjects.filter((p) => p.id !== props.id),
 		);
 
 		const activeProjectStore = useActiveProjectStore();
@@ -415,13 +458,24 @@ async function submitDeleteProject(): Promise<void> {
 					</CardHeader>
 					<CardContent>
 						<Button
+							v-if="details.archived"
 							type="button"
-							:disabled="isArchivingProject || details.archived"
-							@click="openArchiveDialog"
+							:disabled="isRestoringProject"
+							@click="submitRestoreProject"
 						>
 							{{
-								details.archived ? "Projekt ist archiviert" : "Projekt archivieren"
+								isRestoringProject
+									? "Wird wiederhergestellt..."
+									: "Projekt wiederherstellen"
 							}}
+						</Button>
+						<Button
+							v-else
+							type="button"
+							:disabled="isArchivingProject"
+							@click="openArchiveDialog"
+						>
+							Projekt archivieren
 						</Button>
 						<Button
 							type="button"

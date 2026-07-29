@@ -33,16 +33,22 @@ public class ProjectService {
 	private final UserService userService;
 	private final ApplicationEventPublisher eventPublisher;
 
-	public ProjectRecordListResponse getAllProjects(Identity identity) {
-		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
+	public ProjectRecordListResponse getAllProjects(Identity identity, boolean archived) {
+		final var projectModels = archived
+				? projectRepository.findAllArchivedByUserId(identity.userId())
+				: projectRepository.findAllByUserId(identity.userId());
+		final var projects = projectModels.stream()
 				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
 				.toList();
 
 		return new ProjectRecordListResponse(projects);
 	}
 
-	public ProjectRecordListResponse getAdminProjects(Identity identity) {
-		final var projects = projectRepository.findAllWithoutUser(identity.userId()).stream()
+	public ProjectRecordListResponse getAdminProjects(Identity identity, boolean archived) {
+		final var projectModels = archived
+				? projectRepository.findAllArchivedWithoutUser(identity.userId())
+				: projectRepository.findAllWithoutUser(identity.userId());
+		final var projects = projectModels.stream()
 				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
 				.toList();
 
@@ -98,6 +104,22 @@ public class ProjectService {
 		projectRepository.flush();
 		eventPublisher.publishEvent(
 				new ProjectEvent.ProjectArchived(identity.userId(), projectId, project.getName()));
+	}
+
+	@Transactional
+	public void restoreProject(Identity identity, long projectId) {
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+		if (project.getArchivedAt() == null) {
+			return;
+		}
+
+		project.setArchivedAt(null);
+		projectRepository.save(project);
+		projectRepository.flush();
+		eventPublisher.publishEvent(
+				new ProjectEvent.ProjectRestored(identity.userId(), projectId, project.getName()));
 	}
 
 	@Transactional

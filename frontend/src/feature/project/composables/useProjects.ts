@@ -15,17 +15,31 @@ export function useProjects() {
 	});
 
 	async function refreshProjects(): Promise<void> {
-		store.setProjects(await repository.getAllProjects());
-		store.setAdminProjects(
-			userStore.userDetails?.role === "ADMIN" ? await repository.getAdminProjects() : [],
-		);
+		const isAdmin = userStore.userDetails?.role === "ADMIN";
+		const [projects, archivedProjects, adminProjects, archivedAdminProjects] =
+			await Promise.all([
+				repository.getAllProjects(),
+				repository.getAllProjects(true),
+				isAdmin ? repository.getAdminProjects() : [],
+				isAdmin ? repository.getAdminProjects(true) : [],
+			]);
+		store.setProjects(projects);
+		store.setAdminProjects(adminProjects);
+		store.setArchivedProjects([
+			...archivedProjects,
+			...archivedAdminProjects.filter(
+				(project) =>
+					!archivedProjects.some((memberProject) => memberProject.id === project.id),
+			),
+		]);
 	}
 
-	const { adminProjects, projects } = storeToRefs(store);
+	const { adminProjects, archivedProjects, projects } = storeToRefs(store);
 
 	return {
 		projects,
 		adminProjects,
+		archivedProjects,
 		refreshProjects,
 	};
 }

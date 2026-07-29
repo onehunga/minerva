@@ -11,11 +11,12 @@ import type {
 export const ProjectRepositoryKey = Symbol("ProjectRepository");
 
 export interface IProjectRepository {
-	getAllProjects(): Promise<Array<ProjectRecord>>;
-	getAdminProjects(): Promise<Array<ProjectRecord>>;
+	getAllProjects(archived?: boolean): Promise<Array<ProjectRecord>>;
+	getAdminProjects(archived?: boolean): Promise<Array<ProjectRecord>>;
 	getProjectDetails(id: number): Promise<ProjectDetails>;
 	createProject(request: CreateProjectRequest): Promise<number>;
 	archiveProject(id: number): Promise<void>;
+	restoreProject(id: number): Promise<void>;
 	updateProjectDetails(id: number, request: UpdateProjectDetailsRequest): Promise<void>;
 	getProjectUsers(id: number): Promise<Array<ProjectUser>>;
 	addProjectUser(projectId: number, userId: number, role: ProjectRole): Promise<void>;
@@ -25,14 +26,14 @@ export interface IProjectRepository {
 }
 
 export class ProjectRepository implements IProjectRepository {
-	async getAllProjects(): Promise<Array<ProjectRecord>> {
-		const response = await api.getAllProjects();
+	async getAllProjects(archived: boolean = false): Promise<Array<ProjectRecord>> {
+		const response = await api.getAllProjects(archived);
 
 		return response.projects;
 	}
 
-	async getAdminProjects(): Promise<Array<ProjectRecord>> {
-		const response = await api.getAdminProjects();
+	async getAdminProjects(archived: boolean = false): Promise<Array<ProjectRecord>> {
+		const response = await api.getAdminProjects(archived);
 
 		return response.projects;
 	}
@@ -47,6 +48,10 @@ export class ProjectRepository implements IProjectRepository {
 
 	async archiveProject(id: number): Promise<void> {
 		return api.archiveProject(id);
+	}
+
+	async restoreProject(id: number): Promise<void> {
+		return api.restoreProject(id);
 	}
 
 	async updateProjectDetails(id: number, request: UpdateProjectDetailsRequest): Promise<void> {

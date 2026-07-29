@@ -44,7 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const { adminProjects, projects } = useProjects();
+const { adminProjects, archivedProjects, projects } = useProjects();
 const { logout, userDetails } = useUser();
 const route = useRoute();
 const router = useRouter();
@@ -137,6 +137,44 @@ async function submitLogout(): Promise<void> {
 								</div>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
+						<Collapsible
+							v-if="archivedProjects.length > 0"
+							as-child
+							class="group/collapsible"
+						>
+							<SidebarMenuItem>
+								<CollapsibleTrigger as-child>
+									<SidebarMenuButton>
+										<HugeiconsIcon
+											:icon="ChevronRight"
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+										<span>Archivierte Projekte</span>
+									</SidebarMenuButton>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<SidebarMenuSub>
+										<SidebarMenuSubItem
+											v-for="project in archivedProjects"
+											:key="project.id"
+										>
+											<SidebarMenuButton
+												:tooltip="project.name"
+												@click="
+													$router.push({
+														name: 'project',
+														params: { id: project.id },
+													})
+												"
+											>
+												<HugeiconsIcon :icon="Folder" />
+												<span>{{ project.name }}</span>
+											</SidebarMenuButton>
+										</SidebarMenuSubItem>
+									</SidebarMenuSub>
+								</CollapsibleContent>
+							</SidebarMenuItem>
+						</Collapsible>
 					</SidebarMenu>
 				</SidebarGroupContent>
 			</SidebarGroup>

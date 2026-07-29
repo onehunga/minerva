@@ -113,6 +113,7 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 export const useProjectsStore = defineStore("projects", () => {
 	const projects = ref<ProjectRecord[]>([]);
 	const adminProjects = ref<ProjectRecord[]>([]);
+	const archivedProjects = ref<ProjectRecord[]>([]);
 
 	function setProjects(projectRecords: ProjectRecord[]): void {
 		projects.value = projectRecords;
@@ -122,10 +123,16 @@ export const useProjectsStore = defineStore("projects", () => {
 		adminProjects.value = projectRecords;
 	}
 
+	function setArchivedProjects(projectRecords: ProjectRecord[]): void {
+		archivedProjects.value = projectRecords;
+	}
+
 	return {
 		projects,
 		adminProjects,
+		archivedProjects,
 		setProjects,
 		setAdminProjects,
+		setArchivedProjects,
 	};
 });

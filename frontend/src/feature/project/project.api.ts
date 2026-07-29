@@ -8,12 +8,16 @@ import type {
 	UpdateProjectDetailsRequest,
 } from "./project.model";
 
-export async function getAllProjects(): Promise<ProjectRecordListResponse> {
-	return client.get("/v1/projects").then((res) => res.data);
+export async function getAllProjects(
+	archived: boolean = false,
+): Promise<ProjectRecordListResponse> {
+	return client.get("/v1/projects", { params: { archived } }).then((res) => res.data);
 }
 
-export async function getAdminProjects(): Promise<ProjectRecordListResponse> {
-	return client.get("/v1/admin/projects").then((res) => res.data);
+export async function getAdminProjects(
+	archived: boolean = false,
+): Promise<ProjectRecordListResponse> {
+	return client.get("/v1/admin/projects", { params: { archived } }).then((res) => res.data);
 }
 
 export async function getProjectById(id: number): Promise<ProjectDetails> {
@@ -26,6 +30,10 @@ export async function createProject(request: CreateProjectRequest): Promise<numb
 
 export async function archiveProject(id: number): Promise<void> {
 	return client.patch(`/v1/projects/${id}/archive`);
+}
+
+export async function restoreProject(id: number): Promise<void> {
+	return client.delete(`/v1/projects/${id}/archive`);
 }
 
 export async function updateProjectDetails(
