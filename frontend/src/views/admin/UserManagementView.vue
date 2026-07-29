@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CenteredPageLayout from "@/components/CenteredPageLayout.vue";
 import { Card, CardContent } from "@/components/ui/card";
 import { UserList, useUserStore } from "@/feature/user";
 
@@ -6,7 +7,7 @@ const userStore = useUserStore();
 </script>
 
 <template>
-	<main class="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col gap-4">
+	<CenteredPageLayout>
 		<header class="shrink-0">
 			<h1 class="m-0">Benutzerverwaltung</h1>
 			<p class="text-muted-foreground m-0">
@@ -19,5 +20,5 @@ const userStore = useUserStore();
 				<UserList :current-user-id="userStore.userDetails?.id" />
 			</CardContent>
 		</Card>
-	</main>
+	</CenteredPageLayout>
 </template>
