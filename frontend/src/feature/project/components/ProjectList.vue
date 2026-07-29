@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RouterLink } from "vue-router";
 import { useProjects } from "../composables/useProjects";
 
@@ -19,6 +19,9 @@ const { projects } = useProjects();
 				<Card class="h-full transition-shadow hover:shadow-md">
 					<CardHeader>
 						<CardTitle>{{ project.name }}</CardTitle>
+						<CardDescription>
+							{{ project.description || "Keine Beschreibung hinterlegt." }}
+						</CardDescription>
 					</CardHeader>
 				</Card>
 			</RouterLink>

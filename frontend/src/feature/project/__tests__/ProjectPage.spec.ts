@@ -209,7 +209,7 @@ describe("ProjectPage", () => {
 		if (details.value != null) details.value.archived = true;
 		const pinia = createPinia();
 		const projectsStore = useProjectsStore(pinia);
-		projectsStore.setArchivedProjects([{ id: 7, name: "Minerva" }]);
+		projectsStore.setArchivedProjects([{ id: 7, name: "Minerva", description: "" }]);
 		const { wrapper, repository } = mountProjectPage({ pinia });
 
 		clickButton(wrapper.element, "Projekt wiederherstellen");
@@ -217,7 +217,7 @@ describe("ProjectPage", () => {
 
 		expect(repository.restoredProjectIds).toEqual([7]);
 		expect(projectsStore.archivedProjects).toEqual([]);
-		expect(projectsStore.projects).toEqual([{ id: 7, name: "Minerva" }]);
+		expect(projectsStore.projects).toEqual([{ id: 7, name: "Minerva", description: "" }]);
 		expect(details.value?.archived).toBe(false);
 	});
 
@@ -230,7 +230,7 @@ describe("ProjectPage", () => {
 		}
 		const pinia = createPinia();
 		const projectsStore = useProjectsStore(pinia);
-		projectsStore.setArchivedAdminProjects([{ id: 7, name: "Minerva" }]);
+		projectsStore.setArchivedAdminProjects([{ id: 7, name: "Minerva", description: "" }]);
 		const { wrapper, repository } = mountProjectPage({ pinia });
 
 		clickButton(wrapper.element, "Projekt wiederherstellen");
@@ -238,7 +238,7 @@ describe("ProjectPage", () => {
 
 		expect(repository.restoredProjectIds).toEqual([7]);
 		expect(projectsStore.archivedAdminProjects).toEqual([]);
-		expect(projectsStore.adminProjects).toEqual([{ id: 7, name: "Minerva" }]);
+		expect(projectsStore.adminProjects).toEqual([{ id: 7, name: "Minerva", description: "" }]);
 	});
 
 	it("opens delete dialog and confirms deletion", async () => {
@@ -293,12 +293,12 @@ describe("ProjectPage", () => {
 		const pinia = createPinia();
 		const projectsStore = useProjectsStore(pinia);
 		projectsStore.setProjects([
-			{ id: 7, name: "Minerva" },
-			{ id: 8, name: "Anderes Projekt" },
+			{ id: 7, name: "Minerva", description: "" },
+			{ id: 8, name: "Anderes Projekt", description: "" },
 		]);
 		projectsStore.setAdminProjects([
-			{ id: 7, name: "Minerva" },
-			{ id: 9, name: "Admin-Projekt" },
+			{ id: 7, name: "Minerva", description: "" },
+			{ id: 9, name: "Admin-Projekt", description: "" },
 		]);
 
 		const activeProjectStore = useActiveProjectStore(pinia);
@@ -346,8 +346,12 @@ describe("ProjectPage", () => {
 		clickDialogButton("Projekt löschen");
 		await flushPromises();
 
-		expect(projectsStore.projects).toEqual([{ id: 8, name: "Anderes Projekt" }]);
-		expect(projectsStore.adminProjects).toEqual([{ id: 9, name: "Admin-Projekt" }]);
+		expect(projectsStore.projects).toEqual([
+			{ id: 8, name: "Anderes Projekt", description: "" },
+		]);
+		expect(projectsStore.adminProjects).toEqual([
+			{ id: 9, name: "Admin-Projekt", description: "" },
+		]);
 		expect(activeProjectStore.activeProject).toBeNull();
 		expect(activeProjectStore.details).toBeNull();
 		expect(activeProjectStore.projectUsers).toEqual([]);
@@ -361,7 +365,7 @@ describe("ProjectPage", () => {
 		repository.deleteError = new Error("fail");
 		const pinia = createPinia();
 		const projectsStore = useProjectsStore(pinia);
-		projectsStore.setProjects([{ id: 7, name: "Minerva" }]);
+		projectsStore.setProjects([{ id: 7, name: "Minerva", description: "" }]);
 		const { wrapper } = mountProjectPage({ repository, pinia });
 
 		clickButton(wrapper.element, "Projekt löschen");
@@ -371,7 +375,7 @@ describe("ProjectPage", () => {
 
 		expect(getDialog()?.textContent).toContain("konnte nicht gelöscht werden");
 		expect(repository.deletedProjectIds).toEqual([7]);
-		expect(projectsStore.projects).toEqual([{ id: 7, name: "Minerva" }]);
+		expect(projectsStore.projects).toEqual([{ id: 7, name: "Minerva", description: "" }]);
 		expect(routerActions.replace).not.toHaveBeenCalled();
 	});
 });

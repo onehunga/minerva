@@ -9,6 +9,7 @@ export type CreateProjectRequest = {
 export type ProjectRecord = {
 	id: number;
 	name: string;
+	description: string;
 };
 
 export type ProjectRecordListResponse = {

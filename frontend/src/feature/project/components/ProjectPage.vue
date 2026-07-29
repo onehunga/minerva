@@ -188,7 +188,11 @@ async function submitArchiveProject(): Promise<void> {
 	try {
 		await projectRepository.archiveProject(props.id);
 		const projectsStore = useProjectsStore();
-		const project = { id: props.id, name: details.value.name };
+		const project = {
+			id: props.id,
+			name: details.value.name,
+			description: details.value.description,
+		};
 		projectsStore.setProjects(projectsStore.projects.filter((item) => item.id !== props.id));
 		projectsStore.setAdminProjects(
 			projectsStore.adminProjects.filter((item) => item.id !== props.id),
@@ -225,7 +229,11 @@ async function submitRestoreProject(): Promise<void> {
 	try {
 		await projectRepository.restoreProject(props.id);
 		const projectsStore = useProjectsStore();
-		const project = { id: props.id, name: details.value.name };
+		const project = {
+			id: props.id,
+			name: details.value.name,
+			description: details.value.description,
+		};
 		projectsStore.setArchivedProjects(
 			projectsStore.archivedProjects.filter((item) => item.id !== props.id),
 		);

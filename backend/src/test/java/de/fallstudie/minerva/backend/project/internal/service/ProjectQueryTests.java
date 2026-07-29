@@ -56,6 +56,7 @@ class ProjectQueryTests {
 		assertEquals(1, response.projects().size());
 		assertEquals(TestProjects.PROJECT_ID, response.projects().getFirst().id());
 		assertEquals("Minerva", response.projects().getFirst().name());
+		assertEquals("Ticket project", response.projects().getFirst().description());
 	}
 
 	@Test

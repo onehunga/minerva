@@ -38,7 +38,8 @@ public class ProjectService {
 				? projectRepository.findAllArchivedByUserId(identity.userId())
 				: projectRepository.findAllByUserId(identity.userId());
 		final var projects = projectModels.stream()
-				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
+				.map(project -> new ProjectRecordResponse(project.getId(), project.getName(),
+						project.getDescription()))
 				.toList();
 
 		return new ProjectRecordListResponse(projects);
@@ -49,7 +50,8 @@ public class ProjectService {
 				? projectRepository.findAllArchivedWithoutUser(identity.userId())
 				: projectRepository.findAllWithoutUser(identity.userId());
 		final var projects = projectModels.stream()
-				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
+				.map(project -> new ProjectRecordResponse(project.getId(), project.getName(),
+						project.getDescription()))
 				.toList();
 
 		return new ProjectRecordListResponse(projects);
