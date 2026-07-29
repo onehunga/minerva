@@ -88,56 +88,46 @@ async function submitLogout(): Promise<void> {
 								<span>Übersicht</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								tooltip="Projekte"
-								:is-active="route.name === 'projects'"
-								@click="$router.push({ name: 'projects' })"
-							>
-								<HugeiconsIcon :icon="Folder" />
-								<span>Projekte</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								tooltip="Aktivitäten"
-								:is-active="route.name === 'activities'"
-								@click="$router.push({ name: 'activities' })"
-							>
-								<HugeiconsIcon :icon="Activity" />
-								<span>Aktivitäten</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					</SidebarMenu>
-				</SidebarGroupContent>
-			</SidebarGroup>
-
-			<SidebarGroup>
-				<SidebarGroupLabel>Projekte</SidebarGroupLabel>
-				<SidebarGroupContent>
-					<SidebarMenu>
-						<SidebarMenuItem class="m-1" v-for="project in projects" :key="project.id">
-							<SidebarMenuButton
-								:tooltip="project.name"
-								@click="
-									$router.push({ name: 'project', params: { id: project.id } })
-								"
-							>
-								<HugeiconsIcon :icon="Folder" />
-								<span>{{ project.name }}</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								tooltip="Projekt Erstellen"
-								@click="$router.push('/create-project')"
-							>
-								<div class="flex flex-row items-center gap-2">
-									<HugeiconsIcon :icon="Plus" class="" />
-									<p>Projekt erstellen</p>
-								</div>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
+						<Collapsible as-child class="group/collapsible">
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									:is-active="route.name === 'projects'"
+									@click="$router.push({ name: 'projects' })"
+								>
+									<HugeiconsIcon :icon="Folder" />
+									<span>Projekte</span>
+								</SidebarMenuButton>
+								<CollapsibleTrigger v-if="projects.length > 0" as-child>
+									<SidebarMenuAction aria-label="Projekte aufklappen">
+										<HugeiconsIcon
+											:icon="ChevronRight"
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+									</SidebarMenuAction>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<SidebarMenuSub>
+										<SidebarMenuSubItem
+											v-for="project in projects"
+											:key="project.id"
+										>
+											<SidebarMenuButton
+												:tooltip="project.name"
+												@click="
+													$router.push({
+														name: 'project',
+														params: { id: project.id },
+													})
+												"
+											>
+												<HugeiconsIcon :icon="Folder" />
+												<span>{{ project.name }}</span>
+											</SidebarMenuButton>
+										</SidebarMenuSubItem>
+									</SidebarMenuSub>
+								</CollapsibleContent>
+							</SidebarMenuItem>
+						</Collapsible>
 						<Collapsible as-child class="group/collapsible">
 							<SidebarMenuItem>
 								<SidebarMenuButton
@@ -178,6 +168,27 @@ async function submitLogout(): Promise<void> {
 								</CollapsibleContent>
 							</SidebarMenuItem>
 						</Collapsible>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								tooltip="Aktivitäten"
+								:is-active="route.name === 'activities'"
+								@click="$router.push({ name: 'activities' })"
+							>
+								<HugeiconsIcon :icon="Activity" />
+								<span>Aktivitäten</span>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
+						<SidebarMenuItem>
+							<SidebarMenuButton
+								tooltip="Projekt Erstellen"
+								@click="$router.push('/create-project')"
+							>
+								<div class="flex flex-row items-center gap-2">
+									<HugeiconsIcon :icon="Plus" class="" />
+									<p>Projekt erstellen</p>
+								</div>
+							</SidebarMenuButton>
+						</SidebarMenuItem>
 					</SidebarMenu>
 				</SidebarGroupContent>
 			</SidebarGroup>
