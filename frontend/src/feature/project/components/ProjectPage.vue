@@ -43,6 +43,7 @@ const userStore = useUserStore();
 const selectedTicketId = ref<number | null>(null);
 const showArchived = ref(false);
 const isLoadingTickets = ref(false);
+const isRestoringTicket = ref(false);
 const isArchivingProject = ref(false);
 const isArchiveDialogOpen = ref(false);
 const isDeletingProject = ref(false);
@@ -88,6 +89,7 @@ watch(
 	() => {
 		errorMessage.value = "";
 		isArchiveDialogOpen.value = false;
+		isRestoringTicket.value = false;
 		showArchived.value = false;
 		selectedTicketId.value = null;
 	},
@@ -106,6 +108,7 @@ watch(
 	tickets,
 	() => {
 		if (!tickets.value.some((ticket) => ticket.id === selectedTicketId.value)) {
+			isRestoringTicket.value = false;
 			selectedTicketId.value = tickets.value[0]?.id ?? null;
 		}
 	},
@@ -247,10 +250,24 @@ async function submitDeleteProject(): Promise<void> {
 		<Tabs default-value="overview" class="flex-1 mt-2">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
-					<TabsTrigger value="overview">Übersicht</TabsTrigger>
-					<TabsTrigger v-if="canModifyTickets" value="tickets"> Tickets </TabsTrigger>
-					<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
-					<TabsTrigger v-if="canOpenSettings" value="settings">
+					<TabsTrigger value="overview" :disabled="isRestoringTicket">
+						Übersicht
+					</TabsTrigger>
+					<TabsTrigger
+						v-if="canModifyTickets"
+						value="tickets"
+						:disabled="isRestoringTicket"
+					>
+						Tickets
+					</TabsTrigger>
+					<TabsTrigger value="activities" :disabled="isRestoringTicket">
+						Aktivitäten
+					</TabsTrigger>
+					<TabsTrigger
+						v-if="canOpenSettings"
+						value="settings"
+						:disabled="isRestoringTicket"
+					>
 						Einstellungen
 					</TabsTrigger>
 				</TabsList>
@@ -285,7 +302,7 @@ async function submitDeleteProject(): Promise<void> {
 					<Label for="ticket-view">Ticketansicht</Label>
 					<Select
 						:model-value="showArchived ? 'archived' : 'active'"
-						:disabled="isLoadingTickets"
+						:disabled="isLoadingTickets || isRestoringTicket"
 						@update:model-value="selectTicketView"
 					>
 						<SelectTrigger id="ticket-view" class="w-52">
@@ -322,6 +339,7 @@ async function submitDeleteProject(): Promise<void> {
 								:child-tickets="selectedTicketChildren"
 								:is-admin="isAdmin"
 								@select-ticket="selectedTicketId = $event"
+								@restore-pending="isRestoringTicket = $event"
 							/>
 							<p v-else>Wähle ein Ticket aus.</p>
 						</CardContent>

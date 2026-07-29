@@ -46,6 +46,7 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_ASSIGNEE_CHANGED: "Bearbeiter geändert",
 	TICKET_SUBTICKET_ADDED: "Subticket hinzugefügt",
 	TICKET_ARCHIVED: "Ticket archiviert",
+	TICKET_RESTORED: "Ticket wiederhergestellt",
 	TICKET_DELETED: "Ticket gelöscht",
 };
 
@@ -89,6 +90,7 @@ function describe(event: ActivityEvent): string {
 		case "PROJECT_ARCHIVED":
 		case "TICKET_CREATED":
 		case "TICKET_ARCHIVED":
+		case "TICKET_RESTORED":
 		case "TICKET_DELETED":
 			return `„${str(payload, "name") ?? "?"}"`;
 		case "PROJECT_DETAILS_UPDATED":

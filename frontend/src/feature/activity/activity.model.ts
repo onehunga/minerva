@@ -20,6 +20,7 @@ export type ActivityEventType =
 	| "TICKET_ASSIGNEE_CHANGED"
 	| "TICKET_SUBTICKET_ADDED"
 	| "TICKET_ARCHIVED"
+	| "TICKET_RESTORED"
 	| "TICKET_DELETED";
 
 export type ActivityEvent = {

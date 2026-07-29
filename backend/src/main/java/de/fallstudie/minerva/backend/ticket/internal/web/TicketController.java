@@ -76,6 +76,16 @@ public class TicketController {
 		ticketService.archiveTicket(identity, projectId, ticketId);
 	}
 
+	@DeleteMapping("/tickets/{ticketId}/archive")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canModifyTickets(principal, #projectId)")
+	public void restoreTicket(@AuthenticationPrincipal Identity identity,
+			@PathVariable long projectId, @PathVariable long ticketId) {
+		log.info("Restoring ticket with ID {} in project with ID {}", ticketId, projectId);
+
+		ticketService.restoreTicket(identity, projectId, ticketId);
+	}
+
 	@GetMapping("/tickets/{ticketId}/comments")
 	@PreAuthorize("@projectPolicy.canViewProject(principal, #projectId)")
 	public TicketCommentListResponse getTicketComments(@PathVariable long projectId,

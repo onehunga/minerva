@@ -113,6 +113,16 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 		store.removeTicket(ticketId);
 	}
 
+	async function restoreTicket(ticketId: number): Promise<void> {
+		const projectId = store.activeProject;
+		await ticketRepository.restoreTicket(Number(projectId), ticketId);
+		if (projectId !== store.activeProject) {
+			return;
+		}
+
+		store.removeTicket(ticketId);
+	}
+
 	async function updateTicketStatus(
 		ticketId: number,
 		transitionId: number,
@@ -176,6 +186,7 @@ export function useProject(projectId?: MaybeRefOrGetter<string>) {
 		updateProjectDetails,
 		deleteTicket,
 		archiveTicket,
+		restoreTicket,
 		updateTicketStatus,
 		updateTicketPriority,
 		updateTicketDetails,

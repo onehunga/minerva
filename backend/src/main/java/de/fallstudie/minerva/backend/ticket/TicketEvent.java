@@ -42,6 +42,10 @@ public sealed interface TicketEvent {
 			String name) implements TicketEvent {
 	}
 
+	record TicketRestored(long actorUserId, long projectId, long ticketId,
+			String name) implements TicketEvent {
+	}
+
 	record TicketDeleted(long actorUserId, long projectId, long ticketId,
 			String name) implements TicketEvent {
 	}

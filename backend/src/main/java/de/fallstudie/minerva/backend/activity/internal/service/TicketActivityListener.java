@@ -25,6 +25,7 @@ public class TicketActivityListener {
 			case TicketEvent.AssigneeChanged _ -> ActivityEventType.TICKET_ASSIGNEE_CHANGED;
 			case TicketEvent.SubticketAdded _ -> ActivityEventType.TICKET_SUBTICKET_ADDED;
 			case TicketEvent.TicketArchived _ -> ActivityEventType.TICKET_ARCHIVED;
+			case TicketEvent.TicketRestored _ -> ActivityEventType.TICKET_RESTORED;
 			case TicketEvent.TicketDeleted _ -> ActivityEventType.TICKET_DELETED;
 		};
 

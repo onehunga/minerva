@@ -47,6 +47,9 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 
 	function removeTicket(ticketId: number): void {
 		tickets.value = tickets.value.filter((ticket) => ticket.id !== ticketId);
+		for (const ticket of tickets.value) {
+			ticket.children = ticket.children.filter((child) => child.id !== ticketId);
+		}
 	}
 
 	function updateTicketStatus(ticketId: number, statusId: number): void {

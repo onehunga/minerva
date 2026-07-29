@@ -69,6 +69,22 @@ public class TicketService {
 				ticket.getId(), ticket.getName()));
 	}
 
+	@Transactional
+	public void restoreTicket(Identity identity, long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		if (ticket.getArchivedAt() == null) {
+			return;
+		}
+
+		ticket.setArchivedAt(null);
+		ticketRepository.save(ticket);
+		ticketRepository.flush();
+		eventPublisher.publishEvent(new TicketEvent.TicketRestored(identity.userId(), projectId,
+				ticket.getId(), ticket.getName()));
+	}
+
 	public TicketTypeListResponse getTicketTypes(long projectId) {
 		final var ticketTypes = ticketTypeRepository.findAllByProjectIdOrderByNameAsc(projectId)
 				.stream().map(ticketType -> {

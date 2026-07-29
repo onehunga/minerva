@@ -18,6 +18,7 @@ export interface ITicketRepository {
 	createTicket(projectId: number, request: CreateTicketRequest): Promise<Ticket>;
 	deleteTicket(projectId: number, ticketId: number): Promise<void>;
 	archiveTicket(projectId: number, ticketId: number): Promise<void>;
+	restoreTicket(projectId: number, ticketId: number): Promise<void>;
 	updateTicketStatus(projectId: number, ticketId: number, transitionId: number): Promise<void>;
 	updateTicketPriority(
 		projectId: number,
@@ -65,6 +66,10 @@ export class TicketRepository implements ITicketRepository {
 
 	async archiveTicket(projectId: number, ticketId: number): Promise<void> {
 		return api.archiveTicket(projectId, ticketId);
+	}
+
+	async restoreTicket(projectId: number, ticketId: number): Promise<void> {
+		return api.restoreTicket(projectId, ticketId);
 	}
 
 	async updateTicketStatus(

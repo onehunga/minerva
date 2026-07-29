@@ -40,6 +40,10 @@ export async function archiveTicket(projectId: number, ticketId: number): Promis
 	return client.patch(`/v1/projects/${projectId}/tickets/${ticketId}/archive`);
 }
 
+export async function restoreTicket(projectId: number, ticketId: number): Promise<void> {
+	return client.delete(`/v1/projects/${projectId}/tickets/${ticketId}/archive`);
+}
+
 export async function updateTicketStatus(
 	projectId: number,
 	ticketId: number,
