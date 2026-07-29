@@ -105,14 +105,20 @@ test("admin can restore an archived project", async ({ api, authenticatedPage: p
 	await archiveDialog.getByRole("button", { name: "Projekt archivieren" }).click();
 	await expect(page).toHaveURL("/");
 
-	await page.getByRole("button", { name: "Archivierte Projekte" }).click();
+	await page.getByRole("button", { name: "Archivierte Projekte", exact: true }).click();
+	await expect(page).toHaveURL("/projects/archived");
+	await page.goto("/");
+
+	await page.getByRole("button", { name: "Archivierte Projekte aufklappen" }).click();
 	await page.getByRole("button", { name: projectName, exact: true }).click();
 	await expect(page.getByText("Dieses Projekt ist archiviert.")).toBeVisible();
 
 	await page.getByRole("tab", { name: "Einstellungen" }).click();
 	await page.getByRole("button", { name: "Projekt wiederherstellen" }).click();
 	await expect(page.getByText("Dieses Projekt ist archiviert.")).toBeHidden();
-	await expect(page.getByRole("button", { name: "Archivierte Projekte" })).toBeHidden();
+	await expect(
+		page.getByRole("button", { name: "Archivierte Projekte", exact: true }),
+	).toBeVisible();
 	await expect(page.getByRole("button", { name: projectName, exact: true })).toBeVisible();
 
 	await page.getByRole("button", { name: "Übersicht", exact: true }).click();
