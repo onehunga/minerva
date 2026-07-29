@@ -12,6 +12,7 @@ const routerActions = vi.hoisted(() => ({
 	push: vi.fn<(target: unknown) => Promise<void>>(),
 	replace: vi.fn<(target: unknown) => Promise<void>>(),
 }));
+const userState = vi.hoisted(() => ({ role: "USER" }));
 
 vi.mock("vue-router", () => ({
 	useRouter: () => ({ push: routerActions.push, replace: routerActions.replace }),
@@ -49,7 +50,7 @@ vi.mock("@/feature/ticket", () => ({
 }));
 
 vi.mock("@/feature/user", () => ({
-	useUserStore: () => ({ userDetails: { role: "USER" } }),
+	useUserStore: () => ({ userDetails: { role: userState.role } }),
 }));
 
 vi.mock("../composables/useProject", async () => {
@@ -76,14 +77,19 @@ vi.mock("../composables/useProject", async () => {
 
 class FakeProjectRepository implements Pick<
 	IProjectRepository,
-	"archiveProject" | "deleteProject"
+	"archiveProject" | "restoreProject" | "deleteProject"
 > {
 	archivedProjectIds: number[] = [];
+	restoredProjectIds: number[] = [];
 	deletedProjectIds: number[] = [];
 	deleteError: Error | null = null;
 
 	async archiveProject(projectId: number): Promise<void> {
 		this.archivedProjectIds.push(projectId);
+	}
+
+	async restoreProject(projectId: number): Promise<void> {
+		this.restoredProjectIds.push(projectId);
 	}
 
 	async deleteProject(projectId: number): Promise<void> {
@@ -145,9 +151,11 @@ function mountProjectPage({
 describe("ProjectPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		userState.role = "USER";
 		const { details, tickets } = useProject();
 		if (details.value != null) {
 			details.value.archived = false;
+			details.value.projectRole = "OWNER";
 		}
 		tickets.value = [];
 	});
@@ -193,11 +201,44 @@ describe("ProjectPage", () => {
 			"true",
 		);
 
-		clickButton(wrapper.element, "Projekt ist archiviert");
-		await nextTick();
-
 		expect(repository.archivedProjectIds).toEqual([]);
-		expect(getDialog()).toBeNull();
+	});
+
+	it("restores the project and moves it to the member list", async () => {
+		const { details } = useProject();
+		if (details.value != null) details.value.archived = true;
+		const pinia = createPinia();
+		const projectsStore = useProjectsStore(pinia);
+		projectsStore.setArchivedProjects([{ id: 7, name: "Minerva" }]);
+		const { wrapper, repository } = mountProjectPage({ pinia });
+
+		clickButton(wrapper.element, "Projekt wiederherstellen");
+		await flushPromises();
+
+		expect(repository.restoredProjectIds).toEqual([7]);
+		expect(projectsStore.archivedProjects).toEqual([]);
+		expect(projectsStore.projects).toEqual([{ id: 7, name: "Minerva" }]);
+		expect(details.value?.archived).toBe(false);
+	});
+
+	it("restores a non-member project to the admin list", async () => {
+		userState.role = "ADMIN";
+		const { details } = useProject();
+		if (details.value != null) {
+			details.value.archived = true;
+			details.value.projectRole = null;
+		}
+		const pinia = createPinia();
+		const projectsStore = useProjectsStore(pinia);
+		projectsStore.setArchivedAdminProjects([{ id: 7, name: "Minerva" }]);
+		const { wrapper, repository } = mountProjectPage({ pinia });
+
+		clickButton(wrapper.element, "Projekt wiederherstellen");
+		await flushPromises();
+
+		expect(repository.restoredProjectIds).toEqual([7]);
+		expect(projectsStore.archivedAdminProjects).toEqual([]);
+		expect(projectsStore.adminProjects).toEqual([{ id: 7, name: "Minerva" }]);
 	});
 
 	it("opens delete dialog and confirms deletion", async () => {

@@ -25,20 +25,16 @@ export function useProjects() {
 			]);
 		store.setProjects(projects);
 		store.setAdminProjects(adminProjects);
-		store.setArchivedProjects([
-			...archivedProjects,
-			...archivedAdminProjects.filter(
-				(project) =>
-					!archivedProjects.some((memberProject) => memberProject.id === project.id),
-			),
-		]);
+		store.setArchivedProjects(archivedProjects);
+		store.setArchivedAdminProjects(archivedAdminProjects);
 	}
 
-	const { adminProjects, archivedProjects, projects } = storeToRefs(store);
+	const { adminProjects, archivedAdminProjects, archivedProjects, projects } = storeToRefs(store);
 
 	return {
 		projects,
 		adminProjects,
+		archivedAdminProjects,
 		archivedProjects,
 		refreshProjects,
 	};

@@ -193,10 +193,17 @@ async function submitArchiveProject(): Promise<void> {
 		projectsStore.setAdminProjects(
 			projectsStore.adminProjects.filter((item) => item.id !== props.id),
 		);
-		projectsStore.setArchivedProjects([
-			...projectsStore.archivedProjects.filter((item) => item.id !== props.id),
-			project,
-		]);
+		if (details.value.projectRole === null) {
+			projectsStore.setArchivedAdminProjects([
+				...projectsStore.archivedAdminProjects.filter((item) => item.id !== props.id),
+				project,
+			]);
+		} else {
+			projectsStore.setArchivedProjects([
+				...projectsStore.archivedProjects.filter((item) => item.id !== props.id),
+				project,
+			]);
+		}
 		details.value.archived = true;
 		isArchiveDialogOpen.value = false;
 		await router.push({ name: "landing" });
@@ -223,6 +230,9 @@ async function submitRestoreProject(): Promise<void> {
 			projectsStore.archivedProjects.filter((item) => item.id !== props.id),
 		);
 		if (details.value.projectRole === null) {
+			projectsStore.setArchivedAdminProjects(
+				projectsStore.archivedAdminProjects.filter((item) => item.id !== props.id),
+			);
 			projectsStore.setAdminProjects([...projectsStore.adminProjects, project]);
 		} else {
 			projectsStore.setProjects([...projectsStore.projects, project]);
@@ -264,6 +274,9 @@ async function submitDeleteProject(): Promise<void> {
 		);
 		projectsStore.setArchivedProjects(
 			projectsStore.archivedProjects.filter((p) => p.id !== props.id),
+		);
+		projectsStore.setArchivedAdminProjects(
+			projectsStore.archivedAdminProjects.filter((p) => p.id !== props.id),
 		);
 
 		const activeProjectStore = useActiveProjectStore();
