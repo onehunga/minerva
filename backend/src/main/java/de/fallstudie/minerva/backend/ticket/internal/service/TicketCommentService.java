@@ -10,6 +10,7 @@ import de.fallstudie.minerva.backend.project.ProjectPolicies;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
 import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
 import de.fallstudie.minerva.backend.ticket.internal.web.CreateTicketCommentRequest;
 import de.fallstudie.minerva.backend.ticket.internal.web.TicketCommentListResponse;
@@ -44,7 +45,7 @@ public class TicketCommentService {
 	public TicketCommentResponse createTicketComment(Identity identity, long projectId,
 			long ticketId, CreateTicketCommentRequest request) {
 		final var content = validateCreateTicketCommentRequest(request);
-		ensureTicketWritable(projectId, ticketId);
+		final var ticket = ensureTicketWritable(projectId, ticketId);
 
 		final var comment = new TicketCommentModel();
 		comment.setTicketId(ticketId);
@@ -53,7 +54,7 @@ public class TicketCommentService {
 
 		final var savedComment = ticketCommentRepository.save(comment);
 		eventPublisher.publishEvent(new TicketEvent.CommentCreated(identity.userId(), projectId,
-				ticketId, savedComment.getId(), savedComment.getContent()));
+				ticketId, savedComment.getId(), savedComment.getContent(), ticket.getAssignedTo()));
 
 		return toTicketCommentResponse(savedComment);
 	}
@@ -63,7 +64,7 @@ public class TicketCommentService {
 				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
 	}
 
-	private void ensureTicketWritable(long projectId, long ticketId) {
+	private TicketModel ensureTicketWritable(long projectId, long ticketId) {
 		if (projectPolicies.isArchived(projectId)) {
 			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
 		}
@@ -72,6 +73,7 @@ public class TicketCommentService {
 		if (ticket.getArchivedAt() != null) {
 			throw new ReadOnlyException("Archivierte Tickets sind schreibgeschützt");
 		}
+		return ticket;
 	}
 
 	private TicketCommentResponse toTicketCommentResponse(TicketCommentModel comment) {

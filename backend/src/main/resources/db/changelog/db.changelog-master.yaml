@@ -17,3 +17,5 @@ databaseChangeLog:
       file: db/changelog/changes/0008-user-activities.yaml
   - include:
       file: db/changelog/changes/0009-project-deletion.yaml
+  - include:
+      file: db/changelog/changes/0010-notifications.yaml
