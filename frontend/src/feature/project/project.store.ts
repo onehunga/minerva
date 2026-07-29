@@ -47,6 +47,9 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 
 	function removeTicket(ticketId: number): void {
 		tickets.value = tickets.value.filter((ticket) => ticket.id !== ticketId);
+		for (const ticket of tickets.value) {
+			ticket.children = ticket.children.filter((child) => child.id !== ticketId);
+		}
 	}
 
 	function updateTicketStatus(ticketId: number, statusId: number): void {
@@ -110,6 +113,8 @@ export const useActiveProjectStore = defineStore("active.project", () => {
 export const useProjectsStore = defineStore("projects", () => {
 	const projects = ref<ProjectRecord[]>([]);
 	const adminProjects = ref<ProjectRecord[]>([]);
+	const archivedProjects = ref<ProjectRecord[]>([]);
+	const archivedAdminProjects = ref<ProjectRecord[]>([]);
 
 	function setProjects(projectRecords: ProjectRecord[]): void {
 		projects.value = projectRecords;
@@ -119,10 +124,22 @@ export const useProjectsStore = defineStore("projects", () => {
 		adminProjects.value = projectRecords;
 	}
 
+	function setArchivedProjects(projectRecords: ProjectRecord[]): void {
+		archivedProjects.value = projectRecords;
+	}
+
+	function setArchivedAdminProjects(projectRecords: ProjectRecord[]): void {
+		archivedAdminProjects.value = projectRecords;
+	}
+
 	return {
 		projects,
 		adminProjects,
+		archivedProjects,
+		archivedAdminProjects,
 		setProjects,
 		setAdminProjects,
+		setArchivedProjects,
+		setArchivedAdminProjects,
 	};
 });

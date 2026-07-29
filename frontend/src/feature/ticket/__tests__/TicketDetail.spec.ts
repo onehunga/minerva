@@ -7,6 +7,7 @@ import TicketDetail from "../components/TicketDetail.vue";
 const projectActions = vi.hoisted(() => ({
 	deleteTicket: vi.fn<(ticketId: number) => Promise<void>>(),
 	archiveTicket: vi.fn<(ticketId: number) => Promise<void>>(),
+	restoreTicket: vi.fn<(ticketId: number) => Promise<void>>(),
 	updateTicketStatus:
 		vi.fn<(ticketId: number, transitionId: number, statusId: number) => Promise<void>>(),
 	updateTicketPriority: vi.fn<(ticketId: number, priority: string) => Promise<void>>(),
@@ -15,9 +16,13 @@ const projectActions = vi.hoisted(() => ({
 	updateTicketAssignee: vi.fn<(ticketId: number, assignedTo: number | null) => Promise<void>>(),
 }));
 
+const projectState = vi.hoisted(() => ({
+	details: { value: { projectRole: "OWNER" as const, archived: false } },
+}));
+
 vi.mock("@/feature/project", () => ({
 	useProject: () => ({
-		details: { value: { projectRole: "OWNER", archived: false } },
+		details: projectState.details,
 		projectUsers: {
 			value: [{ id: 1, username: "admin", projectRole: "OWNER", member: true }],
 		},
@@ -65,6 +70,7 @@ const ticketType: TicketType = {
 describe("TicketDetail", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		projectState.details.value.archived = false;
 	});
 
 	it("separates ticket content from actions and metadata", async () => {
@@ -209,6 +215,76 @@ describe("TicketDetail", () => {
 		expect(wrapper.text()).toContain(nextTicket.name);
 	});
 
+	it("restores an archived ticket without confirmation", async () => {
+		let finishRestore!: () => void;
+		projectActions.restoreTicket.mockReturnValueOnce(
+			new Promise<void>((resolve) => {
+				finishRestore = resolve;
+			}),
+		);
+		const wrapper = mount(TicketDetail, {
+			attachTo: document.body,
+			props: { ticket: { ...ticket, archived: true }, ticketType, childTickets: [] },
+			global: {
+				stubs: {
+					Tabs: slotStub,
+					TabsList: slotStub,
+					TabsTrigger: slotStub,
+					TabsContent: slotStub,
+					Select: slotStub,
+					SelectTrigger: slotStub,
+					SelectValue: slotStub,
+					SelectContent: slotStub,
+					SelectItem: slotStub,
+					TicketComments: slotStub,
+					ActivityTimeline: slotStub,
+					CreateTicketForm: slotStub,
+				},
+			},
+		});
+
+		await clickButton(wrapper.element, "Ticket wiederherstellen");
+		await nextTick();
+
+		expect(projectActions.restoreTicket).toHaveBeenCalledExactlyOnceWith(ticket.id);
+		expect(wrapper.emitted("restorePending")).toEqual([[true]]);
+		expect(getDialog()).toBeNull();
+		expect(getButton(wrapper.element, "Wird wiederhergestellt...").disabled).toBe(true);
+
+		finishRestore();
+		await flushPromises();
+		expect(wrapper.emitted("restorePending")).toEqual([[true], [false]]);
+
+		projectActions.restoreTicket.mockRejectedValueOnce(new Error("Request failed"));
+		await clickButton(wrapper.element, "Ticket wiederherstellen");
+		await flushPromises();
+
+		expect(
+			wrapper
+				.findAll("[role='alert']")
+				.some((alert) =>
+					alert.text().includes("Das Ticket konnte nicht wiederhergestellt werden."),
+				),
+		).toBe(true);
+	});
+
+	it("disables restoration while the project is archived", () => {
+		projectState.details.value.archived = true;
+		const wrapper = shallowMount(TicketDetail, {
+			props: { ticket: { ...ticket, archived: true }, ticketType, childTickets: [] },
+			global: {
+				stubs: {
+					Button: {
+						props: ["disabled"],
+						template: '<button :disabled="disabled"><slot /></button>',
+					},
+				},
+			},
+		});
+
+		expect(getButton(wrapper.element, "Ticket wiederherstellen").disabled).toBe(true);
+	});
+
 	it("disables local ticket mutations for archived tickets", async () => {
 		const wrapper = shallowMount(TicketDetail, {
 			props: {
@@ -252,6 +328,7 @@ describe("TicketDetail", () => {
 
 		expect(getButton(wrapper.element, ticket.name).disabled).toBe(true);
 		expect(getButton(wrapper.element, "Ticket löschen").disabled).toBe(true);
+		expect(getButton(wrapper.element, "Ticket wiederherstellen").disabled).toBe(false);
 		expect(
 			wrapper
 				.findAll(".select-stub")

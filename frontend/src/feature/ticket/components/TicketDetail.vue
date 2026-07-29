@@ -50,6 +50,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
 	selectTicket: [ticketId: number];
+	restorePending: [pending: boolean];
 }>();
 
 const {
@@ -57,6 +58,7 @@ const {
 	projectUsers,
 	deleteTicket,
 	archiveTicket,
+	restoreTicket,
 	updateTicketStatus,
 	updateTicketPriority,
 	updateTicketDetails,
@@ -73,6 +75,7 @@ const {
 
 const isDeletingTicket = ref(false);
 const isArchivingTicket = ref(false);
+const isRestoringTicket = ref(false);
 const isUpdatingStatus = ref(false);
 const isUpdatingPriority = ref(false);
 const isUpdatingDetails = ref(false);
@@ -97,6 +100,12 @@ const hasTicketWritePermission = computed(
 );
 const isReadOnly = computed(() => projectDetails.value?.archived === true || props.ticket.archived);
 const canModifyTickets = computed(() => hasTicketWritePermission.value && !isReadOnly.value);
+const canRestoreTicket = computed(
+	() =>
+		hasTicketWritePermission.value &&
+		projectDetails.value?.archived === false &&
+		props.ticket.archived,
+);
 const currentStatus = computed<WorkflowState | undefined>(() =>
 	props.ticketType?.states.find((state) => state.id === props.ticket.statusId),
 );
@@ -289,6 +298,24 @@ async function confirmTicketAction(): Promise<void> {
 		} else {
 			isDeletingTicket.value = false;
 		}
+	}
+}
+
+async function submitRestoreTicket(): Promise<void> {
+	if (isRestoringTicket.value || !canRestoreTicket.value) {
+		return;
+	}
+
+	isRestoringTicket.value = true;
+	emit("restorePending", true);
+	errorMessage.value = "";
+	try {
+		await restoreTicket(props.ticket.id);
+	} catch {
+		errorMessage.value = "Das Ticket konnte nicht wiederhergestellt werden.";
+	} finally {
+		isRestoringTicket.value = false;
+		emit("restorePending", false);
 	}
 }
 
@@ -547,6 +574,18 @@ function formatAssignee(userId: number | null): string {
 						@click="openTicketAction('archive')"
 					>
 						{{ isArchivingTicket ? "Wird archiviert..." : "Ticket archivieren" }}
+					</Button>
+					<Button
+						v-if="hasTicketWritePermission && ticket.archived"
+						variant="outline"
+						:disabled="isRestoringTicket || !canRestoreTicket"
+						@click="submitRestoreTicket"
+					>
+						{{
+							isRestoringTicket
+								? "Wird wiederhergestellt..."
+								: "Ticket wiederherstellen"
+						}}
 					</Button>
 					<Button
 						v-if="hasTicketWritePermission"

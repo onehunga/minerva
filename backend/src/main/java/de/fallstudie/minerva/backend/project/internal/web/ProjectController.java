@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import de.fallstudie.minerva.backend.project.internal.service.ProjectService;
 import de.fallstudie.minerva.backend.user.Identity;
@@ -26,10 +27,11 @@ public class ProjectController {
 	private final ProjectService projectService;
 
 	@GetMapping("")
-	public ProjectRecordListResponse getAllProjects(@AuthenticationPrincipal Identity identity) {
+	public ProjectRecordListResponse getAllProjects(@AuthenticationPrincipal Identity identity,
+			@RequestParam(defaultValue = "false") boolean archived) {
 		log.info("User with ID {} is requesting all projects", identity.userId());
 
-		return projectService.getAllProjects(identity);
+		return projectService.getAllProjects(identity, archived);
 	}
 
 	@GetMapping("/{id}")
@@ -59,6 +61,15 @@ public class ProjectController {
 		log.info("User with ID {} is archiving project with ID {}", identity.userId(), id);
 
 		projectService.archiveProject(identity, id);
+	}
+
+	@DeleteMapping("/{id}/archive")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void restoreProject(@AuthenticationPrincipal Identity identity, @PathVariable long id) {
+		log.info("User with ID {} is restoring project with ID {}", identity.userId(), id);
+
+		projectService.restoreProject(identity, id);
 	}
 
 	@GetMapping("/{id}/users")
@@ -103,5 +114,14 @@ public class ProjectController {
 				userId, id);
 
 		projectService.removeProjectUser(identity, id, userId);
+	}
+
+	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	@PreAuthorize("@projectPolicy.canManageProjectUsers(principal, #id)")
+	public void deleteProject(@PathVariable long id) {
+		log.info("Deleting project with ID {}", id);
+
+		projectService.deleteProject(id);
 	}
 }

@@ -74,3 +74,59 @@ test("admin can update ticket priority and status", async ({ api, authenticatedP
 	await page.getByRole("option", { name: "Start → In Arbeit", exact: true }).click();
 	await expect(page.getByLabel("Status")).toContainText("In Arbeit");
 });
+
+test("admin can restore an archived ticket", async ({ api, authenticatedPage: page }) => {
+	const projectId = await api.createProject();
+	const ticket = await api.createTicket(projectId, { name: "Archiviertes Ticket" });
+	await api.archiveTicket(projectId, ticket.id);
+
+	await page.goto(`/project/${projectId}`);
+	await page.getByRole("tab", { name: "Tickets" }).click();
+	await page.getByLabel("Ticketansicht").click();
+	await page.getByRole("option", { name: "Archivierte Tickets" }).click();
+	await expect(page.getByRole("button", { name: ticket.name, exact: true })).toBeVisible();
+
+	await page.getByRole("button", { name: "Ticket wiederherstellen" }).click();
+	await expect(page.getByRole("button", { name: ticket.name, exact: true })).toBeHidden();
+
+	await page.getByLabel("Ticketansicht").click();
+	await page.getByRole("option", { name: "Aktive Tickets" }).click();
+	await expect(page.getByRole("button", { name: ticket.name, exact: true })).toBeVisible();
+});
+
+test("admin can restore an archived project", async ({ api, authenticatedPage: page }) => {
+	const projectName = "Archiviertes Projekt";
+	const projectId = await api.createProject({ name: projectName });
+
+	await page.goto(`/project/${projectId}`);
+	await page.getByRole("tab", { name: "Einstellungen" }).click();
+	await page.getByRole("button", { name: "Projekt archivieren", exact: true }).click();
+	const archiveDialog = page.getByRole("alertdialog");
+	await archiveDialog.getByRole("button", { name: "Projekt archivieren" }).click();
+	await expect(page).toHaveURL("/");
+
+	const navigation = page.getByText("Navigation", { exact: true }).locator("..");
+	await navigation.getByRole("button", { name: "Archivierte Projekte", exact: true }).click();
+	await expect(page).toHaveURL("/projects/archived");
+	await expect(page.getByRole("cell", { name: projectName, exact: true })).toBeVisible();
+	await navigation.getByRole("button", { name: "Übersicht", exact: true }).click();
+	await expect(page).toHaveURL("/");
+
+	await navigation.getByRole("button", { name: "Archivierte Projekte aufklappen" }).click();
+	await navigation.getByRole("button", { name: projectName, exact: true }).click();
+	await expect(page.getByText("Dieses Projekt ist archiviert.")).toBeVisible();
+
+	await page.getByRole("tab", { name: "Einstellungen" }).click();
+	await page.getByRole("button", { name: "Projekt wiederherstellen" }).click();
+	await expect(page.getByText("Dieses Projekt ist archiviert.")).toBeHidden();
+	await expect(
+		navigation.getByRole("button", { name: "Archivierte Projekte", exact: true }),
+	).toBeVisible();
+	await navigation.getByRole("button", { name: "Projekte aufklappen" }).click();
+	await expect(navigation.getByRole("button", { name: projectName, exact: true })).toBeVisible();
+
+	await navigation.getByRole("button", { name: "Übersicht", exact: true }).click();
+	await navigation.getByRole("button", { name: projectName, exact: true }).click();
+	await page.getByRole("tab", { name: "Aktivitäten" }).click();
+	await expect(page.getByText("Projekt wiederhergestellt")).toBeVisible();
+});

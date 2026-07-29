@@ -1,40 +1,27 @@
 package de.fallstudie.minerva.backend.project.internal.service;
 
-import java.time.Instant;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.context.ApplicationEventPublisher;
-
 import de.fallstudie.minerva.backend.common.DuplicateResourceException;
 import de.fallstudie.minerva.backend.common.ReadOnlyException;
 import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
 import de.fallstudie.minerva.backend.common.ValidationException;
 import de.fallstudie.minerva.backend.project.CreateProjectCommand;
+import de.fallstudie.minerva.backend.project.ProjectDeletedEvent;
 import de.fallstudie.minerva.backend.project.ProjectEvent;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberModel;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectMemberRepository;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectModel;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRepository;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleModel;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleName;
-import de.fallstudie.minerva.backend.project.internal.persistence.ProjectRoleRepository;
-import de.fallstudie.minerva.backend.project.internal.web.AddProjectUserRequest;
-import de.fallstudie.minerva.backend.project.internal.web.ProjectDetailsResponse;
-import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordListResponse;
-import de.fallstudie.minerva.backend.project.internal.web.ProjectRecordResponse;
-import de.fallstudie.minerva.backend.project.internal.web.ProjectUserListResponse;
-import de.fallstudie.minerva.backend.project.internal.web.ProjectUserResponse;
-import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectUserRoleRequest;
-import de.fallstudie.minerva.backend.project.internal.web.UpdateProjectDetailsRequest;
+import de.fallstudie.minerva.backend.project.internal.persistence.*;
+import de.fallstudie.minerva.backend.project.internal.web.*;
 import de.fallstudie.minerva.backend.user.Identity;
 import de.fallstudie.minerva.backend.user.UserService;
 import de.fallstudie.minerva.backend.user.WorkspaceRoleName;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -46,17 +33,25 @@ public class ProjectService {
 	private final UserService userService;
 	private final ApplicationEventPublisher eventPublisher;
 
-	public ProjectRecordListResponse getAllProjects(Identity identity) {
-		final var projects = projectRepository.findAllByUserId(identity.userId()).stream()
-				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
+	public ProjectRecordListResponse getAllProjects(Identity identity, boolean archived) {
+		final var projectModels = archived
+				? projectRepository.findAllArchivedByUserId(identity.userId())
+				: projectRepository.findAllByUserId(identity.userId());
+		final var projects = projectModels.stream()
+				.map(project -> new ProjectRecordResponse(project.getId(), project.getName(),
+						project.getDescription()))
 				.toList();
 
 		return new ProjectRecordListResponse(projects);
 	}
 
-	public ProjectRecordListResponse getAdminProjects(Identity identity) {
-		final var projects = projectRepository.findAllWithoutUser(identity.userId()).stream()
-				.map(project -> new ProjectRecordResponse(project.getId(), project.getName()))
+	public ProjectRecordListResponse getAdminProjects(Identity identity, boolean archived) {
+		final var projectModels = archived
+				? projectRepository.findAllArchivedWithoutUser(identity.userId())
+				: projectRepository.findAllWithoutUser(identity.userId());
+		final var projects = projectModels.stream()
+				.map(project -> new ProjectRecordResponse(project.getId(), project.getName(),
+						project.getDescription()))
 				.toList();
 
 		return new ProjectRecordListResponse(projects);
@@ -83,6 +78,21 @@ public class ProjectService {
 	}
 
 	@Transactional
+	public void deleteProject(long projectId) {
+		log.trace("called deleteProject({})", projectId);
+
+		final var project = projectRepository.findById(projectId).orElseThrow(() -> {
+			log.error("tried deleting project that does not exist");
+
+			return new ResourceNotFoundException("Projekt mit ID " + projectId + " nicht gefunden");
+		});
+
+		projectRepository.delete(project);
+		projectRepository.flush();
+		eventPublisher.publishEvent(new ProjectDeletedEvent(projectId));
+	}
+
+	@Transactional
 	public void archiveProject(Identity identity, long projectId) {
 		final var project = projectRepository.findById(projectId)
 				.orElseThrow(() -> new ResourceNotFoundException(
@@ -96,6 +106,22 @@ public class ProjectService {
 		projectRepository.flush();
 		eventPublisher.publishEvent(
 				new ProjectEvent.ProjectArchived(identity.userId(), projectId, project.getName()));
+	}
+
+	@Transactional
+	public void restoreProject(Identity identity, long projectId) {
+		final var project = projectRepository.findById(projectId)
+				.orElseThrow(() -> new ResourceNotFoundException(
+						"Projekt mit ID " + projectId + " nicht gefunden"));
+		if (project.getArchivedAt() == null) {
+			return;
+		}
+
+		project.setArchivedAt(null);
+		projectRepository.save(project);
+		projectRepository.flush();
+		eventPublisher.publishEvent(
+				new ProjectEvent.ProjectRestored(identity.userId(), projectId, project.getName()));
 	}
 
 	@Transactional

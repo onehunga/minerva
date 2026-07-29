@@ -1,6 +1,7 @@
 package de.fallstudie.minerva.backend.ticket.internal.service;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -102,6 +103,67 @@ class TicketArchivalTests {
 		assertThrows(ReadOnlyException.class, () -> ticketService.archiveTicket(TestProjects.OWNER,
 				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID));
 
+		verify(ticketRepository, never()).save(Mockito.any());
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
+	}
+
+	@Test
+	void restoreTicketRestoresArchivedTicket() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		ticket.setArchivedAt(Instant.now());
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+
+		ticketService.restoreTicket(TestProjects.OWNER, TestProjects.PROJECT_ID, ticket.getId());
+
+		assertNull(ticket.getArchivedAt());
+		verify(ticketRepository).save(ticket);
+		verify(ticketRepository).flush();
+		verify(eventPublisher)
+				.publishEvent(new TicketEvent.TicketRestored(TestProjects.OWNER_USER_ID,
+						TestProjects.PROJECT_ID, ticket.getId(), ticket.getName()));
+	}
+
+	@Test
+	void restoreTicketDoesNothingForActiveTicket() {
+		final var ticket = TestProjects.ticket(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_TYPE_ID,
+				TestProjects.OPEN_STATUS_ID);
+		when(ticketRepository.findByIdAndProjectId(ticket.getId(), TestProjects.PROJECT_ID))
+				.thenReturn(Optional.of(ticket));
+
+		ticketService.restoreTicket(TestProjects.OWNER, TestProjects.PROJECT_ID, ticket.getId());
+
+		verify(ticketRepository, never()).save(Mockito.any());
+		verify(ticketRepository, never()).flush();
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
+	}
+
+	@Test
+	void restoreTicketRejectsUnknownTicket() {
+		when(ticketRepository.findByIdAndProjectId(TestProjects.CHILD_TICKET_ID,
+				TestProjects.PROJECT_ID)).thenReturn(Optional.empty());
+
+		assertThrows(ResourceNotFoundException.class,
+				() -> ticketService.restoreTicket(TestProjects.OWNER, TestProjects.PROJECT_ID,
+						TestProjects.CHILD_TICKET_ID));
+
+		verify(ticketRepository, never()).save(Mockito.any());
+		verify(ticketRepository, never()).flush();
+		verify(eventPublisher, never()).publishEvent(Mockito.any());
+	}
+
+	@Test
+	void restoreTicketRejectsArchivedProject() {
+		when(projectPolicies.isArchived(TestProjects.PROJECT_ID)).thenReturn(true);
+
+		assertThrows(ReadOnlyException.class, () -> ticketService.restoreTicket(TestProjects.OWNER,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID));
+
+		verify(ticketRepository, never()).findByIdAndProjectId(Mockito.anyLong(),
+				Mockito.anyLong());
 		verify(ticketRepository, never()).save(Mockito.any());
 		verify(eventPublisher, never()).publishEvent(Mockito.any());
 	}

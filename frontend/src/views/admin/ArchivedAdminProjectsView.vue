@@ -2,12 +2,12 @@
 import CenteredPageLayout from "@/components/CenteredPageLayout.vue";
 import { ProjectList, useProjects } from "@/feature/project";
 
-const { projects } = useProjects();
+const { archivedAdminProjects } = useProjects();
 </script>
 
 <template>
 	<CenteredPageLayout>
-		<h2>Projekte</h2>
-		<ProjectList :projects="projects" />
+		<h2>Archivierte Projekte</h2>
+		<ProjectList :projects="archivedAdminProjects" />
 	</CenteredPageLayout>
 </template>

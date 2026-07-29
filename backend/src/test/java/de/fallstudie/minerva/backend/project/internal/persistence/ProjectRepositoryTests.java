@@ -56,6 +56,21 @@ class ProjectRepositoryTests {
 		assertEquals(List.of(otherProject, emptyProject), projects);
 	}
 
+	@Test
+	void archivedQueriesReturnArchivedMemberAndNonMemberProjects() {
+		final var memberProject = createProject("Member project", 1L);
+		final var nonMemberProject = createProject("Non-member project", 2L);
+		final var activeProject = createProject("Active project", 2L);
+		memberProject.setArchivedAt(Instant.now());
+		nonMemberProject.setArchivedAt(Instant.now());
+		projectRepository.saveAllAndFlush(List.of(memberProject, nonMemberProject));
+		createMembership(memberProject, 42L);
+		createMembership(nonMemberProject, 84L);
+
+		assertEquals(List.of(memberProject), projectRepository.findAllArchivedByUserId(42L));
+		assertEquals(List.of(nonMemberProject), projectRepository.findAllArchivedWithoutUser(42L));
+	}
+
 	private ProjectModel createProject(String name, long createdBy) {
 		final var project = new ProjectModel();
 		project.setName(name);

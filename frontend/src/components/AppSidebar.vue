@@ -5,6 +5,7 @@ import {
 	SidebarContent,
 	SidebarFooter,
 	SidebarMenu,
+	SidebarMenuAction,
 	SidebarMenuItem,
 	SidebarMenuButton,
 	SidebarTrigger,
@@ -44,7 +45,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
-const { adminProjects, projects } = useProjects();
+const { adminProjects, archivedAdminProjects, archivedProjects, projects } = useProjects();
 const { logout, userDetails } = useUser();
 const route = useRoute();
 const router = useRouter();
@@ -87,16 +88,86 @@ async function submitLogout(): Promise<void> {
 								<span>Übersicht</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
-						<SidebarMenuItem>
-							<SidebarMenuButton
-								tooltip="Projekte"
-								:is-active="route.name === 'projects'"
-								@click="$router.push({ name: 'projects' })"
-							>
-								<HugeiconsIcon :icon="Folder" />
-								<span>Projekte</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
+						<Collapsible as-child class="group/collapsible">
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									:is-active="route.name === 'projects'"
+									@click="$router.push({ name: 'projects' })"
+								>
+									<HugeiconsIcon :icon="Folder" />
+									<span>Projekte</span>
+								</SidebarMenuButton>
+								<CollapsibleTrigger v-if="projects.length > 0" as-child>
+									<SidebarMenuAction aria-label="Projekte aufklappen">
+										<HugeiconsIcon
+											:icon="ChevronRight"
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+									</SidebarMenuAction>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<SidebarMenuSub>
+										<SidebarMenuSubItem
+											v-for="project in projects"
+											:key="project.id"
+										>
+											<SidebarMenuButton
+												:tooltip="project.name"
+												@click="
+													$router.push({
+														name: 'project',
+														params: { id: project.id },
+													})
+												"
+											>
+												<HugeiconsIcon :icon="Folder" />
+												<span>{{ project.name }}</span>
+											</SidebarMenuButton>
+										</SidebarMenuSubItem>
+									</SidebarMenuSub>
+								</CollapsibleContent>
+							</SidebarMenuItem>
+						</Collapsible>
+						<Collapsible as-child class="group/collapsible">
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									:is-active="route.name === 'archived-projects'"
+									@click="$router.push({ name: 'archived-projects' })"
+								>
+									<HugeiconsIcon :icon="Folder" />
+									<span>Archivierte Projekte</span>
+								</SidebarMenuButton>
+								<CollapsibleTrigger v-if="archivedProjects.length > 0" as-child>
+									<SidebarMenuAction aria-label="Archivierte Projekte aufklappen">
+										<HugeiconsIcon
+											:icon="ChevronRight"
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+									</SidebarMenuAction>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<SidebarMenuSub>
+										<SidebarMenuSubItem
+											v-for="project in archivedProjects"
+											:key="project.id"
+										>
+											<SidebarMenuButton
+												:tooltip="project.name"
+												@click="
+													$router.push({
+														name: 'project',
+														params: { id: project.id },
+													})
+												"
+											>
+												<HugeiconsIcon :icon="Folder" />
+												<span>{{ project.name }}</span>
+											</SidebarMenuButton>
+										</SidebarMenuSubItem>
+									</SidebarMenuSub>
+								</CollapsibleContent>
+							</SidebarMenuItem>
+						</Collapsible>
 						<SidebarMenuItem>
 							<SidebarMenuButton
 								tooltip="Aktivitäten"
@@ -105,25 +176,6 @@ async function submitLogout(): Promise<void> {
 							>
 								<HugeiconsIcon :icon="Activity" />
 								<span>Aktivitäten</span>
-							</SidebarMenuButton>
-						</SidebarMenuItem>
-					</SidebarMenu>
-				</SidebarGroupContent>
-			</SidebarGroup>
-
-			<SidebarGroup>
-				<SidebarGroupLabel>Projekte</SidebarGroupLabel>
-				<SidebarGroupContent>
-					<SidebarMenu>
-						<SidebarMenuItem class="m-1" v-for="project in projects" :key="project.id">
-							<SidebarMenuButton
-								:tooltip="project.name"
-								@click="
-									$router.push({ name: 'project', params: { id: project.id } })
-								"
-							>
-								<HugeiconsIcon :icon="Folder" />
-								<span>{{ project.name }}</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<SidebarMenuItem>
@@ -156,20 +208,71 @@ async function submitLogout(): Promise<void> {
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 						<Collapsible as-child class="group/collapsible">
-							<SidebarMenuItem v-if="adminProjects.length > 0">
-								<CollapsibleTrigger as-child>
-									<SidebarMenuButton>
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									:is-active="route.name === 'admin-projects'"
+									@click="$router.push({ name: 'admin-projects' })"
+								>
+									<HugeiconsIcon :icon="Folder" />
+									<span>Andere Projekte</span>
+								</SidebarMenuButton>
+								<CollapsibleTrigger v-if="adminProjects.length > 0" as-child>
+									<SidebarMenuAction aria-label="Andere Projekte aufklappen">
 										<HugeiconsIcon
 											:icon="ChevronRight"
 											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
 										/>
-										<span>Andere Projekte</span>
-									</SidebarMenuButton>
+									</SidebarMenuAction>
 								</CollapsibleTrigger>
 								<CollapsibleContent>
 									<SidebarMenuSub>
 										<SidebarMenuSubItem
 											v-for="project in adminProjects"
+											:key="project.id"
+										>
+											<SidebarMenuButton
+												:tooltip="project.name"
+												@click="
+													$router.push({
+														name: 'project',
+														params: { id: project.id },
+													})
+												"
+											>
+												<HugeiconsIcon :icon="Folder" />
+												<span>{{ project.name }}</span>
+											</SidebarMenuButton>
+										</SidebarMenuSubItem>
+									</SidebarMenuSub>
+								</CollapsibleContent>
+							</SidebarMenuItem>
+						</Collapsible>
+						<Collapsible as-child class="group/collapsible">
+							<SidebarMenuItem>
+								<SidebarMenuButton
+									:is-active="route.name === 'admin-archived-projects'"
+									@click="$router.push({ name: 'admin-archived-projects' })"
+								>
+									<HugeiconsIcon :icon="Folder" />
+									<span>Archivierte Projekte</span>
+								</SidebarMenuButton>
+								<CollapsibleTrigger
+									v-if="archivedAdminProjects.length > 0"
+									as-child
+								>
+									<SidebarMenuAction
+										aria-label="Archivierte Admin-Projekte aufklappen"
+									>
+										<HugeiconsIcon
+											:icon="ChevronRight"
+											class="transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+										/>
+									</SidebarMenuAction>
+								</CollapsibleTrigger>
+								<CollapsibleContent>
+									<SidebarMenuSub>
+										<SidebarMenuSubItem
+											v-for="project in archivedAdminProjects"
 											:key="project.id"
 										>
 											<SidebarMenuButton

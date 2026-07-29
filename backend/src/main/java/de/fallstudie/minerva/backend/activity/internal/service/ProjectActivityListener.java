@@ -20,6 +20,7 @@ public class ProjectActivityListener {
 			case ProjectEvent.ProjectCreated _ -> ActivityEventType.PROJECT_CREATED;
 			case ProjectEvent.DetailsUpdated _ -> ActivityEventType.PROJECT_DETAILS_UPDATED;
 			case ProjectEvent.ProjectArchived _ -> ActivityEventType.PROJECT_ARCHIVED;
+			case ProjectEvent.ProjectRestored _ -> ActivityEventType.PROJECT_RESTORED;
 			case ProjectEvent.UserAdded _ -> ActivityEventType.PROJECT_USER_ADDED;
 			case ProjectEvent.UserRoleChanged _ -> ActivityEventType.PROJECT_USER_ROLE_CHANGED;
 			case ProjectEvent.UserRemoved _ -> ActivityEventType.PROJECT_USER_REMOVED;

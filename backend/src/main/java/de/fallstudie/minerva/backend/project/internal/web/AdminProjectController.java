@@ -7,6 +7,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -17,7 +18,8 @@ public class AdminProjectController {
 
 	@GetMapping
 	@PreAuthorize("@userPolicies.isAdmin(principal)")
-	public ProjectRecordListResponse getProjects(@AuthenticationPrincipal Identity identity) {
-		return projectService.getAdminProjects(identity);
+	public ProjectRecordListResponse getProjects(@AuthenticationPrincipal Identity identity,
+			@RequestParam(defaultValue = "false") boolean archived) {
+		return projectService.getAdminProjects(identity, archived);
 	}
 }

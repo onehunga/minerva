@@ -26,6 +26,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useActiveProjectStore, useProjectsStore } from "../project.store";
 import { useProject } from "../composables/useProject";
 import { useProjectRepository } from "../composables/useProjectRepository";
 import ProjectUserManagement from "./ProjectUserManagement.vue";
@@ -42,8 +43,12 @@ const userStore = useUserStore();
 const selectedTicketId = ref<number | null>(null);
 const showArchived = ref(false);
 const isLoadingTickets = ref(false);
+const isRestoringTicket = ref(false);
 const isArchivingProject = ref(false);
+const isRestoringProject = ref(false);
 const isArchiveDialogOpen = ref(false);
+const isDeletingProject = ref(false);
+const isDeleteDialogOpen = ref(false);
 const isUpdatingDetails = ref(false);
 const errorMessage = ref("");
 const draftName = ref("");
@@ -85,6 +90,7 @@ watch(
 	() => {
 		errorMessage.value = "";
 		isArchiveDialogOpen.value = false;
+		isRestoringTicket.value = false;
 		showArchived.value = false;
 		selectedTicketId.value = null;
 	},
@@ -103,6 +109,7 @@ watch(
 	tickets,
 	() => {
 		if (!tickets.value.some((ticket) => ticket.id === selectedTicketId.value)) {
+			isRestoringTicket.value = false;
 			selectedTicketId.value = tickets.value[0]?.id ?? null;
 		}
 	},
@@ -180,12 +187,119 @@ async function submitArchiveProject(): Promise<void> {
 
 	try {
 		await projectRepository.archiveProject(props.id);
+		const projectsStore = useProjectsStore();
+		const project = {
+			id: props.id,
+			name: details.value.name,
+			description: details.value.description,
+		};
+		projectsStore.setProjects(projectsStore.projects.filter((item) => item.id !== props.id));
+		projectsStore.setAdminProjects(
+			projectsStore.adminProjects.filter((item) => item.id !== props.id),
+		);
+		if (details.value.projectRole === null) {
+			projectsStore.setArchivedAdminProjects([
+				...projectsStore.archivedAdminProjects.filter((item) => item.id !== props.id),
+				project,
+			]);
+		} else {
+			projectsStore.setArchivedProjects([
+				...projectsStore.archivedProjects.filter((item) => item.id !== props.id),
+				project,
+			]);
+		}
+		details.value.archived = true;
 		isArchiveDialogOpen.value = false;
 		await router.push({ name: "landing" });
 	} catch {
 		errorMessage.value = "Das Projekt konnte nicht archiviert werden.";
 	} finally {
 		isArchivingProject.value = false;
+	}
+}
+
+async function submitRestoreProject(): Promise<void> {
+	if (isRestoringProject.value || details.value?.archived !== true || !canUpdateDetails.value) {
+		return;
+	}
+
+	isRestoringProject.value = true;
+	errorMessage.value = "";
+
+	try {
+		await projectRepository.restoreProject(props.id);
+		const projectsStore = useProjectsStore();
+		const project = {
+			id: props.id,
+			name: details.value.name,
+			description: details.value.description,
+		};
+		projectsStore.setArchivedProjects(
+			projectsStore.archivedProjects.filter((item) => item.id !== props.id),
+		);
+		if (details.value.projectRole === null) {
+			projectsStore.setArchivedAdminProjects(
+				projectsStore.archivedAdminProjects.filter((item) => item.id !== props.id),
+			);
+			projectsStore.setAdminProjects([...projectsStore.adminProjects, project]);
+		} else {
+			projectsStore.setProjects([...projectsStore.projects, project]);
+		}
+		details.value.archived = false;
+	} catch {
+		errorMessage.value = "Das Projekt konnte nicht wiederhergestellt werden.";
+	} finally {
+		isRestoringProject.value = false;
+	}
+}
+
+function updateDeleteDialogOpen(open: boolean): void {
+	if (!open && !isDeletingProject.value) {
+		isDeleteDialogOpen.value = false;
+	}
+}
+
+function openDeleteDialog(): void {
+	errorMessage.value = "";
+	isDeleteDialogOpen.value = true;
+}
+
+async function submitDeleteProject(): Promise<void> {
+	if (isDeletingProject.value) {
+		return;
+	}
+
+	isDeletingProject.value = true;
+	errorMessage.value = "";
+
+	try {
+		await projectRepository.deleteProject(props.id);
+
+		const projectsStore = useProjectsStore();
+		projectsStore.setProjects(projectsStore.projects.filter((p) => p.id !== props.id));
+		projectsStore.setAdminProjects(
+			projectsStore.adminProjects.filter((p) => p.id !== props.id),
+		);
+		projectsStore.setArchivedProjects(
+			projectsStore.archivedProjects.filter((p) => p.id !== props.id),
+		);
+		projectsStore.setArchivedAdminProjects(
+			projectsStore.archivedAdminProjects.filter((p) => p.id !== props.id),
+		);
+
+		const activeProjectStore = useActiveProjectStore();
+		activeProjectStore.setActiveProject(null);
+		activeProjectStore.setProjectDetails(null);
+		activeProjectStore.setProjectUsers([]);
+		activeProjectStore.setTicketTypes([]);
+		activeProjectStore.setTickets([]);
+
+		isDeleteDialogOpen.value = false;
+		await router.replace({ name: "projects" });
+	} catch {
+		errorMessage.value = "Das Projekt konnte nicht gelöscht werden.";
+	} finally {
+		isDeletingProject.value = false;
 	}
 }
 </script>
@@ -200,10 +314,24 @@ async function submitArchiveProject(): Promise<void> {
 		<Tabs default-value="overview" class="flex-1 mt-2">
 			<div class="project-page__tabs-scroll">
 				<TabsList>
-					<TabsTrigger value="overview">Übersicht</TabsTrigger>
-					<TabsTrigger v-if="canModifyTickets" value="tickets"> Tickets </TabsTrigger>
-					<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
-					<TabsTrigger v-if="canOpenSettings" value="settings">
+					<TabsTrigger value="overview" :disabled="isRestoringTicket">
+						Übersicht
+					</TabsTrigger>
+					<TabsTrigger
+						v-if="canModifyTickets"
+						value="tickets"
+						:disabled="isRestoringTicket"
+					>
+						Tickets
+					</TabsTrigger>
+					<TabsTrigger value="activities" :disabled="isRestoringTicket">
+						Aktivitäten
+					</TabsTrigger>
+					<TabsTrigger
+						v-if="canOpenSettings"
+						value="settings"
+						:disabled="isRestoringTicket"
+					>
 						Einstellungen
 					</TabsTrigger>
 				</TabsList>
@@ -238,7 +366,7 @@ async function submitArchiveProject(): Promise<void> {
 					<Label for="ticket-view">Ticketansicht</Label>
 					<Select
 						:model-value="showArchived ? 'archived' : 'active'"
-						:disabled="isLoadingTickets"
+						:disabled="isLoadingTickets || isRestoringTicket"
 						@update:model-value="selectTicketView"
 					>
 						<SelectTrigger id="ticket-view" class="w-52">
@@ -275,6 +403,7 @@ async function submitArchiveProject(): Promise<void> {
 								:child-tickets="selectedTicketChildren"
 								:is-admin="isAdmin"
 								@select-ticket="selectedTicketId = $event"
+								@restore-pending="isRestoringTicket = $event"
 							/>
 							<p v-else>Wähle ein Ticket aus.</p>
 						</CardContent>
@@ -350,13 +479,32 @@ async function submitArchiveProject(): Promise<void> {
 					</CardHeader>
 					<CardContent>
 						<Button
+							v-if="details.archived"
 							type="button"
-							:disabled="isArchivingProject || details.archived"
-							@click="openArchiveDialog"
+							:disabled="isRestoringProject"
+							@click="submitRestoreProject"
 						>
 							{{
-								details.archived ? "Projekt ist archiviert" : "Projekt archivieren"
+								isRestoringProject
+									? "Wird wiederhergestellt..."
+									: "Projekt wiederherstellen"
 							}}
+						</Button>
+						<Button
+							v-else
+							type="button"
+							:disabled="isArchivingProject"
+							@click="openArchiveDialog"
+						>
+							Projekt archivieren
+						</Button>
+						<Button
+							type="button"
+							variant="destructive"
+							:disabled="isDeletingProject"
+							@click="openDeleteDialog"
+						>
+							Projekt löschen
 						</Button>
 					</CardContent>
 				</Card>
@@ -380,6 +528,31 @@ async function submitArchiveProject(): Promise<void> {
 					</AlertDialogCancel>
 					<Button :disabled="isArchivingProject" @click="submitArchiveProject">
 						{{ isArchivingProject ? "Wird archiviert..." : "Projekt archivieren" }}
+					</Button>
+				</AlertDialogFooter>
+			</AlertDialogContent>
+		</AlertDialog>
+
+		<AlertDialog :open="isDeleteDialogOpen" @update:open="updateDeleteDialogOpen">
+			<AlertDialogContent>
+				<AlertDialogHeader>
+					<AlertDialogTitle>Projekt unwiderruflich löschen?</AlertDialogTitle>
+					<AlertDialogDescription>
+						Das Projekt „{{ details.name }}“ und alle zugehörigen Tickets, Kommentare
+						und Aktivitäten werden dauerhaft gelöscht.
+					</AlertDialogDescription>
+				</AlertDialogHeader>
+				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
+					{{ errorMessage }}
+				</p>
+				<AlertDialogFooter>
+					<AlertDialogCancel :disabled="isDeletingProject"> Abbrechen </AlertDialogCancel>
+					<Button
+						variant="destructive"
+						:disabled="isDeletingProject"
+						@click="submitDeleteProject"
+					>
+						{{ isDeletingProject ? "Wird gelöscht..." : "Projekt löschen" }}
 					</Button>
 				</AlertDialogFooter>
 			</AlertDialogContent>

@@ -16,6 +16,9 @@ public sealed interface ProjectEvent {
 	record ProjectArchived(long actorUserId, long projectId, String name) implements ProjectEvent {
 	}
 
+	record ProjectRestored(long actorUserId, long projectId, String name) implements ProjectEvent {
+	}
+
 	record UserAdded(long actorUserId, long projectId, long userId,
 			String role) implements ProjectEvent {
 	}

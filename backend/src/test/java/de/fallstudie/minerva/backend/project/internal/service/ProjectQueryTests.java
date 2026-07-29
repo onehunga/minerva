@@ -51,11 +51,12 @@ class ProjectQueryTests {
 		when(projectRepository.findAllByUserId(TestProjects.OWNER_USER_ID))
 				.thenReturn(List.of(project));
 
-		final var response = projectService.getAllProjects(TestProjects.OWNER);
+		final var response = projectService.getAllProjects(TestProjects.OWNER, false);
 
 		assertEquals(1, response.projects().size());
 		assertEquals(TestProjects.PROJECT_ID, response.projects().getFirst().id());
 		assertEquals("Minerva", response.projects().getFirst().name());
+		assertEquals("Ticket project", response.projects().getFirst().description());
 	}
 
 	@Test
@@ -65,7 +66,8 @@ class ProjectQueryTests {
 				.thenReturn(List.of(project));
 
 		final var response = projectService.getAdminProjects(
-				new de.fallstudie.minerva.backend.user.Identity(TestProjects.OUTSIDER_USER_ID));
+				new de.fallstudie.minerva.backend.user.Identity(TestProjects.OUTSIDER_USER_ID),
+				false);
 
 		assertEquals(List.of(TestProjects.PROJECT_ID),
 				response.projects().stream().map(projectRecord -> projectRecord.id()).toList());
@@ -164,5 +166,20 @@ class ProjectQueryTests {
 		verify(projectRepository, never()).save(Mockito.any());
 		verify(projectRepository, never()).flush();
 		verify(eventPublisher, never()).publishEvent(Mockito.any());
+	}
+
+	@Test
+	void restoreProjectRestoresExistingProject() {
+		final var project = TestProjects.project(TestProjects.PROJECT_ID);
+		project.setArchivedAt(java.time.Instant.now());
+		when(projectRepository.findById(TestProjects.PROJECT_ID)).thenReturn(Optional.of(project));
+
+		projectService.restoreProject(TestProjects.OWNER, TestProjects.PROJECT_ID);
+
+		assertEquals(null, project.getArchivedAt());
+		verify(projectRepository).save(project);
+		verify(projectRepository).flush();
+		verify(eventPublisher).publishEvent(new ProjectEvent.ProjectRestored(
+				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID, "Minerva"));
 	}
 }

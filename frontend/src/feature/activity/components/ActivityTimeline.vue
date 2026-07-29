@@ -28,6 +28,7 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	PROJECT_CREATED: "Projekt erstellt",
 	PROJECT_DETAILS_UPDATED: "Projektname oder Beschreibung geändert",
 	PROJECT_ARCHIVED: "Projekt archiviert",
+	PROJECT_RESTORED: "Projekt wiederhergestellt",
 	PROJECT_USER_ADDED: "Nutzer hinzugefügt",
 	PROJECT_USER_ROLE_CHANGED: "Nutzerrolle geändert",
 	PROJECT_USER_REMOVED: "Nutzer entfernt",
@@ -46,6 +47,7 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 	TICKET_ASSIGNEE_CHANGED: "Bearbeiter geändert",
 	TICKET_SUBTICKET_ADDED: "Subticket hinzugefügt",
 	TICKET_ARCHIVED: "Ticket archiviert",
+	TICKET_RESTORED: "Ticket wiederhergestellt",
 	TICKET_DELETED: "Ticket gelöscht",
 };
 
@@ -87,8 +89,10 @@ function describe(event: ActivityEvent): string {
 	switch (event.type) {
 		case "PROJECT_CREATED":
 		case "PROJECT_ARCHIVED":
+		case "PROJECT_RESTORED":
 		case "TICKET_CREATED":
 		case "TICKET_ARCHIVED":
+		case "TICKET_RESTORED":
 		case "TICKET_DELETED":
 			return `„${str(payload, "name") ?? "?"}"`;
 		case "PROJECT_DETAILS_UPDATED":
