@@ -101,9 +101,10 @@ class TicketCreationTests {
 		assertEquals(TestProjects.OWNER_USER_ID, savedTicket.getCreatedBy());
 		assertEquals(TestProjects.CONTRIBUTOR_USER_ID, savedTicket.getAssignedTo());
 		assertEquals(null, savedTicket.getParentTicketId());
-		verify(eventPublisher).publishEvent(
-				new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
-						savedTicket.getId(), ticketType.getId(), status.getId(), "Root ticket"));
+		verify(eventPublisher)
+				.publishEvent(new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID,
+						TestProjects.PROJECT_ID, savedTicket.getId(), ticketType.getId(),
+						status.getId(), "Root ticket", TestProjects.CONTRIBUTOR_USER_ID));
 		verify(projectPolicies).canBeAssigned(TestProjects.PROJECT_ID,
 				TestProjects.CONTRIBUTOR_USER_ID);
 	}
@@ -217,7 +218,7 @@ class TicketCreationTests {
 		assertEquals(childTicketType.getId(), ticketCaptor.getValue().getTicketTypeId());
 		verify(eventPublisher).publishEvent(
 				new TicketEvent.SubticketAdded(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
-						parentTicket.getId(), ticketCaptor.getValue().getId(), "Ticket"));
+						parentTicket.getId(), ticketCaptor.getValue().getId(), "Ticket", null));
 	}
 
 	@Test

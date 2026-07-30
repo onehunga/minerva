@@ -76,7 +76,7 @@ class TicketPriorityUpdateTests {
 		assertEquals(TicketPriorityName.HIGH, ticketCaptor.getValue().getPriority());
 		verify(eventPublisher).publishEvent(
 				new TicketEvent.PriorityChanged(TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID,
-						ticket.getId(), TicketPriorityName.NORMAL, TicketPriorityName.HIGH));
+						ticket.getId(), TicketPriorityName.NORMAL, TicketPriorityName.HIGH, null));
 	}
 
 	@Test

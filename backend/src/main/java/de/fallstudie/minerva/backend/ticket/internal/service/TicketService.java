@@ -66,7 +66,7 @@ public class TicketService {
 		ticketRepository.save(ticket);
 		ticketRepository.flush();
 		eventPublisher.publishEvent(new TicketEvent.TicketArchived(identity.userId(), projectId,
-				ticket.getId(), ticket.getName()));
+				ticket.getId(), ticket.getName(), ticket.getAssignedTo()));
 	}
 
 	@Transactional
@@ -82,7 +82,7 @@ public class TicketService {
 		ticketRepository.save(ticket);
 		ticketRepository.flush();
 		eventPublisher.publishEvent(new TicketEvent.TicketRestored(identity.userId(), projectId,
-				ticket.getId(), ticket.getName()));
+				ticket.getId(), ticket.getName(), ticket.getAssignedTo()));
 	}
 
 	public TicketTypeListResponse getTicketTypes(long projectId) {
@@ -146,8 +146,9 @@ public class TicketService {
 			throw new ValidationException("Der Nutzer kann diesem Projekt nicht zugewiesen werden");
 		}
 
+		TicketModel parentTicket = null;
 		if (request.parentTicketId() != null) {
-			final var parentTicket = ticketRepository
+			parentTicket = ticketRepository
 					.findByIdAndProjectId(request.parentTicketId(), projectId)
 					.orElseThrow(() -> new ValidationException(
 							"Parent-Ticket gehört nicht zum Projekt"));
@@ -175,10 +176,11 @@ public class TicketService {
 		final var savedTicket = ticketRepository.save(ticket);
 		eventPublisher.publishEvent(new TicketEvent.TicketCreated(identity.userId(), projectId,
 				savedTicket.getId(), savedTicket.getTicketTypeId(), savedTicket.getStatusId(),
-				savedTicket.getName()));
-		if (savedTicket.getParentTicketId() != null) {
+				savedTicket.getName(), savedTicket.getAssignedTo()));
+		if (parentTicket != null) {
 			eventPublisher.publishEvent(new TicketEvent.SubticketAdded(identity.userId(), projectId,
-					savedTicket.getParentTicketId(), savedTicket.getId(), savedTicket.getName()));
+					parentTicket.getId(), savedTicket.getId(), savedTicket.getName(),
+					parentTicket.getAssignedTo()));
 		}
 
 		// leere liste, da es keine Kinder geben kann
@@ -198,7 +200,7 @@ public class TicketService {
 		ticketCommentRepository.deleteAllByTicketId(ticket.getId());
 		ticketRepository.delete(ticket);
 		eventPublisher.publishEvent(new TicketEvent.TicketDeleted(identity.userId(), projectId,
-				ticket.getId(), ticket.getName()));
+				ticket.getId(), ticket.getName(), ticket.getAssignedTo()));
 
 		log.trace("Deleted ticket with ID {} in project with ID {}", ticketId, projectId);
 	}
@@ -232,10 +234,10 @@ public class TicketService {
 
 		ticket.setStatusId(transition.getToState());
 		ticketRepository.save(ticket);
-		eventPublisher.publishEvent(
-				new TicketEvent.StatusChanged(identity.userId(), projectId, ticket.getId(),
-						previousStatus.getId(), previousStatus.getName(), targetStatus.getId(),
-						targetStatus.getName(), transition.getId(), transition.getName()));
+		eventPublisher.publishEvent(new TicketEvent.StatusChanged(identity.userId(), projectId,
+				ticket.getId(), previousStatus.getId(), previousStatus.getName(),
+				targetStatus.getId(), targetStatus.getName(), transition.getId(),
+				transition.getName(), ticket.getAssignedTo()));
 	}
 
 	@Transactional
@@ -256,7 +258,8 @@ public class TicketService {
 		ticketRepository.save(ticket);
 		if (!previousName.equals(newName) || !previousDescription.equals(newDescription)) {
 			eventPublisher.publishEvent(new TicketEvent.DetailsUpdated(identity.userId(), projectId,
-					ticket.getId(), previousName, newName, previousDescription, newDescription));
+					ticket.getId(), previousName, newName, previousDescription, newDescription,
+					ticket.getAssignedTo()));
 		}
 	}
 
@@ -271,8 +274,9 @@ public class TicketService {
 		ticket.setPriority(request.priority());
 		ticketRepository.save(ticket);
 		if (previousPriority != request.priority()) {
-			eventPublisher.publishEvent(new TicketEvent.PriorityChanged(identity.userId(),
-					projectId, ticket.getId(), previousPriority, request.priority()));
+			eventPublisher.publishEvent(
+					new TicketEvent.PriorityChanged(identity.userId(), projectId, ticket.getId(),
+							previousPriority, request.priority(), ticket.getAssignedTo()));
 		}
 	}
 
