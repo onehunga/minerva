@@ -49,6 +49,7 @@ describe("DashboardOverview", () => {
 				isLoading: false,
 				errorMessage: "",
 				showProjectName: true,
+				projectCount: 3,
 			},
 		});
 
@@ -61,6 +62,7 @@ describe("DashboardOverview", () => {
 		expect(wrapper.text()).toContain("Dashboard bauen");
 		expect(wrapper.text()).toContain("#5");
 		expect(wrapper.text()).toContain("Minerva");
+		expect(wrapper.text()).toContain("3 Projekte, 3 offene Tickets und 4 insgesamt");
 	});
 
 	it("hides the project name in a project dashboard", () => {

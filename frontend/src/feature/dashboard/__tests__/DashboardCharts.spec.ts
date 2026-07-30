@@ -31,6 +31,7 @@ const stubs = {
 	CardHeader: slotStub,
 	CardTitle: slotStub,
 	ChartContainer: slotStub,
+	DashboardPanel: slotStub,
 };
 
 describe("dashboard charts", () => {

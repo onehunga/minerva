@@ -2,22 +2,18 @@
 import { computed } from "vue";
 import { VisDonut, VisSingleContainer } from "@unovis/vue";
 import type { DashboardCategoryCount } from "../dashboard.model";
-import type { ChartConfig } from "@/components/ui/chart";
 import { ChartContainer } from "@/components/ui/chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	dashboardStatusChartConfig as config,
+	type DashboardStatusChartCategory,
+} from "../dashboard-chart.config";
+import DashboardPanel from "./DashboardPanel.vue";
 
 const props = defineProps<{
 	counts: DashboardCategoryCount;
 }>();
 
-const config = {
-	open: { label: "Offen", color: "var(--chart-1)" },
-	inProgress: { label: "In Arbeit", color: "var(--chart-2)" },
-	completed: { label: "Abgeschlossen", color: "var(--chart-3)" },
-} satisfies ChartConfig;
-
-type StatusCategory = keyof typeof config;
-type ChartRow = { category: StatusCategory; count: number; color: string };
+type ChartRow = { category: DashboardStatusChartCategory; count: number; color: string };
 
 const chartData = computed<ChartRow[]>(() => [
 	{ category: "open", count: props.counts.open, color: config.open.color },
@@ -36,52 +32,47 @@ const total = computed(() => chartData.value.reduce((sum, item) => sum + item.co
 </script>
 
 <template>
-	<Card>
-		<CardHeader>
-			<CardTitle>Statusverteilung</CardTitle>
-			<CardDescription>Aktive Tickets nach Bearbeitungsstand</CardDescription>
-		</CardHeader>
-		<CardContent>
-			<div class="status-chart__visual">
-				<ChartContainer
-					:config="config"
-					class="status-chart__chart"
-					:aria-label="`${total} Tickets nach Status verteilt`"
-				>
-					<VisSingleContainer :data="chartData">
-						<VisDonut
-							:value="(item: ChartRow) => item.count"
-							:color="(item: ChartRow) => item.color"
-							:arc-width="32"
-						/>
-					</VisSingleContainer>
-				</ChartContainer>
-				<div class="status-chart__total" aria-hidden="true">
-					<strong>{{ total }}</strong>
-					<span>Tickets</span>
-				</div>
+	<DashboardPanel title="Statusverteilung" description="Aktive Tickets nach Bearbeitungsstand">
+		<div class="status-chart__visual">
+			<ChartContainer
+				:config="config"
+				class="status-chart__chart"
+				:aria-label="`${total} Tickets nach Status verteilt`"
+			>
+				<VisSingleContainer :data="chartData">
+					<VisDonut
+						:value="(item: ChartRow) => item.count"
+						:color="(item: ChartRow) => item.color"
+						:arc-width="32"
+					/>
+				</VisSingleContainer>
+			</ChartContainer>
+			<div class="status-chart__total" aria-hidden="true">
+				<strong>{{ total }}</strong>
+				<span>Tickets</span>
 			</div>
+		</div>
 
-			<ul class="status-chart__legend" aria-label="Statuswerte">
-				<li v-for="item in chartData" :key="item.category">
-					<span class="status-chart__dot" :style="{ backgroundColor: item.color }"></span>
-					<span>{{ config[item.category]?.label }}</span>
-					<strong>{{ item.count }}</strong>
-				</li>
-			</ul>
-		</CardContent>
-	</Card>
+		<ul class="status-chart__legend" aria-label="Statuswerte">
+			<li v-for="item in chartData" :key="item.category">
+				<span class="status-chart__dot" :style="{ backgroundColor: item.color }"></span>
+				<span>{{ config[item.category]?.label }}</span>
+				<strong>{{ item.count }}</strong>
+			</li>
+		</ul>
+	</DashboardPanel>
 </template>
 
 <style scoped>
 .status-chart__visual {
 	position: relative;
+	flex: 1;
 	width: min(100%, 18rem);
 	margin: 0 auto;
 }
 
 .status-chart__chart {
-	height: 15rem;
+	min-height: 0;
 }
 
 .status-chart__total {

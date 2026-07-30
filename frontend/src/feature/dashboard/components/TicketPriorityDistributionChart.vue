@@ -2,7 +2,6 @@
 import { computed } from "vue";
 import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue";
 import type { DashboardPriorityRow } from "../dashboard.model";
-import type { ChartConfig } from "@/components/ui/chart";
 import {
 	ChartContainer,
 	ChartCrosshair,
@@ -11,18 +10,13 @@ import {
 	ChartTooltipContent,
 	componentToString,
 } from "@/components/ui/chart";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "@/feature/ticket";
+import { dashboardStatusChartConfig as config } from "../dashboard-chart.config";
+import DashboardPanel from "./DashboardPanel.vue";
 
 const props = defineProps<{
 	priorities: DashboardPriorityRow[];
 }>();
-
-const config = {
-	open: { label: "Offen", color: "var(--chart-1)" },
-	inProgress: { label: "In Arbeit", color: "var(--chart-2)" },
-	completed: { label: "Abgeschlossen", color: "var(--chart-3)" },
-} satisfies ChartConfig;
 
 const chartData = computed(() =>
 	TICKET_PRIORITY_ORDER.map((priority, index) => {
@@ -46,62 +40,53 @@ function priorityLabel(value: number | Date): string {
 </script>
 
 <template>
-	<Card>
-		<CardHeader>
-			<CardTitle>Prioritäten und Status</CardTitle>
-			<CardDescription>Statusverteilung innerhalb jeder Priorität</CardDescription>
-		</CardHeader>
-		<CardContent>
-			<ChartContainer :config="config" class="priority-chart__chart">
-				<VisXYContainer :data="chartData">
-					<VisGroupedBar
-						:x="(item: ChartRow) => item.index"
-						:y="[
-							(item: ChartRow) => item.open,
-							(item: ChartRow) => item.inProgress,
-							(item: ChartRow) => item.completed,
-						]"
-						:color="[
-							config.open.color,
-							config.inProgress.color,
-							config.completed.color,
-						]"
-						:rounded-corners="4"
-						:group-padding="0.15"
-					/>
-					<VisAxis
-						type="x"
-						:x="(item: ChartRow) => item.index"
-						:tick-values="chartData.map((item) => item.index)"
-						:tick-format="priorityLabel"
-						:tick-line="false"
-						:domain-line="false"
-						:grid-line="false"
-					/>
-					<VisAxis type="y" :tick-line="false" :domain-line="false" :grid-line="true" />
-					<ChartTooltip />
-					<ChartCrosshair
-						:circle-radius="0"
-						:template="
-							componentToString(config, ChartTooltipContent, {
-								labelFormatter: priorityLabel,
-							})
-						"
-						:color="[
-							config.open.color,
-							config.inProgress.color,
-							config.completed.color,
-						]"
-					/>
-				</VisXYContainer>
-				<ChartLegendContent />
-			</ChartContainer>
-		</CardContent>
-	</Card>
+	<DashboardPanel
+		title="Prioritäten und Status"
+		description="Statusverteilung innerhalb jeder Priorität"
+	>
+		<ChartContainer :config="config" class="priority-chart__chart">
+			<VisXYContainer :data="chartData">
+				<VisGroupedBar
+					:x="(item: ChartRow) => item.index"
+					:y="[
+						(item: ChartRow) => item.open,
+						(item: ChartRow) => item.inProgress,
+						(item: ChartRow) => item.completed,
+					]"
+					:color="[config.open.color, config.inProgress.color, config.completed.color]"
+					:rounded-corners="4"
+					:group-padding="0.15"
+				/>
+				<VisAxis
+					type="x"
+					:x="(item: ChartRow) => item.index"
+					:tick-values="chartData.map((item) => item.index)"
+					:tick-format="priorityLabel"
+					:tick-line="false"
+					:domain-line="false"
+					:grid-line="false"
+				/>
+				<VisAxis type="y" :tick-line="false" :domain-line="false" :grid-line="true" />
+				<ChartTooltip />
+				<ChartCrosshair
+					:circle-radius="0"
+					:template="
+						componentToString(config, ChartTooltipContent, {
+							labelFormatter: priorityLabel,
+						})
+					"
+					:color="[config.open.color, config.inProgress.color, config.completed.color]"
+				/>
+			</VisXYContainer>
+			<ChartLegendContent />
+		</ChartContainer>
+	</DashboardPanel>
 </template>
 
 <style scoped>
 .priority-chart__chart {
-	height: 20rem;
+	min-width: 0;
+	min-height: 0;
+	flex: 1;
 }
 </style>

@@ -1,31 +1,23 @@
 <script setup lang="ts">
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableEmpty,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import { formatDate } from "@/lib/date";
-import type { DashboardRecentTicket, DashboardResponse } from "../dashboard.model";
+import { computed } from "vue";
+import type { DashboardResponse } from "../dashboard.model";
+import DashboardRecentTickets from "./DashboardRecentTickets.vue";
 import TicketPriorityDistributionChart from "./TicketPriorityDistributionChart.vue";
 import TicketStatusDistributionChart from "./TicketStatusDistributionChart.vue";
-import { formatTicketPriority } from "@/feature/ticket";
 
 const props = defineProps<{
 	data: DashboardResponse | null;
 	isLoading: boolean;
 	errorMessage: string;
 	showProjectName: boolean;
+	projectCount?: number;
 }>();
 
-function recent(): DashboardRecentTicket[] {
-	return props.data?.recentTickets ?? [];
-}
+const openTicketCount = computed(
+	() =>
+		(props.data?.ticketsByCategory.open ?? 0) + (props.data?.ticketsByCategory.inProgress ?? 0),
+);
 </script>
 
 <template>
@@ -38,54 +30,25 @@ function recent(): DashboardRecentTicket[] {
 		</Alert>
 
 		<template v-else-if="data != null">
+			<p class="dashboard-overview__summary">
+				<template v-if="projectCount != null">
+					<strong>{{ projectCount }}</strong>
+					{{ projectCount === 1 ? "Projekt" : "Projekte" }},
+				</template>
+				<strong>{{ openTicketCount }}</strong>
+				{{ openTicketCount === 1 ? "offenes Ticket" : "offene Tickets" }} und
+				<strong>{{ data.totalTickets }}</strong> insgesamt
+			</p>
+
 			<div class="dashboard-overview__charts">
 				<TicketStatusDistributionChart :counts="data.ticketsByCategory" />
 				<TicketPriorityDistributionChart :priorities="data.priorities" />
 			</div>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>Zuletzt erstellte Tickets</CardTitle>
-					<CardDescription>Die fünf neuesten Tickets im Überblick</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead v-if="showProjectName">Projekt</TableHead>
-								<TableHead>Ticket</TableHead>
-								<TableHead>Status</TableHead>
-								<TableHead>Priorität</TableHead>
-								<TableHead>Erstellt</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							<TableEmpty
-								v-if="recent().length === 0"
-								:colspan="showProjectName ? 5 : 4"
-							>
-								Keine Tickets vorhanden.
-							</TableEmpty>
-							<TableRow v-for="ticket in recent()" v-else :key="ticket.id">
-								<TableCell v-if="showProjectName">
-									{{ ticket.projectName ?? "-" }}
-								</TableCell>
-								<TableCell>
-									<div class="flex flex-col">
-										<span class="font-medium">{{ ticket.name }}</span>
-										<small class="text-muted-foreground"
-											>#{{ ticket.id }}</small
-										>
-									</div>
-								</TableCell>
-								<TableCell>{{ ticket.statusName }}</TableCell>
-								<TableCell>{{ formatTicketPriority(ticket.priority) }}</TableCell>
-								<TableCell>{{ formatDate(ticket.createdAt) }}</TableCell>
-							</TableRow>
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
+			<DashboardRecentTickets
+				:tickets="data.recentTickets"
+				:show-project-name="showProjectName"
+			/>
 		</template>
 	</section>
 </template>
@@ -101,6 +64,23 @@ function recent(): DashboardRecentTicket[] {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 1rem;
+}
+
+.dashboard-overview__charts > * {
+	min-width: 0;
+}
+
+.dashboard-overview__summary {
+	margin: 0;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--muted);
+	color: var(--muted-foreground);
+}
+
+.dashboard-overview__summary strong {
+	color: var(--foreground);
 }
 
 @media (max-width: 64rem) {
