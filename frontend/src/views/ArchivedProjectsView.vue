@@ -8,6 +8,10 @@ const { archivedProjects } = useProjects();
 <template>
 	<CenteredPageLayout>
 		<h2>Archivierte Projekte</h2>
-		<ProjectList :projects="archivedProjects" />
+		<ProjectList
+			:projects="archivedProjects"
+			empty-title="Keine archivierten Projekte"
+			empty-description="Archivierte eigene Projekte werden hier angezeigt."
+		/>
 	</CenteredPageLayout>
 </template>

@@ -131,15 +131,6 @@ function mountProjectPage({
 					template: '<button :data-tab="value" :disabled="disabled"><slot /></button>',
 				},
 				TabsContent: slotStub,
-				Select: {
-					props: ["disabled"],
-					template:
-						'<div data-testid="ticket-view-select" :data-disabled="String(disabled)"><slot /></div>',
-				},
-				SelectTrigger: slotStub,
-				SelectValue: slotStub,
-				SelectContent: slotStub,
-				SelectItem: slotStub,
 				ProjectUserManagement: projectUserManagement,
 			},
 		},
@@ -271,9 +262,11 @@ describe("ProjectPage", () => {
 		await nextTick();
 
 		await wrapper.get("[data-testid='restore-pending']").trigger("click");
-		expect(wrapper.get("[data-testid='ticket-view-select']").attributes("data-disabled")).toBe(
-			"true",
-		);
+		expect(
+			wrapper
+				.findAll("[aria-label='Ticketansicht'] button")
+				.every((button) => button.attributes("disabled") != null),
+		).toBe(true);
 		expect(
 			wrapper.findAll("[data-tab]").every((tab) => tab.attributes("disabled") != null),
 		).toBe(true);
@@ -281,9 +274,11 @@ describe("ProjectPage", () => {
 		tickets.value = [];
 		await nextTick();
 
-		expect(wrapper.get("[data-testid='ticket-view-select']").attributes("data-disabled")).toBe(
-			"false",
-		);
+		expect(
+			wrapper
+				.findAll("[aria-label='Ticketansicht'] button")
+				.every((button) => button.attributes("disabled") == null),
+		).toBe(true);
 		expect(
 			wrapper.findAll("[data-tab]").every((tab) => tab.attributes("disabled") == null),
 		).toBe(true);

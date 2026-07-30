@@ -119,6 +119,7 @@ async function submitLogout(): Promise<void> {
 										>
 											<SidebarMenuButton
 												:tooltip="project.name"
+												:is-active="Number(route.params.id) === project.id"
 												@click="
 													$router.push({
 														name: 'project',
@@ -159,6 +160,7 @@ async function submitLogout(): Promise<void> {
 										>
 											<SidebarMenuButton
 												:tooltip="project.name"
+												:is-active="Number(route.params.id) === project.id"
 												@click="
 													$router.push({
 														name: 'project',
@@ -238,6 +240,7 @@ async function submitLogout(): Promise<void> {
 										>
 											<SidebarMenuButton
 												:tooltip="project.name"
+												:is-active="Number(route.params.id) === project.id"
 												@click="
 													$router.push({
 														name: 'project',
@@ -283,6 +286,7 @@ async function submitLogout(): Promise<void> {
 										>
 											<SidebarMenuButton
 												:tooltip="project.name"
+												:is-active="Number(route.params.id) === project.id"
 												@click="
 													$router.push({
 														name: 'project',

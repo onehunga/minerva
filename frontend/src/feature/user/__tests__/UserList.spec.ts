@@ -93,6 +93,17 @@ describe("UserList", () => {
 		expect(wrapper.text()).toContain("Deaktiviert");
 	});
 
+	it("filters users by username", async () => {
+		const wrapper = mountUserList(new MockUserRepository());
+		await flushPromises();
+
+		await wrapper.get("input[type='search']").setValue("JAN");
+
+		expect(wrapper.findAll("tbody tr")).toHaveLength(1);
+		expect(wrapper.text()).toContain("jane");
+		expect(wrapper.text()).not.toContain("admin");
+	});
+
 	it("provides an options button and a context menu for every user", async () => {
 		const wrapper = mountUserList(new MockUserRepository());
 

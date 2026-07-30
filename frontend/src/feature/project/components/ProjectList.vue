@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
 	Table,
 	TableBody,
@@ -12,9 +13,19 @@ import {
 import type { ProjectRecord } from "../project.model";
 import { useRouter } from "vue-router";
 
-defineProps<{
-	projects: ProjectRecord[];
-}>();
+withDefaults(
+	defineProps<{
+		projects: ProjectRecord[];
+		emptyTitle?: string;
+		emptyDescription?: string;
+		showCreateAction?: boolean;
+	}>(),
+	{
+		emptyTitle: "Keine Projekte vorhanden",
+		emptyDescription: "In dieser Ansicht sind derzeit keine Projekte verfügbar.",
+		showCreateAction: false,
+	},
+);
 
 const router = useRouter();
 </script>
@@ -30,7 +41,17 @@ const router = useRouter();
 			</TableHeader>
 			<TableBody>
 				<TableEmpty v-if="projects.length === 0" :colspan="2">
-					Keine Projekte vorhanden.
+					<div class="flex flex-col items-center gap-2 py-4">
+						<p class="font-medium text-foreground">{{ emptyTitle }}</p>
+						<p>{{ emptyDescription }}</p>
+						<Button
+							v-if="showCreateAction"
+							class="mt-2"
+							@click="router.push('/create-project')"
+						>
+							Projekt erstellen
+						</Button>
+					</div>
 				</TableEmpty>
 				<TableRow
 					v-for="project in projects"

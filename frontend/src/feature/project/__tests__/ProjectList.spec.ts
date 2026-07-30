@@ -40,4 +40,31 @@ describe("ProjectList", () => {
 
 		expect(router.currentRoute.value.fullPath).toBe("/project/1");
 	});
+
+	it("shows the contextual empty state and optional create action", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: "/", component: { template: "<div />" } },
+				{ path: "/create-project", component: { template: "<div />" } },
+			],
+		});
+		await router.push("/");
+		await router.isReady();
+
+		const wrapper = mount(ProjectList, {
+			props: {
+				projects: [],
+				emptyTitle: "Noch keine Projekte",
+				emptyDescription: "Erstelle dein erstes Projekt.",
+				showCreateAction: true,
+			},
+			global: { plugins: [router] },
+		});
+
+		expect(wrapper.text()).toContain("Noch keine Projekte");
+		await wrapper.get("button").trigger("click");
+		await flushPromises();
+		expect(router.currentRoute.value.fullPath).toBe("/create-project");
+	});
 });

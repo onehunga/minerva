@@ -17,7 +17,9 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -72,8 +74,14 @@ const isCreateOpen = ref(false);
 const selectedUser = ref<UserRecord | null>(null);
 const deleteCandidate = ref<UserRecord | null>(null);
 const deactivateCandidate = ref<UserRecord | null>(null);
+const searchQuery = ref("");
 
 const isEditOpen = computed(() => selectedUser.value !== null);
+const filteredUsers = computed(() =>
+	users.value.filter((user) =>
+		user.username.toLocaleLowerCase().includes(searchQuery.value.trim().toLocaleLowerCase()),
+	),
+);
 
 function formatRole(role: UserRole): string {
 	return role === "ADMIN" ? "Administrator" : "Nutzer";
@@ -145,9 +153,15 @@ async function confirmDeactivate(): Promise<void> {
 
 <template>
 	<section class="flex min-h-0 flex-1 flex-col gap-3">
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ errorMessage }}
-		</p>
+		<Input
+			v-model="searchQuery"
+			type="search"
+			placeholder="Benutzer suchen..."
+			class="max-w-sm"
+		/>
+		<Alert v-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
 		<p v-if="isLoadingUsers" class="m-0">Benutzer werden geladen...</p>
 
 		<div v-else class="min-h-0 flex-1 overflow-auto">
@@ -164,20 +178,44 @@ async function confirmDeactivate(): Promise<void> {
 				</TableHeader>
 
 				<TableBody>
-					<TableRow v-if="users.length === 0">
+					<TableRow v-if="filteredUsers.length === 0">
 						<TableCell colspan="4" class="h-24 text-center text-muted-foreground">
-							Es sind noch keine Benutzer vorhanden.
+							{{
+								users.length === 0
+									? "Es sind noch keine Benutzer vorhanden."
+									: "Keine passenden Benutzer gefunden."
+							}}
 						</TableCell>
 					</TableRow>
 
-					<ContextMenu v-for="user in users" :key="user.id">
+					<ContextMenu v-for="user in filteredUsers" :key="user.id">
 						<ContextMenuTrigger as-child>
 							<TableRow>
 								<TableCell class="font-medium">{{ user.username }}</TableCell>
-								<TableCell>{{ formatRole(user.role) }}</TableCell>
-								<TableCell>{{
-									user.deactivated ? "Deaktiviert" : "Aktiv"
-								}}</TableCell>
+								<TableCell>
+									<span
+										class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+										:class="
+											user.role === 'ADMIN'
+												? 'bg-primary text-primary-foreground'
+												: 'bg-muted text-muted-foreground'
+										"
+									>
+										{{ formatRole(user.role) }}
+									</span>
+								</TableCell>
+								<TableCell>
+									<span
+										class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium"
+										:class="
+											user.deactivated
+												? 'bg-destructive/10 text-destructive'
+												: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+										"
+									>
+										{{ user.deactivated ? "Deaktiviert" : "Aktiv" }}
+									</span>
+								</TableCell>
 								<TableCell class="text-right">
 									<DropdownMenu>
 										<DropdownMenuTrigger as-child>

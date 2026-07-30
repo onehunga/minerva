@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -269,9 +270,9 @@ async function confirmRemove(): Promise<void> {
 	<section class="flex min-h-0 flex-1 flex-col gap-3">
 		<h2 class="m-0 text-lg font-semibold">Projektbenutzer</h2>
 
-		<p v-if="visibleErrorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ visibleErrorMessage }}
-		</p>
+		<Alert v-if="visibleErrorMessage" variant="destructive">
+			<AlertDescription>{{ visibleErrorMessage }}</AlertDescription>
+		</Alert>
 		<p v-if="successMessage" class="m-0 text-sm text-muted-foreground" role="status">
 			{{ successMessage }}
 		</p>

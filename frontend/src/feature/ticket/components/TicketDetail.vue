@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { HugeiconsIcon } from "@hugeicons/vue";
+import { PencilEditIcon } from "@hugeicons/core-free-icons";
 import type {
 	Ticket,
 	TicketPriorityName,
@@ -334,9 +336,9 @@ function formatAssignee(userId: number | null): string {
 			<AlertTitle>Archiviertes Ticket</AlertTitle>
 			<AlertDescription>Dieses Ticket ist archiviert.</AlertDescription>
 		</Alert>
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ errorMessage }}
-		</p>
+		<Alert v-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
 
 		<div class="ticket-detail__layout">
 			<div class="ticket-detail__main">
@@ -387,10 +389,12 @@ function formatAssignee(userId: number | null): string {
 							v-if="hasTicketWritePermission"
 							variant="ghost"
 							class="ticket-detail__editable"
+							aria-label="Ticketname bearbeiten"
 							:disabled="!canModifyTickets"
 							@click="beginDetailsEdit('name')"
 						>
 							{{ ticket.name }}
+							<HugeiconsIcon :icon="PencilEditIcon" aria-hidden="true" />
 						</Button>
 						<template v-else>{{ ticket.name }}</template>
 					</h3>
@@ -424,10 +428,12 @@ function formatAssignee(userId: number | null): string {
 						v-if="hasTicketWritePermission"
 						variant="ghost"
 						class="ticket-detail__editable"
+						aria-label="Ticketbeschreibung bearbeiten"
 						:disabled="!canModifyTickets"
 						@click="beginDetailsEdit('description')"
 					>
 						{{ ticket.description || "Keine Beschreibung hinterlegt." }}
+						<HugeiconsIcon :icon="PencilEditIcon" aria-hidden="true" />
 					</Button>
 					<template v-else>
 						{{ ticket.description || "Keine Beschreibung hinterlegt." }}

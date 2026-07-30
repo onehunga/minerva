@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, useId } from "vue";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatTicketPriority } from "@/feature/ticket";
 import { useUsers } from "@/feature/user";
@@ -139,7 +140,9 @@ function describe(event: ActivityEvent): string {
 		<h4 :id="headingId">{{ heading }}</h4>
 
 		<p v-if="isLoading">Aktivitäten werden geladen...</p>
-		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
+		<Alert v-else-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
 		<p v-else-if="events.length === 0">Keine Aktivitäten vorhanden.</p>
 		<ScrollArea v-else :class="fillHeight ? 'min-h-0 flex-1' : undefined">
 			<ul class="m-0 flex flex-col gap-1">

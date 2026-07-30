@@ -5,6 +5,7 @@ import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketDetail, TicketList } from "@/feature/ticket";
 import { useUserStore } from "@/feature/user";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -17,14 +18,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveProjectStore, useProjectsStore } from "../project.store";
 import { useProject } from "../composables/useProject";
@@ -128,10 +121,6 @@ watch(showArchived, async (archived) => {
 		isLoadingTickets.value = false;
 	}
 });
-
-function selectTicketView(value: unknown): void {
-	showArchived.value = value === "archived";
-}
 
 async function submitDetailsUpdate(): Promise<void> {
 	if (
@@ -307,9 +296,9 @@ async function submitDeleteProject(): Promise<void> {
 <template>
 	<main v-if="details != null" class="project-page">
 		<p v-if="details.archived" class="archive-banner">Dieses Projekt ist archiviert.</p>
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive">
-			{{ errorMessage }}
-		</p>
+		<Alert v-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
 
 		<Tabs default-value="overview" class="flex-1 mt-2">
 			<div class="project-page__tabs-scroll">
@@ -362,21 +351,25 @@ async function submitDeleteProject(): Promise<void> {
 					:disabled="details.archived"
 				/>
 				<p v-else>Als Viewer kannst du keine Tickets erstellen.</p>
-				<div class="project-page__ticket-filter">
-					<Label for="ticket-view">Ticketansicht</Label>
-					<Select
-						:model-value="showArchived ? 'archived' : 'active'"
+				<div class="project-page__ticket-filter" role="group" aria-label="Ticketansicht">
+					<Button
+						type="button"
+						:variant="showArchived ? 'outline' : 'default'"
+						:aria-pressed="!showArchived"
 						:disabled="isLoadingTickets || isRestoringTicket"
-						@update:model-value="selectTicketView"
+						@click="showArchived = false"
 					>
-						<SelectTrigger id="ticket-view" class="w-52">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="active">Aktive Tickets</SelectItem>
-							<SelectItem value="archived">Archivierte Tickets</SelectItem>
-						</SelectContent>
-					</Select>
+						Aktive Tickets
+					</Button>
+					<Button
+						type="button"
+						:variant="showArchived ? 'default' : 'outline'"
+						:aria-pressed="showArchived"
+						:disabled="isLoadingTickets || isRestoringTicket"
+						@click="showArchived = true"
+					>
+						Archivierte Tickets
+					</Button>
 				</div>
 				<p v-if="isLoadingTickets">Tickets werden geladen...</p>
 				<div v-else class="project-page__tickets">

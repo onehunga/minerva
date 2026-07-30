@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
 	Table,
@@ -32,7 +33,9 @@ function recent(): DashboardRecentTicket[] {
 		<h3>Dashboard</h3>
 
 		<p v-if="isLoading">Dashboard wird geladen...</p>
-		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
+		<Alert v-else-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
 
 		<template v-else-if="data != null">
 			<div class="dashboard-overview__charts">
