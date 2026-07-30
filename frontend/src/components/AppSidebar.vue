@@ -23,6 +23,7 @@ import {
 	Bell,
 	Computer,
 	Folder,
+	FolderArchiveIcon,
 	Home,
 	Logout,
 	Moon,
@@ -44,9 +45,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 	DropdownMenuItem,
-	DropdownMenuSub,
-	DropdownMenuSubContent,
-	DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -141,7 +139,7 @@ async function submitLogout(): Promise<void> {
 									:is-active="route.name === 'archived-projects'"
 									@click="$router.push({ name: 'archived-projects' })"
 								>
-									<HugeiconsIcon :icon="Folder" />
+									<HugeiconsIcon :icon="FolderArchiveIcon" />
 									<span>Archivierte Projekte</span>
 								</SidebarMenuButton>
 								<CollapsibleTrigger v-if="archivedProjects.length > 0" as-child>
@@ -168,7 +166,7 @@ async function submitLogout(): Promise<void> {
 													})
 												"
 											>
-												<HugeiconsIcon :icon="Folder" />
+												<HugeiconsIcon :icon="FolderArchiveIcon" />
 												<span>{{ project.name }}</span>
 											</SidebarMenuButton>
 										</SidebarMenuSubItem>
@@ -188,13 +186,12 @@ async function submitLogout(): Promise<void> {
 						</SidebarMenuItem>
 						<SidebarMenuItem>
 							<SidebarMenuButton
-								tooltip="Projekt Erstellen"
-								@click="$router.push('/create-project')"
+								tooltip="Projekt erstellen"
+								:is-active="route.name === 'create-project'"
+								@click="$router.push({ name: 'create-project' })"
 							>
-								<div class="flex flex-row items-center gap-2">
-									<HugeiconsIcon :icon="Plus" class="" />
-									<p>Projekt erstellen</p>
-								</div>
+								<HugeiconsIcon :icon="Plus" />
+								<span>Projekt erstellen</span>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
 					</SidebarMenu>
@@ -262,7 +259,7 @@ async function submitLogout(): Promise<void> {
 									:is-active="route.name === 'admin-archived-projects'"
 									@click="$router.push({ name: 'admin-archived-projects' })"
 								>
-									<HugeiconsIcon :icon="Folder" />
+									<HugeiconsIcon :icon="FolderArchiveIcon" />
 									<span>Archivierte Projekte</span>
 								</SidebarMenuButton>
 								<CollapsibleTrigger
@@ -294,7 +291,7 @@ async function submitLogout(): Promise<void> {
 													})
 												"
 											>
-												<HugeiconsIcon :icon="Folder" />
+												<HugeiconsIcon :icon="FolderArchiveIcon" />
 												<span>{{ project.name }}</span>
 											</SidebarMenuButton>
 										</SidebarMenuSubItem>
@@ -348,6 +345,36 @@ async function submitLogout(): Promise<void> {
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</SidebarMenuItem>
+			</SidebarMenu>
+			<SidebarMenu
+				class="grid grid-cols-[auto_minmax(0,1fr)] group-data-[collapsible=icon]:grid-cols-1"
+			>
+				<SidebarMenuItem>
+					<DropdownMenu>
+						<DropdownMenuTrigger as-child>
+							<SidebarMenuButton
+								tooltip="Benachrichtigungen"
+								:aria-label="
+									unreadCount > 0
+										? `Benachrichtigungen, ${unreadCount} ungelesen`
+										: 'Benachrichtigungen'
+								"
+								class="relative w-8 justify-center px-0"
+							>
+								<HugeiconsIcon :icon="Bell" />
+								<span
+									v-if="unreadCount > 0"
+									class="bg-primary text-primary-foreground absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[0.625rem] tabular-nums"
+								>
+									{{ unreadCount }}
+								</span>
+							</SidebarMenuButton>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent side="top" align="start" class="w-fit p-0">
+							<NotificationList />
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</SidebarMenuItem>
 				<SidebarMenuItem>
 					<DropdownMenu>
 						<DropdownMenuTrigger as-child>
@@ -357,22 +384,6 @@ async function submitLogout(): Promise<void> {
 							</SidebarMenuButton>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent side="top" align="end" class="w-fit">
-							<DropdownMenuSub>
-								<DropdownMenuSubTrigger>
-									<HugeiconsIcon :icon="Bell" class="mr-2" />
-									Benachrichtigungen
-									<span
-										v-if="unreadCount > 0"
-										class="bg-primary text-primary-foreground flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs tabular-nums"
-									>
-										{{ unreadCount }}
-									</span>
-								</DropdownMenuSubTrigger>
-								<DropdownMenuSubContent class="p-0">
-									<NotificationList />
-								</DropdownMenuSubContent>
-							</DropdownMenuSub>
-							<DropdownMenuSeparator />
 							<DropdownMenuItem @select="router.push({ name: 'profile' })">
 								<HugeiconsIcon :icon="User" class="mr-2" />
 								Profil
