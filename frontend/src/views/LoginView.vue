@@ -6,8 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { HugeiconsIcon } from "@hugeicons/vue";
-import { BookOpen01Icon } from "@hugeicons/core-free-icons";
 
 const router: Router = useRouter();
 
@@ -31,7 +29,11 @@ async function handleLogin(): Promise<void> {
 </script>
 
 <template>
-	<div class="flex min-h-screen items-center justify-center">
+	<main class="flex min-h-screen flex-col items-center justify-center gap-6 px-4">
+		<div class="flex flex-col items-center gap-3">
+			<img src="/logo.png" alt="" aria-hidden="true" class="size-24 rounded-2xl" />
+			<h1 class="cn-font-heading text-3xl font-semibold tracking-tight">Minerva</h1>
+		</div>
 		<Card class="w-full max-w-sm">
 			<CardHeader>
 				<CardTitle>Login</CardTitle>
@@ -64,16 +66,8 @@ async function handleLogin(): Promise<void> {
 				</form>
 			</CardContent>
 		</Card>
-		<Button
-			as="a"
-			href="/docs/"
-			variant="secondary"
-			size="icon-lg"
-			class="fixed right-6 bottom-6 rounded-full"
-			aria-label="Dokumentation öffnen"
-			title="Dokumentation"
-		>
-			<HugeiconsIcon :icon="BookOpen01Icon" />
-		</Button>
-	</div>
+		<a href="/docs/" class="text-sm text-muted-foreground underline-offset-4 hover:underline">
+			Dokumentation
+		</a>
+	</main>
 </template>
