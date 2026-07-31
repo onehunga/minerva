@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { Ticket } from "../ticket.model";
+import type { Ticket, TicketType } from "../ticket.model";
 import TicketListItem from "./TicketListItem.vue";
 
 defineProps<{
 	tickets: Ticket[];
+	ticketTypes: TicketType[];
 	selectedTicketId: number | null;
 }>();
 
@@ -19,6 +20,8 @@ const emit = defineEmits<{
 			v-for="ticket in tickets"
 			:key="ticket.id"
 			:ticket="ticket"
+			:all-tickets="tickets"
+			:ticket-types="ticketTypes"
 			:selectedTicketId="selectedTicketId"
 			@selectTicket="emit('selectTicket', $event)"
 		/>

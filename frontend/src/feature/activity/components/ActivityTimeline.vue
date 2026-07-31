@@ -2,6 +2,7 @@
 import { computed, useId } from "vue";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatTicketPriority } from "@/feature/ticket";
 import { useUsers } from "@/feature/user";
 import { formatDate } from "@/lib/date";
@@ -136,10 +137,21 @@ function describe(event: ActivityEvent): string {
 </script>
 
 <template>
-	<section class="activity-timeline" :aria-labelledby="headingId">
+	<section class="activity-timeline" :aria-labelledby="headingId" :aria-busy="isLoading">
 		<h4 :id="headingId">{{ heading }}</h4>
 
-		<p v-if="isLoading">Aktivitäten werden geladen...</p>
+		<div v-if="isLoading" class="flex flex-col gap-2" data-testid="activity-skeleton">
+			<span class="sr-only">Aktivitäten werden geladen...</span>
+			<div
+				v-for="index in 3"
+				:key="index"
+				class="flex flex-col gap-2 rounded-md border px-3 py-2"
+			>
+				<Skeleton class="h-4 w-2/5" />
+				<Skeleton class="h-3 w-4/5" />
+				<Skeleton class="h-3 w-1/3" />
+			</div>
+		</div>
 		<Alert v-else-if="errorMessage" variant="destructive">
 			<AlertDescription>{{ errorMessage }}</AlertDescription>
 		</Alert>

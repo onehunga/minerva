@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/date";
+import { useUserStore } from "@/feature/user";
 
 const props = withDefaults(
 	defineProps<{
@@ -17,6 +18,7 @@ const props = withDefaults(
 );
 
 const content = ref("");
+const userStore = useUserStore();
 const { comments, isLoading, isCreating, hasLoadError, hasCreateError, createComment } =
 	useTicketComments(
 		() => props.projectId,
@@ -58,6 +60,8 @@ watch(
 				v-for="comment in newestFirstComments"
 				:key="comment.id"
 				class="flex flex-col gap-1 rounded-md border px-3 py-2"
+				:class="{ 'bg-muted/50': comment.authorId === userStore.userDetails?.id }"
+				:data-own-comment="comment.authorId === userStore.userDetails?.id || undefined"
 			>
 				<p class="m-0">{{ comment.content }}</p>
 				<small class="text-muted-foreground">

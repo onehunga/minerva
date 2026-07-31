@@ -441,6 +441,7 @@ async function submitDeleteProject(): Promise<void> {
 						<CardContent>
 							<TicketList
 								:tickets="tickets"
+								:ticket-types="ticketTypes"
 								:selected-ticket-id="selectedTicketId"
 								@select-ticket="selectTicket"
 							/>

@@ -23,7 +23,11 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/feature/project";
-import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
+import {
+	formatTicketPriority,
+	ticketPriorityIndicatorClass,
+	TICKET_PRIORITY_ORDER,
+} from "../priority-labels";
 import type { TicketPriorityName } from "../ticket.model";
 
 const props = withDefaults(
@@ -284,7 +288,15 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 									@update:model-value="selectPriority"
 								>
 									<SelectTrigger :id="`${formId}-priority`" class="w-full">
-										<SelectValue />
+										<SelectValue>
+											<span
+												class="size-2 rounded-full"
+												:class="
+													ticketPriorityIndicatorClass(selectedPriority)
+												"
+											></span>
+											{{ formatTicketPriority(selectedPriority) }}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent>
 										<SelectGroup>
@@ -294,6 +306,10 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 												:key="priority"
 												:value="priority"
 											>
+												<span
+													class="size-2 rounded-full"
+													:class="ticketPriorityIndicatorClass(priority)"
+												></span>
 												{{ formatTicketPriority(priority) }}
 											</SelectItem>
 										</SelectGroup>

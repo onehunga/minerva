@@ -1,6 +1,8 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import { createPinia } from "pinia";
+import { useUserStore } from "@/feature/user";
 import type { TicketComment } from "../ticket.model";
 import { TicketRepositoryKey, type ITicketRepository } from "../ticket.repository";
 import TicketComments from "../components/TicketComments.vue";
@@ -37,6 +39,7 @@ describe("TicketComments", () => {
 		await flushPromises();
 		expect(repository.getTicketComments).toHaveBeenCalledExactlyOnceWith(1, 2);
 		expect(wrapper.text()).toContain(existingComment.content);
+		expect(wrapper.get("[data-own-comment='true']").text()).toContain(existingComment.content);
 
 		await wrapper.get("textarea").setValue(createdComment.content);
 		await wrapper.get("form").trigger("submit");
@@ -107,6 +110,8 @@ describe("TicketComments", () => {
 });
 
 function mountComments(repository: Partial<ITicketRepository>) {
+	const pinia = createPinia();
+	useUserStore(pinia).setUserDetails({ id: 3, username: "admin", role: "ADMIN" });
 	return mount(TicketComments, {
 		props: {
 			projectId: 1,
@@ -114,6 +119,7 @@ function mountComments(repository: Partial<ITicketRepository>) {
 			canCreateComment: true,
 		},
 		global: {
+			plugins: [pinia],
 			provide: {
 				[TicketRepositoryKey as symbol]: repository,
 			},

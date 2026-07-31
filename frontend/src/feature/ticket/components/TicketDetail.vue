@@ -9,7 +9,11 @@ import type {
 	WorkflowState,
 	WorkflowTransition,
 } from "../ticket.model";
-import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
+import {
+	formatTicketPriority,
+	ticketPriorityIndicatorClass,
+	TICKET_PRIORITY_ORDER,
+} from "../priority-labels";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	AlertDialog,
@@ -501,8 +505,8 @@ function formatAssignee(userId: number | null): string {
 			<Separator class="ticket-detail__separator--mobile" />
 
 			<aside class="ticket-detail__sidebar">
-				<section class="ticket-detail__section" aria-labelledby="ticket-actions-heading">
-					<h4 id="ticket-actions-heading">Aktionen</h4>
+				<section class="ticket-detail__section" aria-labelledby="ticket-workflow-heading">
+					<h4 id="ticket-workflow-heading">Workflow</h4>
 
 					<div class="ticket-detail__field">
 						<Label for="ticket-status">Status</Label>
@@ -541,7 +545,13 @@ function formatAssignee(userId: number | null): string {
 							@update:model-value="submitPriorityUpdate"
 						>
 							<SelectTrigger id="ticket-priority" class="w-full">
-								<SelectValue />
+								<SelectValue>
+									<span
+										class="size-2 rounded-full"
+										:class="ticketPriorityIndicatorClass(ticket.priority)"
+									></span>
+									{{ formatTicketPriority(ticket.priority) }}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
 								<SelectGroup>
@@ -551,6 +561,10 @@ function formatAssignee(userId: number | null): string {
 										:key="priority"
 										:value="priority"
 									>
+										<span
+											class="size-2 rounded-full"
+											:class="ticketPriorityIndicatorClass(priority)"
+										></span>
 										{{ formatTicketPriority(priority) }}
 									</SelectItem>
 								</SelectGroup>
@@ -584,6 +598,12 @@ function formatAssignee(userId: number | null): string {
 							</SelectContent>
 						</Select>
 					</div>
+				</section>
+
+				<Separator />
+
+				<section class="ticket-detail__section" aria-labelledby="ticket-management-heading">
+					<h4 id="ticket-management-heading">Verwaltung</h4>
 
 					<Button
 						v-if="hasTicketWritePermission && !ticket.archived"
@@ -605,6 +625,7 @@ function formatAssignee(userId: number | null): string {
 								: "Ticket wiederherstellen"
 						}}
 					</Button>
+					<Separator v-if="hasTicketWritePermission" />
 					<Button
 						v-if="hasTicketWritePermission"
 						variant="destructive"
@@ -783,6 +804,14 @@ function formatAssignee(userId: number | null): string {
 
 .ticket-detail__separator--mobile {
 	display: none;
+}
+
+@media (min-width: 64.01rem) {
+	.ticket-detail__meta > div {
+		display: grid;
+		grid-template-columns: minmax(6rem, 0.8fr) 1fr;
+		align-items: baseline;
+	}
 }
 
 @media (max-width: 64rem) {

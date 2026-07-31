@@ -7,6 +7,18 @@ vi.mock("@/feature/user", () => ({
 }));
 
 describe("ActivityTimeline", () => {
+	it("shows a structural skeleton while loading", () => {
+		const wrapper = mount(ActivityTimeline, {
+			props: { events: [], isLoading: true, errorMessage: "" },
+		});
+
+		expect(wrapper.get("section").attributes("aria-busy")).toBe("true");
+		expect(
+			wrapper.get("[data-testid='activity-skeleton']").findAll("[data-slot='skeleton']"),
+		).toHaveLength(9);
+		expect(wrapper.text()).toContain("Aktivitäten werden geladen...");
+	});
+
 	it("describes a restored ticket", () => {
 		const wrapper = mount(ActivityTimeline, {
 			props: {
