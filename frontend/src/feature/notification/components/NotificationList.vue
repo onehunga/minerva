@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	DropdownMenuItem,
 	DropdownMenuLabel,
@@ -137,9 +138,9 @@ function descriptionFor(notification: Notification): string {
 			<p v-if="isLoading" class="text-muted-foreground px-3 py-6 text-center text-sm">
 				Benachrichtigungen werden geladen...
 			</p>
-			<p v-else-if="errorMessage" class="text-destructive px-3 py-6 text-center text-sm">
-				{{ errorMessage }}
-			</p>
+			<Alert v-else-if="errorMessage" variant="destructive" class="my-1">
+				<AlertDescription>{{ errorMessage }}</AlertDescription>
+			</Alert>
 			<DropdownMenuItem
 				v-for="notification in isLoading || errorMessage ? [] : notifications"
 				:key="notification.id"
@@ -172,7 +173,8 @@ function descriptionFor(notification: Notification): string {
 				v-if="!isLoading && !errorMessage && notifications.length === 0"
 				class="text-muted-foreground px-3 py-6 text-center text-sm"
 			>
-				Keine Benachrichtigungen
+				<span class="font-medium text-foreground">Keine Benachrichtigungen</span>
+				<span class="mt-1 block">Neue Benachrichtigungen erscheinen hier.</span>
 			</p>
 		</div>
 	</div>

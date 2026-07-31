@@ -8,6 +8,10 @@ const { adminProjects } = useProjects();
 <template>
 	<CenteredPageLayout>
 		<h2>Andere Projekte</h2>
-		<ProjectList :projects="adminProjects" />
+		<ProjectList
+			:projects="adminProjects"
+			empty-title="Keine weiteren Projekte"
+			empty-description="Derzeit gibt es keine Projekte außerhalb deiner Mitgliedschaften."
+		/>
 	</CenteredPageLayout>
 </template>

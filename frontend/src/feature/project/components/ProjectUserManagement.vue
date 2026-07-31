@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { EllipsisIcon, PencilIcon, Trash2Icon, UserPlusIcon } from "@lucide/vue";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -26,10 +27,13 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -141,7 +145,7 @@ function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
 		!props.disabled &&
 		isOwnerLike.value &&
-		user.id !== userStore.userDetails?.id &&
+		(user.id !== userStore.userDetails?.id || isAdmin.value) &&
 		user.projectRole !== null
 	);
 }
@@ -269,15 +273,13 @@ async function confirmRemove(): Promise<void> {
 	<section class="flex min-h-0 flex-1 flex-col gap-3">
 		<h2 class="m-0 text-lg font-semibold">Projektbenutzer</h2>
 
-		<p v-if="visibleErrorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ visibleErrorMessage }}
-		</p>
+		<Alert v-if="visibleErrorMessage" variant="destructive">
+			<AlertDescription>{{ visibleErrorMessage }}</AlertDescription>
+		</Alert>
 		<p v-if="successMessage" class="m-0 text-sm text-muted-foreground" role="status">
 			{{ successMessage }}
 		</p>
-		<p v-if="isLoadingUsers" class="m-0">Projektbenutzer werden geladen...</p>
-
-		<div v-else class="min-h-0 flex-1 overflow-auto">
+		<div class="min-h-0 flex-1 overflow-auto">
 			<Table class="min-w-lg">
 				<TableHeader class="bg-card sticky top-0 z-10">
 					<TableRow>
@@ -290,11 +292,27 @@ async function confirmRemove(): Promise<void> {
 				</TableHeader>
 
 				<TableBody>
-					<TableEmpty v-if="users.length === 0" :colspan="3">
-						Es sind keine Projektmitglieder vorhanden.
+					<template v-if="isLoadingUsers">
+						<TableRow v-for="row in 3" :key="row" aria-hidden="true">
+							<TableCell v-for="column in 3" :key="column">
+								<Skeleton class="h-5 w-full max-w-32" />
+							</TableCell>
+						</TableRow>
+					</template>
+					<TableEmpty v-else-if="users.length === 0" :colspan="3">
+						<div class="py-3 text-center">
+							<p class="font-medium text-foreground">Keine Projektmitglieder</p>
+							<p class="mt-1 text-sm">
+								{{
+									isOwnerLike
+										? "Füge unten den ersten Benutzer hinzu."
+										: "Diesem Projekt sind keine Benutzer zugeordnet."
+								}}
+							</p>
+						</div>
 					</TableEmpty>
 
-					<ContextMenu v-for="user in users" :key="user.id">
+					<ContextMenu v-for="user in users" v-else :key="user.id">
 						<ContextMenuTrigger as-child :disabled="!canManageUser(user)">
 							<TableRow>
 								<TableCell class="font-medium">{{ user.username }}</TableCell>
@@ -321,10 +339,13 @@ async function confirmRemove(): Promise<void> {
 												Projektrolle ändern
 											</DropdownMenuItem>
 											<DropdownMenuSeparator
-												v-if="canRemoveProjectUser(user)"
+												v-if="
+													canUpdateProjectRole(user) &&
+													canRemoveProjectUser(user)
+												"
 											/>
 											<DropdownMenuItem
-												v-if="canUpdateProjectRole(user)"
+												v-if="canRemoveProjectUser(user)"
 												data-action="remove"
 												variant="destructive"
 												@select="openDeleteDialog(user)"
@@ -363,7 +384,10 @@ async function confirmRemove(): Promise<void> {
 					</ContextMenu>
 				</TableBody>
 
-				<TableFooter v-if="isOwnerLike" class="bg-card sticky bottom-0 z-10">
+				<TableFooter
+					v-if="isOwnerLike && !isLoadingUsers"
+					class="bg-card sticky bottom-0 z-10"
+				>
 					<TableRow>
 						<TableCell colspan="3">
 							<form
@@ -393,13 +417,16 @@ async function confirmRemove(): Promise<void> {
 											/>
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem
-												v-for="user in availableUsers"
-												:key="user.id"
-												:value="String(user.id)"
-											>
-												{{ user.username }}
-											</SelectItem>
+											<SelectGroup>
+												<SelectLabel>Benutzer auswählen</SelectLabel>
+												<SelectItem
+													v-for="user in availableUsers"
+													:key="user.id"
+													:value="String(user.id)"
+												>
+													{{ user.username }}
+												</SelectItem>
+											</SelectGroup>
 										</SelectContent>
 									</Select>
 								</div>
@@ -417,13 +444,16 @@ async function confirmRemove(): Promise<void> {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem
-												v-for="role in projectRoles"
-												:key="role"
-												:value="role"
-											>
-												{{ formatProjectRole(role) }}
-											</SelectItem>
+											<SelectGroup>
+												<SelectLabel>Projektrolle auswählen</SelectLabel>
+												<SelectItem
+													v-for="role in projectRoles"
+													:key="role"
+													:value="role"
+												>
+													{{ formatProjectRole(role) }}
+												</SelectItem>
+											</SelectGroup>
 										</SelectContent>
 									</Select>
 								</div>
@@ -468,22 +498,25 @@ async function confirmRemove(): Promise<void> {
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent v-if="!isLoadingAllUsers">
-								<SelectItem
-									v-for="role in availableProjectRoles"
-									:key="role"
-									:value="role"
-								>
-									{{ formatProjectRole(role) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Projektrolle auswählen</SelectLabel>
+									<SelectItem
+										v-for="role in availableProjectRoles"
+										:key="role"
+										:value="role"
+									>
+										{{ formatProjectRole(role) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 							<SelectContent v-else>
 								<SelectItem :value="null" disabled> Lädt... </SelectItem>
 							</SelectContent>
 						</Select>
 
-						<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-							{{ errorMessage }}
-						</p>
+						<Alert v-if="errorMessage" variant="destructive">
+							<AlertDescription>{{ errorMessage }}</AlertDescription>
+						</Alert>
 					</div>
 
 					<SheetFooter class="sm:flex-row sm:justify-end">
@@ -520,9 +553,9 @@ async function confirmRemove(): Promise<void> {
 						„{{ deleteCandidate?.username }}“ verliert den Zugriff auf dieses Projekt.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="removingUserId !== null">
 						Abbrechen

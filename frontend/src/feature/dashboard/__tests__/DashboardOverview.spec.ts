@@ -42,6 +42,23 @@ const dashboard: DashboardResponse = {
 };
 
 describe("DashboardOverview", () => {
+	it("shows a structural skeleton while loading", () => {
+		const wrapper = mount(DashboardOverview, {
+			props: {
+				data: null,
+				isLoading: true,
+				errorMessage: "",
+				showProjectName: true,
+			},
+		});
+
+		expect(wrapper.get("[data-testid='dashboard-skeleton']").attributes("aria-busy")).toBe(
+			"true",
+		);
+		expect(wrapper.findAll("[data-slot='skeleton']")).toHaveLength(4);
+		expect(wrapper.text()).toContain("Dashboard wird geladen...");
+	});
+
 	it("passes dashboard data to both charts and keeps recent tickets", () => {
 		const wrapper = mount(DashboardOverview, {
 			props: {
@@ -49,6 +66,7 @@ describe("DashboardOverview", () => {
 				isLoading: false,
 				errorMessage: "",
 				showProjectName: true,
+				projectCount: 3,
 			},
 		});
 
@@ -61,6 +79,7 @@ describe("DashboardOverview", () => {
 		expect(wrapper.text()).toContain("Dashboard bauen");
 		expect(wrapper.text()).toContain("#5");
 		expect(wrapper.text()).toContain("Minerva");
+		expect(wrapper.text()).toContain("3 Projekte, 3 offene Tickets und 4 insgesamt");
 	});
 
 	it("hides the project name in a project dashboard", () => {
@@ -87,6 +106,7 @@ describe("DashboardOverview", () => {
 			},
 		});
 
-		expect(wrapper.text()).toContain("Keine Tickets vorhanden.");
+		expect(wrapper.text()).toContain("Noch keine Tickets vorhanden");
+		expect(wrapper.text()).toContain("Neu erstellte Tickets erscheinen hier.");
 	});
 });

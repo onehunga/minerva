@@ -29,13 +29,13 @@ const {
 </script>
 
 <template>
-	<main class="mx-auto flex w-full max-w-4xl flex-col gap-4">
+	<main class="mx-auto flex w-full max-w-2xl flex-col gap-4">
 		<header>
 			<h1 class="m-0">Profil</h1>
 			<p class="text-muted-foreground m-0">Benutzername und Passwort verwalten.</p>
 		</header>
 
-		<div class="grid items-start gap-4 md:grid-cols-2">
+		<div class="flex flex-col gap-4">
 			<form @submit.prevent="updateUsername">
 				<Card class="h-full">
 					<CardHeader>

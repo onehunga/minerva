@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { HugeiconsIcon } from "@hugeicons/vue";
+import { PencilEditIcon } from "@hugeicons/core-free-icons";
 import type {
 	Ticket,
 	TicketPriorityName,
@@ -7,7 +9,11 @@ import type {
 	WorkflowState,
 	WorkflowTransition,
 } from "../ticket.model";
-import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
+import {
+	formatTicketPriority,
+	ticketPriorityIndicatorClass,
+	TICKET_PRIORITY_ORDER,
+} from "../priority-labels";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	AlertDialog,
@@ -24,7 +30,9 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -334,9 +342,9 @@ function formatAssignee(userId: number | null): string {
 			<AlertTitle>Archiviertes Ticket</AlertTitle>
 			<AlertDescription>Dieses Ticket ist archiviert.</AlertDescription>
 		</Alert>
-		<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-			{{ errorMessage }}
-		</p>
+		<Alert v-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
 
 		<div class="ticket-detail__layout">
 			<div class="ticket-detail__main">
@@ -387,10 +395,12 @@ function formatAssignee(userId: number | null): string {
 							v-if="hasTicketWritePermission"
 							variant="ghost"
 							class="ticket-detail__editable"
+							aria-label="Ticketname bearbeiten"
 							:disabled="!canModifyTickets"
 							@click="beginDetailsEdit('name')"
 						>
 							{{ ticket.name }}
+							<HugeiconsIcon :icon="PencilEditIcon" aria-hidden="true" />
 						</Button>
 						<template v-else>{{ ticket.name }}</template>
 					</h3>
@@ -424,10 +434,12 @@ function formatAssignee(userId: number | null): string {
 						v-if="hasTicketWritePermission"
 						variant="ghost"
 						class="ticket-detail__editable"
+						aria-label="Ticketbeschreibung bearbeiten"
 						:disabled="!canModifyTickets"
 						@click="beginDetailsEdit('description')"
 					>
 						{{ ticket.description || "Keine Beschreibung hinterlegt." }}
+						<HugeiconsIcon :icon="PencilEditIcon" aria-hidden="true" />
 					</Button>
 					<template v-else>
 						{{ ticket.description || "Keine Beschreibung hinterlegt." }}
@@ -467,10 +479,12 @@ function formatAssignee(userId: number | null): string {
 
 				<Separator />
 				<Tabs default-value="comments">
-					<TabsList>
-						<TabsTrigger value="comments">Kommentare</TabsTrigger>
-						<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
-					</TabsList>
+					<div class="overflow-x-auto pb-1">
+						<TabsList>
+							<TabsTrigger value="comments">Kommentare</TabsTrigger>
+							<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
+						</TabsList>
+					</div>
 					<TabsContent value="comments" class="ticket-detail__tab-content">
 						<TicketComments
 							:project-id="ticket.projectId"
@@ -493,8 +507,8 @@ function formatAssignee(userId: number | null): string {
 			<Separator class="ticket-detail__separator--mobile" />
 
 			<aside class="ticket-detail__sidebar">
-				<section class="ticket-detail__section" aria-labelledby="ticket-actions-heading">
-					<h4 id="ticket-actions-heading">Aktionen</h4>
+				<section class="ticket-detail__section" aria-labelledby="ticket-workflow-heading">
+					<h4 id="ticket-workflow-heading">Workflow</h4>
 
 					<div class="ticket-detail__field">
 						<Label for="ticket-status">Status</Label>
@@ -510,13 +524,17 @@ function formatAssignee(userId: number | null): string {
 								<SelectValue :placeholder="currentStatus?.name ?? 'Unbekannt'" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem
-									v-for="transition in availableTransitions"
-									:key="transition.id"
-									:value="String(transition.id)"
-								>
-									{{ transition.name }} → {{ getStateName(transition.toStateId) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Statusübergang auswählen</SelectLabel>
+									<SelectItem
+										v-for="transition in availableTransitions"
+										:key="transition.id"
+										:value="String(transition.id)"
+									>
+										{{ transition.name }} →
+										{{ getStateName(transition.toStateId) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 						</Select>
 					</div>
@@ -529,16 +547,29 @@ function formatAssignee(userId: number | null): string {
 							@update:model-value="submitPriorityUpdate"
 						>
 							<SelectTrigger id="ticket-priority" class="w-full">
-								<SelectValue />
+								<SelectValue>
+									<span
+										class="size-2 rounded-full"
+										:class="ticketPriorityIndicatorClass(ticket.priority)"
+									></span>
+									{{ formatTicketPriority(ticket.priority) }}
+								</SelectValue>
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem
-									v-for="priority in TICKET_PRIORITY_ORDER"
-									:key="priority"
-									:value="priority"
-								>
-									{{ formatTicketPriority(priority) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Priorität auswählen</SelectLabel>
+									<SelectItem
+										v-for="priority in TICKET_PRIORITY_ORDER"
+										:key="priority"
+										:value="priority"
+									>
+										<span
+											class="size-2 rounded-full"
+											:class="ticketPriorityIndicatorClass(priority)"
+										></span>
+										{{ formatTicketPriority(priority) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 						</Select>
 					</div>
@@ -556,16 +587,25 @@ function formatAssignee(userId: number | null): string {
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem
-									v-for="userId in possibleAssignees"
-									:key="userId ?? 'unassigned'"
-									:value="userId == null ? 'unassigned' : String(userId)"
-								>
-									{{ formatAssignee(userId) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Bearbeiter auswählen</SelectLabel>
+									<SelectItem
+										v-for="userId in possibleAssignees"
+										:key="userId ?? 'unassigned'"
+										:value="userId == null ? 'unassigned' : String(userId)"
+									>
+										{{ formatAssignee(userId) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 						</Select>
 					</div>
+				</section>
+
+				<Separator />
+
+				<section class="ticket-detail__section" aria-labelledby="ticket-management-heading">
+					<h4 id="ticket-management-heading">Verwaltung</h4>
 
 					<Button
 						v-if="hasTicketWritePermission && !ticket.archived"
@@ -587,6 +627,7 @@ function formatAssignee(userId: number | null): string {
 								: "Ticket wiederherstellen"
 						}}
 					</Button>
+					<Separator v-if="hasTicketWritePermission" />
 					<Button
 						v-if="hasTicketWritePermission"
 						variant="destructive"
@@ -638,9 +679,9 @@ function formatAssignee(userId: number | null): string {
 						{{ ticketAction === "archive" ? "archiviert" : "gelöscht" }}.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="isTicketActionPending">
 						Abbrechen
@@ -765,6 +806,14 @@ function formatAssignee(userId: number | null): string {
 
 .ticket-detail__separator--mobile {
 	display: none;
+}
+
+@media (min-width: 64.01rem) {
+	.ticket-detail__meta > div {
+		display: grid;
+		grid-template-columns: minmax(6rem, 0.8fr) 1fr;
+		align-items: baseline;
+	}
 }
 
 @media (max-width: 64rem) {

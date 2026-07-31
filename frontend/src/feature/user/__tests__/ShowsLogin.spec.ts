@@ -26,7 +26,9 @@ describe("ShowsLogin", () => {
 
 		await router.isReady();
 
-		expect(wrapper.exists()).toBe(true);
+		expect(wrapper.get("h1").text()).toBe("Minerva");
+		expect(wrapper.get("img").attributes("src")).toBe("/logo.png");
+		expect(wrapper.get("a[href='/docs/']").text()).toBe("Dokumentation");
 	});
 
 	it("renders a non-blocking error when login fails", async () => {

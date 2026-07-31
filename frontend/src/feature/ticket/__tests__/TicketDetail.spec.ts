@@ -95,7 +95,8 @@ describe("TicketDetail", () => {
 		expect(wrapper.text()).toContain("Kommentare");
 		expect(wrapper.text()).toContain("Aktivitäten");
 		expect(wrapper.find("#ticket-children-heading").exists()).toBe(false);
-		expect(wrapper.get("#ticket-actions-heading").text()).toBe("Aktionen");
+		expect(wrapper.get("#ticket-workflow-heading").text()).toBe("Workflow");
+		expect(wrapper.get("#ticket-management-heading").text()).toBe("Verwaltung");
 		expect(wrapper.get("#ticket-meta-heading").text()).toBe("Eckdaten");
 		expect(wrapper.text()).not.toContain("Ticketdetails");
 

@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -21,7 +23,11 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/feature/project";
-import { formatTicketPriority, TICKET_PRIORITY_ORDER } from "../priority-labels";
+import {
+	formatTicketPriority,
+	ticketPriorityIndicatorClass,
+	TICKET_PRIORITY_ORDER,
+} from "../priority-labels";
 import type { TicketPriorityName } from "../ticket.model";
 
 const props = withDefaults(
@@ -229,13 +235,16 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 										<SelectValue placeholder="Ticketart wählen" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem
-											v-for="ticketType in availableTicketTypes"
-											:key="ticketType.id"
-											:value="String(ticketType.id)"
-										>
-											{{ ticketType.name }}
-										</SelectItem>
+										<SelectGroup>
+											<SelectLabel>Ticketart auswählen</SelectLabel>
+											<SelectItem
+												v-for="ticketType in availableTicketTypes"
+												:key="ticketType.id"
+												:value="String(ticketType.id)"
+											>
+												{{ ticketType.name }}
+											</SelectItem>
+										</SelectGroup>
 									</SelectContent>
 								</Select>
 							</div>
@@ -257,13 +266,16 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 										<SelectValue placeholder="Zustand wählen" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem
-											v-for="state in availableStates"
-											:key="state.id"
-											:value="String(state.id)"
-										>
-											{{ state.name }}
-										</SelectItem>
+										<SelectGroup>
+											<SelectLabel>Startzustand auswählen</SelectLabel>
+											<SelectItem
+												v-for="state in availableStates"
+												:key="state.id"
+												:value="String(state.id)"
+											>
+												{{ state.name }}
+											</SelectItem>
+										</SelectGroup>
 									</SelectContent>
 								</Select>
 							</div>
@@ -276,16 +288,31 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 									@update:model-value="selectPriority"
 								>
 									<SelectTrigger :id="`${formId}-priority`" class="w-full">
-										<SelectValue />
+										<SelectValue>
+											<span
+												class="size-2 rounded-full"
+												:class="
+													ticketPriorityIndicatorClass(selectedPriority)
+												"
+											></span>
+											{{ formatTicketPriority(selectedPriority) }}
+										</SelectValue>
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem
-											v-for="priority in TICKET_PRIORITY_ORDER"
-											:key="priority"
-											:value="priority"
-										>
-											{{ formatTicketPriority(priority) }}
-										</SelectItem>
+										<SelectGroup>
+											<SelectLabel>Priorität auswählen</SelectLabel>
+											<SelectItem
+												v-for="priority in TICKET_PRIORITY_ORDER"
+												:key="priority"
+												:value="priority"
+											>
+												<span
+													class="size-2 rounded-full"
+													:class="ticketPriorityIndicatorClass(priority)"
+												></span>
+												{{ formatTicketPriority(priority) }}
+											</SelectItem>
+										</SelectGroup>
 									</SelectContent>
 								</Select>
 							</div>
@@ -305,14 +332,19 @@ watch(selectedTicketTypeId, selectDefaultStatus);
 										<SelectValue />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="unassigned">Nicht zugewiesen</SelectItem>
-										<SelectItem
-											v-for="user in possibleAssignees"
-											:key="user.id"
-											:value="String(user.id)"
-										>
-											{{ user.username }}
-										</SelectItem>
+										<SelectGroup>
+											<SelectLabel>Bearbeiter auswählen</SelectLabel>
+											<SelectItem value="unassigned"
+												>Nicht zugewiesen</SelectItem
+											>
+											<SelectItem
+												v-for="user in possibleAssignees"
+												:key="user.id"
+												:value="String(user.id)"
+											>
+												{{ user.username }}
+											</SelectItem>
+										</SelectGroup>
 									</SelectContent>
 								</Select>
 							</div>

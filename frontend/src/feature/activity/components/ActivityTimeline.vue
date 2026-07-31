@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, useId } from "vue";
+import { HugeiconsIcon } from "@hugeicons/vue";
+import { Folder, Ticket, User } from "@hugeicons/core-free-icons";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatTicketPriority } from "@/feature/ticket";
 import { useUsers } from "@/feature/user";
 import { formatDate } from "@/lib/date";
@@ -12,6 +16,7 @@ withDefaults(
 		isLoading: boolean;
 		errorMessage: string;
 		heading?: string;
+		description?: string;
 		fillHeight?: boolean;
 	}>(),
 	{
@@ -21,6 +26,7 @@ withDefaults(
 );
 
 const headingId = useId();
+const descriptionId = useId();
 const { users } = useUsers();
 const usernames = computed(() => new Map(users.value.map((user) => [user.id, user.username])));
 
@@ -53,6 +59,23 @@ const ACTIVITY_TYPE_LABELS: Record<ActivityEventType, string> = {
 
 function formatType(type: ActivityEventType): string {
 	return ACTIVITY_TYPE_LABELS[type] ?? type;
+}
+
+function category(type: ActivityEventType): "project" | "ticket" | "user" {
+	if (type.startsWith("PROJECT_")) return "project";
+	if (type.startsWith("TICKET_")) return "ticket";
+	return "user";
+}
+
+function categoryIcon(type: ActivityEventType) {
+	switch (category(type)) {
+		case "project":
+			return Folder;
+		case "ticket":
+			return Ticket;
+		case "user":
+			return User;
+	}
 }
 
 type Payload = Record<string, unknown>;
@@ -135,32 +158,68 @@ function describe(event: ActivityEvent): string {
 </script>
 
 <template>
-	<section class="activity-timeline" :aria-labelledby="headingId">
+	<section
+		class="activity-timeline"
+		:aria-labelledby="headingId"
+		:aria-describedby="description ? descriptionId : undefined"
+		:aria-busy="isLoading"
+	>
 		<h4 :id="headingId">{{ heading }}</h4>
+		<p v-if="description" :id="descriptionId" class="text-sm text-muted-foreground">
+			{{ description }}
+		</p>
 
-		<p v-if="isLoading">Aktivitäten werden geladen...</p>
-		<p v-else-if="errorMessage" role="alert">{{ errorMessage }}</p>
-		<p v-else-if="events.length === 0">Keine Aktivitäten vorhanden.</p>
+		<div v-if="isLoading" class="flex flex-col gap-2" data-testid="activity-skeleton">
+			<span class="sr-only">Aktivitäten werden geladen...</span>
+			<div
+				v-for="index in 3"
+				:key="index"
+				class="flex flex-col gap-2 rounded-md border px-3 py-2"
+			>
+				<Skeleton class="h-4 w-2/5" />
+				<Skeleton class="h-3 w-4/5" />
+				<Skeleton class="h-3 w-1/3" />
+			</div>
+		</div>
+		<Alert v-else-if="errorMessage" variant="destructive">
+			<AlertDescription>{{ errorMessage }}</AlertDescription>
+		</Alert>
+		<div v-else-if="events.length === 0" class="text-muted-foreground">
+			<p class="font-medium text-foreground">Noch keine Aktivitäten</p>
+			<p class="text-sm">Änderungen und Aktionen erscheinen hier chronologisch.</p>
+		</div>
 		<ScrollArea v-else :class="fillHeight ? 'min-h-0 flex-1' : undefined">
 			<ul class="m-0 flex flex-col gap-1">
 				<li
 					v-for="event in events"
 					:key="event.id"
-					class="flex flex-col gap-1 rounded-md border px-3 py-2"
+					class="flex gap-3 rounded-md border px-3 py-2"
+					:data-activity-category="category(event.type)"
 				>
-					<p class="activity-timeline__title">{{ formatType(event.type) }}</p>
-					<p
-						v-if="describe(event)"
-						class="activity-timeline__detail truncate"
-						:title="describe(event)"
+					<span
+						class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md bg-muted"
 					>
-						{{ describe(event) }}
-					</p>
-					<small>
-						{{ userRef(event.actorUserId) }}
-						-
-						{{ formatDate(event.occurredAt) }}
-					</small>
+						<HugeiconsIcon
+							:icon="categoryIcon(event.type)"
+							class="size-4"
+							aria-hidden="true"
+						/>
+					</span>
+					<div class="min-w-0 flex-1">
+						<p class="activity-timeline__title">{{ formatType(event.type) }}</p>
+						<p
+							v-if="describe(event)"
+							class="activity-timeline__detail truncate"
+							:title="describe(event)"
+						>
+							{{ describe(event) }}
+						</p>
+						<small>
+							{{ userRef(event.actorUserId) }}
+							-
+							{{ formatDate(event.occurredAt) }}
+						</small>
+					</div>
 				</li>
 			</ul>
 		</ScrollArea>

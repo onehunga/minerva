@@ -22,8 +22,22 @@ describe("ProjectList", () => {
 		const wrapper = mount(ProjectList, {
 			props: {
 				projects: [
-					{ id: 1, name: "Erstes Projekt", description: "Beschreibung" },
-					{ id: 2, name: "Zweites Projekt", description: "" },
+					{
+						id: 1,
+						name: "Erstes Projekt",
+						description: "Beschreibung",
+						projectRole: "OWNER",
+						openTicketCount: 2,
+						ticketCount: 4,
+					},
+					{
+						id: 2,
+						name: "Zweites Projekt",
+						description: "",
+						projectRole: "VIEWER",
+						openTicketCount: 0,
+						ticketCount: 1,
+					},
 				],
 			},
 			global: {
@@ -34,10 +48,39 @@ describe("ProjectList", () => {
 		expect(wrapper.text()).toContain("Erstes Projekt");
 		expect(wrapper.text()).toContain("Zweites Projekt");
 		expect(wrapper.text()).toContain("Keine Beschreibung hinterlegt.");
+		expect(wrapper.text()).toContain("Owner");
+		expect(wrapper.text()).toContain("4");
 
 		await wrapper.findAll("tbody tr")[0]?.trigger("click");
 		await flushPromises();
 
 		expect(router.currentRoute.value.fullPath).toBe("/project/1");
+	});
+
+	it("shows the contextual empty state and optional create action", async () => {
+		const router = createRouter({
+			history: createMemoryHistory(),
+			routes: [
+				{ path: "/", component: { template: "<div />" } },
+				{ path: "/create-project", component: { template: "<div />" } },
+			],
+		});
+		await router.push("/");
+		await router.isReady();
+
+		const wrapper = mount(ProjectList, {
+			props: {
+				projects: [],
+				emptyTitle: "Noch keine Projekte",
+				emptyDescription: "Erstelle dein erstes Projekt.",
+				showCreateAction: true,
+			},
+			global: { plugins: [router] },
+		});
+
+		expect(wrapper.text()).toContain("Noch keine Projekte");
+		await wrapper.get("button.mt-2").trigger("click");
+		await flushPromises();
+		expect(router.currentRoute.value.fullPath).toBe("/create-project");
 	});
 });

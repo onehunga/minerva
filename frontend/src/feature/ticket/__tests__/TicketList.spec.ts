@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
-import type { Ticket } from "../ticket.model";
+import type { Ticket, TicketType } from "../ticket.model";
 import TicketList from "../components/TicketList.vue";
 
 const tickets: Ticket[] = [
@@ -37,14 +37,26 @@ const tickets: Ticket[] = [
 		archived: false,
 	},
 ];
+const ticketTypes: TicketType[] = [
+	{
+		id: 1,
+		name: "Aufgabe",
+		description: "",
+		states: [{ id: 1, name: "Offen", category: "OPEN" }],
+		transitions: [],
+		children: [],
+	},
+];
 
 describe("TicketList", () => {
 	it("renders the selection and emits the selected ticket id", async () => {
 		const wrapper = mount(TicketList, {
-			props: { tickets, selectedTicketId: 1 },
+			props: { tickets, ticketTypes, selectedTicketId: 1 },
 		});
 
 		expect(wrapper.get('[aria-current="true"]').text()).toContain("Erstes Ticket");
+		expect(wrapper.get('[aria-current="true"]').text()).toContain("Offen");
+		expect(wrapper.get('[aria-current="true"]').text()).toContain("Normal");
 
 		await wrapper.findAll("button")[1]?.trigger("click");
 
@@ -54,6 +66,7 @@ describe("TicketList", () => {
 	it("shows and selects ticket children in the dropdown", async () => {
 		const wrapper = mount(TicketList, {
 			props: {
+				ticketTypes,
 				tickets: [
 					{
 						...tickets[0]!,

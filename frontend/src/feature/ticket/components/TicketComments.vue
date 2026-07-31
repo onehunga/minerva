@@ -5,6 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDate } from "@/lib/date";
+import { useUserStore } from "@/feature/user";
 
 const props = withDefaults(
 	defineProps<{
@@ -17,6 +18,7 @@ const props = withDefaults(
 );
 
 const content = ref("");
+const userStore = useUserStore();
 const { comments, isLoading, isCreating, hasLoadError, hasCreateError, createComment } =
 	useTicketComments(
 		() => props.projectId,
@@ -52,12 +54,23 @@ watch(
 		<Alert v-else-if="hasLoadError" variant="destructive">
 			<AlertDescription>Kommentare konnten nicht geladen werden.</AlertDescription>
 		</Alert>
-		<p v-else-if="comments.length === 0" class="m-0">Keine Kommentare vorhanden.</p>
+		<div v-else-if="comments.length === 0" class="text-muted-foreground">
+			<p class="m-0 font-medium text-foreground">Noch keine Kommentare</p>
+			<p class="mt-1 text-sm">
+				{{
+					canCreateComment
+						? "Schreibe den ersten Kommentar."
+						: "Zu diesem Ticket wurden noch keine Kommentare verfasst."
+				}}
+			</p>
+		</div>
 		<ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
 			<li
 				v-for="comment in newestFirstComments"
 				:key="comment.id"
 				class="flex flex-col gap-1 rounded-md border px-3 py-2"
+				:class="{ 'bg-muted/50': comment.authorId === userStore.userDetails?.id }"
+				:data-own-comment="comment.authorId === userStore.userDetails?.id || undefined"
 			>
 				<p class="m-0">{{ comment.content }}</p>
 				<small class="text-muted-foreground">

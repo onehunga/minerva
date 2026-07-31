@@ -8,6 +8,11 @@ const { projects } = useProjects();
 <template>
 	<CenteredPageLayout>
 		<h2>Projekte</h2>
-		<ProjectList :projects="projects" />
+		<ProjectList
+			:projects="projects"
+			empty-title="Noch keine Projekte"
+			empty-description="Erstelle ein Projekt, um Tickets und Abläufe zu verwalten."
+			show-create-action
+		/>
 	</CenteredPageLayout>
 </template>

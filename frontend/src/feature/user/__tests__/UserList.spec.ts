@@ -93,6 +93,17 @@ describe("UserList", () => {
 		expect(wrapper.text()).toContain("Deaktiviert");
 	});
 
+	it("filters users by username", async () => {
+		const wrapper = mountUserList(new MockUserRepository());
+		await flushPromises();
+
+		await wrapper.get("input[type='search']").setValue("JAN");
+
+		expect(wrapper.findAll("tbody tr")).toHaveLength(1);
+		expect(wrapper.text()).toContain("jane");
+		expect(wrapper.text()).not.toContain("admin");
+	});
+
 	it("provides an options button and a context menu for every user", async () => {
 		const wrapper = mountUserList(new MockUserRepository());
 
@@ -239,8 +250,9 @@ describe("UserList", () => {
 
 		await nextTick();
 
-		expect(wrapper.text()).toContain("Benutzer werden geladen...");
-		expect(wrapper.find("table").exists()).toBe(false);
+		expect(wrapper.find("table").exists()).toBe(true);
+		expect(wrapper.findAll("[data-slot='skeleton']")).toHaveLength(12);
+		expect(wrapper.find("tfoot").exists()).toBe(false);
 	});
 });
 
