@@ -20,6 +20,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	ContextMenu,
 	ContextMenuContent,
@@ -162,9 +163,7 @@ async function confirmDeactivate(): Promise<void> {
 		<Alert v-if="errorMessage" variant="destructive">
 			<AlertDescription>{{ errorMessage }}</AlertDescription>
 		</Alert>
-		<p v-if="isLoadingUsers" class="m-0">Benutzer werden geladen...</p>
-
-		<div v-else class="min-h-0 flex-1 overflow-auto">
+		<div class="min-h-0 flex-1 overflow-auto">
 			<Table class="min-w-lg">
 				<TableHeader class="bg-card sticky top-0 z-10">
 					<TableRow>
@@ -178,7 +177,14 @@ async function confirmDeactivate(): Promise<void> {
 				</TableHeader>
 
 				<TableBody>
-					<TableRow v-if="filteredUsers.length === 0">
+					<template v-if="isLoadingUsers">
+						<TableRow v-for="row in 3" :key="row" aria-hidden="true">
+							<TableCell v-for="column in 4" :key="column">
+								<Skeleton class="h-5 w-full max-w-32" />
+							</TableCell>
+						</TableRow>
+					</template>
+					<TableRow v-else-if="filteredUsers.length === 0">
 						<TableCell colspan="4" class="h-24 text-center text-muted-foreground">
 							{{
 								users.length === 0
@@ -188,7 +194,7 @@ async function confirmDeactivate(): Promise<void> {
 						</TableCell>
 					</TableRow>
 
-					<ContextMenu v-for="user in filteredUsers" :key="user.id">
+					<ContextMenu v-for="user in filteredUsers" v-else :key="user.id">
 						<ContextMenuTrigger as-child>
 							<TableRow>
 								<TableCell class="font-medium">{{ user.username }}</TableCell>
@@ -312,7 +318,7 @@ async function confirmDeactivate(): Promise<void> {
 					</ContextMenu>
 				</TableBody>
 
-				<TableFooter class="bg-card sticky bottom-0 z-10">
+				<TableFooter v-if="!isLoadingUsers" class="bg-card sticky bottom-0 z-10">
 					<TableRow>
 						<TableCell colspan="4" class="p-0">
 							<Button
@@ -367,9 +373,9 @@ async function confirmDeactivate(): Promise<void> {
 						sich anschließend nicht mehr anmelden.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="deletingUserId !== null">
 						Abbrechen
@@ -394,9 +400,9 @@ async function confirmDeactivate(): Promise<void> {
 						sich bis zur Reaktivierung nicht mehr anmelden.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="updatingUserStateId !== null"
 						>Abbrechen</AlertDialogCancel

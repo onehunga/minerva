@@ -15,10 +15,8 @@ const {
 </script>
 
 <template>
-	<main
-		class="grid h-full min-h-0 grid-cols-1 grid-rows-2 gap-4 overflow-hidden lg:grid-cols-2 lg:grid-rows-1"
-	>
-		<Card class="min-h-0">
+	<main class="grid grid-cols-1 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-2 lg:overflow-hidden">
+		<Card class="lg:min-h-0">
 			<CardContent class="flex min-h-0 flex-1">
 				<ActivityTimeline
 					class="min-h-0 flex-1"
@@ -32,7 +30,7 @@ const {
 			</CardContent>
 		</Card>
 
-		<Card class="min-h-0">
+		<Card class="lg:min-h-0">
 			<CardContent class="flex min-h-0 flex-1">
 				<ActivityTimeline
 					class="min-h-0 flex-1"

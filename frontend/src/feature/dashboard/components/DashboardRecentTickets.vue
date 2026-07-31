@@ -36,7 +36,10 @@ defineProps<{
 			</TableHeader>
 			<TableBody>
 				<TableEmpty v-if="tickets.length === 0" :colspan="showProjectName ? 5 : 4">
-					Keine Tickets vorhanden.
+					<div class="py-3 text-center">
+						<p class="font-medium text-foreground">Noch keine Tickets vorhanden</p>
+						<p class="mt-1 text-sm">Neu erstellte Tickets erscheinen hier.</p>
+					</div>
 				</TableEmpty>
 				<TableRow v-for="ticket in tickets" v-else :key="ticket.id">
 					<TableCell v-if="showProjectName">{{ ticket.projectName ?? "-" }}</TableCell>

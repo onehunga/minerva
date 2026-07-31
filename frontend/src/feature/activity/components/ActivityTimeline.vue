@@ -184,7 +184,10 @@ function describe(event: ActivityEvent): string {
 		<Alert v-else-if="errorMessage" variant="destructive">
 			<AlertDescription>{{ errorMessage }}</AlertDescription>
 		</Alert>
-		<p v-else-if="events.length === 0">Keine Aktivitäten vorhanden.</p>
+		<div v-else-if="events.length === 0" class="text-muted-foreground">
+			<p class="font-medium text-foreground">Noch keine Aktivitäten</p>
+			<p class="text-sm">Änderungen und Aktionen erscheinen hier chronologisch.</p>
+		</div>
 		<ScrollArea v-else :class="fillHeight ? 'min-h-0 flex-1' : undefined">
 			<ul class="m-0 flex flex-col gap-1">
 				<li

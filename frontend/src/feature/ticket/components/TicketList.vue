@@ -6,6 +6,8 @@ defineProps<{
 	tickets: Ticket[];
 	ticketTypes: TicketType[];
 	selectedTicketId: number | null;
+	emptyTitle?: string;
+	emptyDescription?: string;
 }>();
 
 const emit = defineEmits<{
@@ -14,7 +16,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-	<p v-if="tickets.length === 0" class="m-0">Keine Tickets vorhanden.</p>
+	<div v-if="tickets.length === 0" class="py-4 text-center text-muted-foreground">
+		<p class="font-medium text-foreground">{{ emptyTitle ?? "Keine Tickets vorhanden" }}</p>
+		<p class="mt-1 text-sm">
+			{{ emptyDescription ?? "Tickets erscheinen hier, sobald sie erstellt wurden." }}
+		</p>
+	</div>
 	<div v-else class="flex flex-col gap-2" aria-label="Tickets">
 		<TicketListItem
 			v-for="ticket in tickets"

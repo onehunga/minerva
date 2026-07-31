@@ -173,7 +173,8 @@ function descriptionFor(notification: Notification): string {
 				v-if="!isLoading && !errorMessage && notifications.length === 0"
 				class="text-muted-foreground px-3 py-6 text-center text-sm"
 			>
-				Keine Benachrichtigungen
+				<span class="font-medium text-foreground">Keine Benachrichtigungen</span>
+				<span class="mt-1 block">Neue Benachrichtigungen erscheinen hier.</span>
 			</p>
 		</div>
 	</div>

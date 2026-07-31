@@ -250,8 +250,9 @@ describe("UserList", () => {
 
 		await nextTick();
 
-		expect(wrapper.text()).toContain("Benutzer werden geladen...");
-		expect(wrapper.find("table").exists()).toBe(false);
+		expect(wrapper.find("table").exists()).toBe(true);
+		expect(wrapper.findAll("[data-slot='skeleton']")).toHaveLength(12);
+		expect(wrapper.find("tfoot").exists()).toBe(false);
 	});
 });
 

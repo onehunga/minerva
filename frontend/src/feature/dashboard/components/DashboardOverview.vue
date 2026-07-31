@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { computed } from "vue";
 import type { DashboardResponse } from "../dashboard.model";
 import DashboardRecentTickets from "./DashboardRecentTickets.vue";
@@ -24,7 +25,20 @@ const openTicketCount = computed(
 	<section class="dashboard-overview">
 		<h3>Dashboard</h3>
 
-		<p v-if="isLoading">Dashboard wird geladen...</p>
+		<div
+			v-if="isLoading"
+			class="flex flex-col gap-4"
+			aria-busy="true"
+			data-testid="dashboard-skeleton"
+		>
+			<span class="sr-only">Dashboard wird geladen...</span>
+			<Skeleton class="h-12 w-full" />
+			<div class="dashboard-overview__charts">
+				<Skeleton class="h-72 w-full" />
+				<Skeleton class="h-72 w-full" />
+			</div>
+			<Skeleton class="h-56 w-full" />
+		</div>
 		<Alert v-else-if="errorMessage" variant="destructive">
 			<AlertDescription>{{ errorMessage }}</AlertDescription>
 		</Alert>

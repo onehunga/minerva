@@ -42,6 +42,23 @@ const dashboard: DashboardResponse = {
 };
 
 describe("DashboardOverview", () => {
+	it("shows a structural skeleton while loading", () => {
+		const wrapper = mount(DashboardOverview, {
+			props: {
+				data: null,
+				isLoading: true,
+				errorMessage: "",
+				showProjectName: true,
+			},
+		});
+
+		expect(wrapper.get("[data-testid='dashboard-skeleton']").attributes("aria-busy")).toBe(
+			"true",
+		);
+		expect(wrapper.findAll("[data-slot='skeleton']")).toHaveLength(4);
+		expect(wrapper.text()).toContain("Dashboard wird geladen...");
+	});
+
 	it("passes dashboard data to both charts and keeps recent tickets", () => {
 		const wrapper = mount(DashboardOverview, {
 			props: {
@@ -89,6 +106,7 @@ describe("DashboardOverview", () => {
 			},
 		});
 
-		expect(wrapper.text()).toContain("Keine Tickets vorhanden.");
+		expect(wrapper.text()).toContain("Noch keine Tickets vorhanden");
+		expect(wrapper.text()).toContain("Neu erstellte Tickets erscheinen hier.");
 	});
 });

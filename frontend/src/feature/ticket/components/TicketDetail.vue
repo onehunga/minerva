@@ -479,10 +479,12 @@ function formatAssignee(userId: number | null): string {
 
 				<Separator />
 				<Tabs default-value="comments">
-					<TabsList>
-						<TabsTrigger value="comments">Kommentare</TabsTrigger>
-						<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
-					</TabsList>
+					<div class="overflow-x-auto pb-1">
+						<TabsList>
+							<TabsTrigger value="comments">Kommentare</TabsTrigger>
+							<TabsTrigger value="activities">Aktivitäten</TabsTrigger>
+						</TabsList>
+					</div>
 					<TabsContent value="comments" class="ticket-detail__tab-content">
 						<TicketComments
 							:project-id="ticket.projectId"
@@ -677,9 +679,9 @@ function formatAssignee(userId: number | null): string {
 						{{ ticketAction === "archive" ? "archiviert" : "gelöscht" }}.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="isTicketActionPending">
 						Abbrechen

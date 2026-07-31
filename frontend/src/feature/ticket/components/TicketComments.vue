@@ -54,7 +54,16 @@ watch(
 		<Alert v-else-if="hasLoadError" variant="destructive">
 			<AlertDescription>Kommentare konnten nicht geladen werden.</AlertDescription>
 		</Alert>
-		<p v-else-if="comments.length === 0" class="m-0">Keine Kommentare vorhanden.</p>
+		<div v-else-if="comments.length === 0" class="text-muted-foreground">
+			<p class="m-0 font-medium text-foreground">Noch keine Kommentare</p>
+			<p class="mt-1 text-sm">
+				{{
+					canCreateComment
+						? "Schreibe den ersten Kommentar."
+						: "Zu diesem Ticket wurden noch keine Kommentare verfasst."
+				}}
+			</p>
+		</div>
 		<ul v-else class="m-0 flex list-none flex-col gap-2 p-0">
 			<li
 				v-for="comment in newestFirstComments"

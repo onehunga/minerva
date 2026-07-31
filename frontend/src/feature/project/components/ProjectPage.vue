@@ -443,6 +443,16 @@ async function submitDeleteProject(): Promise<void> {
 								:tickets="tickets"
 								:ticket-types="ticketTypes"
 								:selected-ticket-id="selectedTicketId"
+								:empty-title="
+									showArchived
+										? 'Keine archivierten Tickets'
+										: 'Keine aktiven Tickets'
+								"
+								:empty-description="
+									showArchived
+										? 'Archivierte Tickets erscheinen nach dem Archivieren hier.'
+										: 'Erstelle ein Ticket, um die Arbeit in diesem Projekt zu erfassen.'
+								"
 								@select-ticket="selectTicket"
 							/>
 						</CardContent>
@@ -596,9 +606,9 @@ async function submitDeleteProject(): Promise<void> {
 						Das Projekt „{{ details.name }}“ wird archiviert.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="isArchivingProject">
 						Abbrechen
@@ -619,9 +629,9 @@ async function submitDeleteProject(): Promise<void> {
 						und Aktivitäten werden dauerhaft gelöscht.
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<p v-if="errorMessage" class="m-0 text-sm text-destructive" role="alert">
-					{{ errorMessage }}
-				</p>
+				<Alert v-if="errorMessage" variant="destructive">
+					<AlertDescription>{{ errorMessage }}</AlertDescription>
+				</Alert>
 				<AlertDialogFooter>
 					<AlertDialogCancel :disabled="isDeletingProject"> Abbrechen </AlertDialogCancel>
 					<Button
@@ -646,7 +656,7 @@ async function submitDeleteProject(): Promise<void> {
 	flex-direction: column;
 	width: min(100%, 90rem);
 	margin: 0 auto;
-	padding: 2rem;
+	padding: 0;
 }
 
 .project-page__tabs-scroll {
@@ -689,6 +699,7 @@ async function submitDeleteProject(): Promise<void> {
 
 .project-page__ticket-filter {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 0.75rem;
 }
@@ -758,10 +769,6 @@ async function submitDeleteProject(): Promise<void> {
 }
 
 @media (max-width: 48rem) {
-	.project-page {
-		padding: 1rem;
-	}
-
 	.project-page__tickets {
 		grid-template-columns: 1fr;
 	}
