@@ -26,7 +26,9 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -516,13 +518,17 @@ function formatAssignee(userId: number | null): string {
 								<SelectValue :placeholder="currentStatus?.name ?? 'Unbekannt'" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem
-									v-for="transition in availableTransitions"
-									:key="transition.id"
-									:value="String(transition.id)"
-								>
-									{{ transition.name }} → {{ getStateName(transition.toStateId) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Statusübergang auswählen</SelectLabel>
+									<SelectItem
+										v-for="transition in availableTransitions"
+										:key="transition.id"
+										:value="String(transition.id)"
+									>
+										{{ transition.name }} →
+										{{ getStateName(transition.toStateId) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 						</Select>
 					</div>
@@ -538,13 +544,16 @@ function formatAssignee(userId: number | null): string {
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem
-									v-for="priority in TICKET_PRIORITY_ORDER"
-									:key="priority"
-									:value="priority"
-								>
-									{{ formatTicketPriority(priority) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Priorität auswählen</SelectLabel>
+									<SelectItem
+										v-for="priority in TICKET_PRIORITY_ORDER"
+										:key="priority"
+										:value="priority"
+									>
+										{{ formatTicketPriority(priority) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 						</Select>
 					</div>
@@ -562,13 +571,16 @@ function formatAssignee(userId: number | null): string {
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem
-									v-for="userId in possibleAssignees"
-									:key="userId ?? 'unassigned'"
-									:value="userId == null ? 'unassigned' : String(userId)"
-								>
-									{{ formatAssignee(userId) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Bearbeiter auswählen</SelectLabel>
+									<SelectItem
+										v-for="userId in possibleAssignees"
+										:key="userId ?? 'unassigned'"
+										:value="userId == null ? 'unassigned' : String(userId)"
+									>
+										{{ formatAssignee(userId) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 						</Select>
 					</div>

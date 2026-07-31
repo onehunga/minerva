@@ -30,7 +30,9 @@ import { Label } from "@/components/ui/label";
 import {
 	Select,
 	SelectContent,
+	SelectGroup,
 	SelectItem,
+	SelectLabel,
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
@@ -142,7 +144,7 @@ function canUpdateProjectRole(user: ProjectUser): boolean {
 	return (
 		!props.disabled &&
 		isOwnerLike.value &&
-		user.id !== userStore.userDetails?.id &&
+		(user.id !== userStore.userDetails?.id || isAdmin.value) &&
 		user.projectRole !== null
 	);
 }
@@ -322,10 +324,13 @@ async function confirmRemove(): Promise<void> {
 												Projektrolle ändern
 											</DropdownMenuItem>
 											<DropdownMenuSeparator
-												v-if="canRemoveProjectUser(user)"
+												v-if="
+													canUpdateProjectRole(user) &&
+													canRemoveProjectUser(user)
+												"
 											/>
 											<DropdownMenuItem
-												v-if="canUpdateProjectRole(user)"
+												v-if="canRemoveProjectUser(user)"
 												data-action="remove"
 												variant="destructive"
 												@select="openDeleteDialog(user)"
@@ -394,13 +399,16 @@ async function confirmRemove(): Promise<void> {
 											/>
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem
-												v-for="user in availableUsers"
-												:key="user.id"
-												:value="String(user.id)"
-											>
-												{{ user.username }}
-											</SelectItem>
+											<SelectGroup>
+												<SelectLabel>Benutzer auswählen</SelectLabel>
+												<SelectItem
+													v-for="user in availableUsers"
+													:key="user.id"
+													:value="String(user.id)"
+												>
+													{{ user.username }}
+												</SelectItem>
+											</SelectGroup>
 										</SelectContent>
 									</Select>
 								</div>
@@ -418,13 +426,16 @@ async function confirmRemove(): Promise<void> {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem
-												v-for="role in projectRoles"
-												:key="role"
-												:value="role"
-											>
-												{{ formatProjectRole(role) }}
-											</SelectItem>
+											<SelectGroup>
+												<SelectLabel>Projektrolle auswählen</SelectLabel>
+												<SelectItem
+													v-for="role in projectRoles"
+													:key="role"
+													:value="role"
+												>
+													{{ formatProjectRole(role) }}
+												</SelectItem>
+											</SelectGroup>
 										</SelectContent>
 									</Select>
 								</div>
@@ -469,13 +480,16 @@ async function confirmRemove(): Promise<void> {
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent v-if="!isLoadingAllUsers">
-								<SelectItem
-									v-for="role in availableProjectRoles"
-									:key="role"
-									:value="role"
-								>
-									{{ formatProjectRole(role) }}
-								</SelectItem>
+								<SelectGroup>
+									<SelectLabel>Projektrolle auswählen</SelectLabel>
+									<SelectItem
+										v-for="role in availableProjectRoles"
+										:key="role"
+										:value="role"
+									>
+										{{ formatProjectRole(role) }}
+									</SelectItem>
+								</SelectGroup>
 							</SelectContent>
 							<SelectContent v-else>
 								<SelectItem :value="null" disabled> Lädt... </SelectItem>

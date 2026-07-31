@@ -5,7 +5,7 @@ import { ActivityTimeline, useProjectActivities } from "@/feature/activity";
 import { DashboardOverview, useProjectDashboard } from "@/feature/dashboard";
 import { CreateTicketForm, TicketDetail, TicketList } from "@/feature/ticket";
 import { useUserStore } from "@/feature/user";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -18,7 +18,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HugeiconsIcon } from "@hugeicons/vue";
+import { FolderArchiveIcon } from "@hugeicons/core-free-icons";
 import { useActiveProjectStore, useProjectsStore } from "../project.store";
 import { useProject } from "../composables/useProject";
 import { useProjectRepository } from "../composables/useProjectRepository";
@@ -46,6 +49,7 @@ const isUpdatingDetails = ref(false);
 const errorMessage = ref("");
 const draftName = ref("");
 const draftDescription = ref("");
+const showMobileTicketDetail = ref(false);
 
 const isAdmin = computed(() => userStore.userDetails?.role === "ADMIN");
 const canUpdateDetails = computed(() => details.value?.projectRole === "OWNER" || isAdmin.value);
@@ -54,6 +58,23 @@ const canModifyProject = computed(
 );
 const canModifyTickets = computed(() => isAdmin.value || details.value?.projectRole !== null);
 const canOpenSettings = canUpdateDetails;
+const projectRoleLabel = computed(() => {
+	switch (details.value?.projectRole) {
+		case "OWNER":
+			return "Owner";
+		case "CONTRIBUTOR":
+			return "Mitwirkend";
+		case "VIEWER":
+			return "Lesend";
+		default:
+			return "Keine Mitgliedschaft";
+	}
+});
+const openTicketCount = computed(
+	() =>
+		(projectDashboard.value?.ticketsByCategory.open ?? 0) +
+		(projectDashboard.value?.ticketsByCategory.inProgress ?? 0),
+);
 const selectedTicket = computed(() =>
 	tickets.value.find((ticket) => ticket.id === selectedTicketId.value),
 );
@@ -86,6 +107,7 @@ watch(
 		isRestoringTicket.value = false;
 		showArchived.value = false;
 		selectedTicketId.value = null;
+		showMobileTicketDetail.value = false;
 	},
 );
 
@@ -121,6 +143,11 @@ watch(showArchived, async (archived) => {
 		isLoadingTickets.value = false;
 	}
 });
+
+function selectTicket(ticketId: number): void {
+	selectedTicketId.value = ticketId;
+	showMobileTicketDetail.value = true;
+}
 
 async function submitDetailsUpdate(): Promise<void> {
 	if (
@@ -295,7 +322,25 @@ async function submitDeleteProject(): Promise<void> {
 
 <template>
 	<main v-if="details != null" class="project-page">
-		<p v-if="details.archived" class="archive-banner">Dieses Projekt ist archiviert.</p>
+		<Alert
+			v-if="details.archived"
+			class="border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100"
+		>
+			<HugeiconsIcon :icon="FolderArchiveIcon" />
+			<AlertTitle>Projekt archiviert</AlertTitle>
+			<AlertDescription>Dieses Projekt ist schreibgeschützt.</AlertDescription>
+			<AlertAction v-if="canUpdateDetails">
+				<Button
+					type="button"
+					variant="outline"
+					size="sm"
+					:disabled="isRestoringProject"
+					@click="submitRestoreProject"
+				>
+					{{ isRestoringProject ? "Wird wiederhergestellt..." : "Wiederherstellen" }}
+				</Button>
+			</AlertAction>
+		</Alert>
 		<Alert v-if="errorMessage" variant="destructive">
 			<AlertDescription>{{ errorMessage }}</AlertDescription>
 		</Alert>
@@ -334,6 +379,22 @@ async function submitDeleteProject(): Promise<void> {
 							{{ details.description || "Keine Beschreibung hinterlegt." }}
 						</CardDescription>
 					</CardHeader>
+					<CardContent class="project-page__facts">
+						<div>
+							<span>Eigene Rolle</span>
+							<strong>{{ projectRoleLabel }}</strong>
+						</div>
+						<div>
+							<span>Tickets</span>
+							<strong v-if="projectDashboard">
+								{{ openTicketCount }} offen /
+								{{ projectDashboard.totalTickets }} gesamt
+							</strong>
+							<strong v-else>{{
+								isProjectDashboardLoading ? "Wird geladen..." : "–"
+							}}</strong>
+						</div>
+					</CardContent>
 				</Card>
 
 				<DashboardOverview
@@ -373,7 +434,7 @@ async function submitDeleteProject(): Promise<void> {
 				</div>
 				<p v-if="isLoadingTickets">Tickets werden geladen...</p>
 				<div v-else class="project-page__tickets">
-					<Card>
+					<Card :class="{ 'project-page__mobile-hidden': showMobileTicketDetail }">
 						<CardHeader>
 							<CardTitle>Tickets</CardTitle>
 						</CardHeader>
@@ -381,13 +442,24 @@ async function submitDeleteProject(): Promise<void> {
 							<TicketList
 								:tickets="tickets"
 								:selected-ticket-id="selectedTicketId"
-								@select-ticket="selectedTicketId = $event"
+								@select-ticket="selectTicket"
 							/>
 						</CardContent>
 					</Card>
 
-					<Card class="project-page__ticket-detail-card">
+					<Card
+						class="project-page__ticket-detail-card"
+						:class="{ 'project-page__mobile-hidden': !showMobileTicketDetail }"
+					>
 						<CardContent>
+							<Button
+								class="project-page__ticket-back"
+								type="button"
+								variant="ghost"
+								@click="showMobileTicketDetail = false"
+							>
+								Zurück zur Ticketliste
+							</Button>
 							<TicketDetail
 								v-if="selectedTicket"
 								:ticket="selectedTicket"
@@ -395,7 +467,7 @@ async function submitDeleteProject(): Promise<void> {
 								:parent-ticket-name="selectedTicketParentName"
 								:child-tickets="selectedTicketChildren"
 								:is-admin="isAdmin"
-								@select-ticket="selectedTicketId = $event"
+								@select-ticket="selectTicket"
 								@restore-pending="isRestoringTicket = $event"
 							/>
 							<p v-else>Wähle ein Ticket aus.</p>
@@ -470,35 +542,46 @@ async function submitDeleteProject(): Promise<void> {
 					<CardHeader>
 						<CardTitle>Projektverwaltung</CardTitle>
 					</CardHeader>
-					<CardContent>
-						<Button
-							v-if="details.archived"
-							type="button"
-							:disabled="isRestoringProject"
-							@click="submitRestoreProject"
-						>
-							{{
-								isRestoringProject
-									? "Wird wiederhergestellt..."
-									: "Projekt wiederherstellen"
-							}}
-						</Button>
-						<Button
-							v-else
-							type="button"
-							:disabled="isArchivingProject"
-							@click="openArchiveDialog"
-						>
-							Projekt archivieren
-						</Button>
-						<Button
-							type="button"
-							variant="destructive"
-							:disabled="isDeletingProject"
-							@click="openDeleteDialog"
-						>
-							Projekt löschen
-						</Button>
+					<CardContent class="project-page__management">
+						<section>
+							<h3>Archivierung</h3>
+							<p>
+								Archivierte Projekte bleiben erhalten, sind aber schreibgeschützt.
+							</p>
+							<Button
+								v-if="details.archived"
+								type="button"
+								:disabled="isRestoringProject"
+								@click="submitRestoreProject"
+							>
+								{{
+									isRestoringProject
+										? "Wird wiederhergestellt..."
+										: "Projekt wiederherstellen"
+								}}
+							</Button>
+							<Button
+								v-else
+								type="button"
+								:disabled="isArchivingProject"
+								@click="openArchiveDialog"
+							>
+								Projekt archivieren
+							</Button>
+						</section>
+						<Separator />
+						<section>
+							<h3>Projekt löschen</h3>
+							<p>Das Projekt und alle zugehörigen Daten werden dauerhaft entfernt.</p>
+							<Button
+								type="button"
+								variant="destructive"
+								:disabled="isDeletingProject"
+								@click="openDeleteDialog"
+							>
+								Projekt löschen
+							</Button>
+						</section>
 					</CardContent>
 				</Card>
 			</TabsContent>
@@ -570,6 +653,24 @@ async function submitDeleteProject(): Promise<void> {
 	padding-bottom: 0.25rem;
 }
 
+.project-page__facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1rem 2.5rem;
+}
+
+.project-page__facts div {
+	display: grid;
+	gap: 0.125rem;
+}
+
+.project-page__facts span {
+	color: var(--muted-foreground);
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
 .project-page__tab-content {
 	display: flex;
 	min-height: 0;
@@ -589,6 +690,25 @@ async function submitDeleteProject(): Promise<void> {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
+}
+
+.project-page__ticket-back {
+	display: none;
+}
+
+.project-page__management,
+.project-page__management section {
+	display: grid;
+	gap: 0.75rem;
+}
+
+.project-page__management h3 {
+	font-weight: 600;
+}
+
+.project-page__management section > .cn-button,
+.project-page__management section > button {
+	justify-self: start;
 }
 
 .project-page__details-form,
@@ -630,14 +750,6 @@ async function submitDeleteProject(): Promise<void> {
 	margin: 0;
 }
 
-.archive-banner {
-	padding: 1rem;
-	border: 1px solid var(--border);
-	border-radius: var(--radius-lg);
-	background: var(--accent);
-	font-weight: 700;
-}
-
 .project-page__ticket-detail-card :deep(.ticket-detail) {
 	min-height: 0;
 	padding: 0;
@@ -651,6 +763,15 @@ async function submitDeleteProject(): Promise<void> {
 
 	.project-page__tickets {
 		grid-template-columns: 1fr;
+	}
+
+	.project-page__tickets > .project-page__mobile-hidden {
+		display: none;
+	}
+
+	.project-page__ticket-back {
+		display: inline-flex;
+		margin-bottom: 1rem;
 	}
 }
 </style>

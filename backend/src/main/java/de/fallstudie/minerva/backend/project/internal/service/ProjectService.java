@@ -253,7 +253,7 @@ public class ProjectService {
 		validateUpdateProjectUserRoleRequest(request);
 		final var projectRoleName = validateProjectRole(request.role());
 
-		if (identity.userId() == userId) {
+		if (identity.userId() == userId && !isAdmin(identity)) {
 			throw new ValidationException("Ein Owner kann seine eigene Rolle nicht aktualisieren");
 		}
 
