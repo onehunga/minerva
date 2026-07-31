@@ -23,6 +23,7 @@ const {
 				<ActivityTimeline
 					class="min-h-0 flex-1"
 					heading="Letzte Aktivitäten"
+					description="Alle Aktivitäten in deinen Projekten"
 					:events="userActivityEvents"
 					:is-loading="isUserActivityLoading"
 					:error-message="userActivityError"
