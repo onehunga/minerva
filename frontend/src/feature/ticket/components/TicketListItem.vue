@@ -53,6 +53,7 @@ function statusClass(status: WorkflowState | undefined): string {
 			type="button"
 			class="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50"
 			:class="{ 'font-semibold': selectedTicketId === ticket.id }"
+			:aria-label="ticket.name"
 			:aria-current="selectedTicketId === ticket.id ? 'true' : undefined"
 			@click="emit('selectTicket', ticket.id)"
 		>
