@@ -37,10 +37,21 @@ public class ProjectService {
 		final var projectModels = archived
 				? projectRepository.findAllArchivedByUserId(identity.userId())
 				: projectRepository.findAllByUserId(identity.userId());
-		final var projects = projectModels.stream()
-				.map(project -> new ProjectRecordResponse(project.getId(), project.getName(),
-						project.getDescription()))
-				.toList();
+		final var members = projectMemberRepository.findAllByUserId(identity.userId()).stream()
+				.collect(Collectors.toMap(ProjectMemberModel::getProjectId, Function.identity()));
+		final var roles = projectRoleRepository
+				.findAllById(members.values().stream().map(ProjectMemberModel::getRoleId).toList())
+				.stream()
+				.collect(Collectors.toMap(ProjectRoleModel::getId, ProjectRoleModel::getName));
+		final var ticketStatistics = getTicketStatistics(projectModels);
+		final var projects = projectModels.stream().map(project -> {
+			final var member = members.get(project.getId());
+			final var statistics = ticketStatistics.get(project.getId());
+			return new ProjectRecordResponse(project.getId(), project.getName(),
+					project.getDescription(), member == null ? null : roles.get(member.getRoleId()),
+					statistics == null ? 0 : statistics.getOpenTicketCount(),
+					statistics == null ? 0 : statistics.getTicketCount());
+		}).toList();
 
 		return new ProjectRecordListResponse(projects);
 	}
@@ -49,12 +60,27 @@ public class ProjectService {
 		final var projectModels = archived
 				? projectRepository.findAllArchivedWithoutUser(identity.userId())
 				: projectRepository.findAllWithoutUser(identity.userId());
-		final var projects = projectModels.stream()
-				.map(project -> new ProjectRecordResponse(project.getId(), project.getName(),
-						project.getDescription()))
-				.toList();
+		final var ticketStatistics = getTicketStatistics(projectModels);
+		final var projects = projectModels.stream().map(project -> {
+			final var statistics = ticketStatistics.get(project.getId());
+			return new ProjectRecordResponse(project.getId(), project.getName(),
+					project.getDescription(), null,
+					statistics == null ? 0 : statistics.getOpenTicketCount(),
+					statistics == null ? 0 : statistics.getTicketCount());
+		}).toList();
 
 		return new ProjectRecordListResponse(projects);
+	}
+
+	private java.util.Map<Long, ProjectRepository.TicketCounts> getTicketStatistics(
+			java.util.List<ProjectModel> projects) {
+		if (projects.isEmpty()) {
+			return java.util.Map.of();
+		}
+		return projectRepository
+				.countTicketsByProjectIds(projects.stream().map(ProjectModel::getId).toList())
+				.stream().collect(Collectors.toMap(ProjectRepository.TicketCounts::getProjectId,
+						Function.identity()));
 	}
 
 	public ProjectDetailsResponse getProjectById(Identity identity, long projectId) {

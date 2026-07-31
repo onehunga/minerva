@@ -10,6 +10,9 @@ export type ProjectRecord = {
 	id: number;
 	name: string;
 	description: string;
+	projectRole?: ProjectRole | null;
+	openTicketCount?: number;
+	ticketCount?: number;
 };
 
 export type ProjectRecordListResponse = {

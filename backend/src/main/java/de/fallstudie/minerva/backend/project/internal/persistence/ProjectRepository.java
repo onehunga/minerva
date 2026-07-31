@@ -7,6 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ProjectRepository extends JpaRepository<ProjectModel, Long> {
+	interface TicketCounts {
+		long getProjectId();
+		long getOpenTicketCount();
+		long getTicketCount();
+	}
+
 	boolean existsByIdAndArchivedAtIsNotNull(long id);
 
 	List<ProjectModel> findAllByArchivedAtIsNull();
@@ -54,4 +60,16 @@ public interface ProjectRepository extends JpaRepository<ProjectModel, Long> {
 			)
 			""")
 	List<ProjectModel> findAllArchivedWithoutUser(@Param("userId") long userId);
+
+	@Query(value = """
+			SELECT t.project_id AS "projectId",
+				SUM(CASE WHEN ws.workflow_status_category = 'OPEN' THEN 1 ELSE 0 END) AS "openTicketCount",
+				COUNT(t.id) AS "ticketCount"
+			FROM tickets t
+			JOIN workflows w ON w.project_id = t.project_id AND w.ticket_type_id = t.ticket_type_id
+			JOIN workflow_states ws ON ws.id = t.status_id AND ws.workflow_id = w.id
+			WHERE t.project_id IN :projectIds AND t.archived_at IS NULL
+			GROUP BY t.project_id
+			""", nativeQuery = true)
+	List<TicketCounts> countTicketsByProjectIds(@Param("projectIds") List<Long> projectIds);
 }

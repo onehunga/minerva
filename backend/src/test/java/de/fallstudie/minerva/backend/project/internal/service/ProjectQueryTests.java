@@ -48,8 +48,22 @@ class ProjectQueryTests {
 	@Test
 	void getAllProjectsFiltersByIdentityUserId() {
 		final var project = TestProjects.project(TestProjects.PROJECT_ID);
+		final var member = TestProjects.projectMember(TestProjects.PROJECT_ID,
+				TestProjects.OWNER_USER_ID, TestProjects.OWNER_ROLE_ID);
+		final var role = TestProjects.projectRole(TestProjects.OWNER_ROLE_ID,
+				TestProjects.PROJECT_ID, ProjectRoleName.OWNER);
 		when(projectRepository.findAllByUserId(TestProjects.OWNER_USER_ID))
 				.thenReturn(List.of(project));
+		when(projectMemberRepository.findAllByUserId(TestProjects.OWNER_USER_ID))
+				.thenReturn(List.of(member));
+		when(projectRoleRepository.findAllById(List.of(TestProjects.OWNER_ROLE_ID)))
+				.thenReturn(List.of(role));
+		final var counts = mock(ProjectRepository.TicketCounts.class);
+		when(counts.getProjectId()).thenReturn(TestProjects.PROJECT_ID);
+		when(counts.getOpenTicketCount()).thenReturn(2L);
+		when(counts.getTicketCount()).thenReturn(5L);
+		when(projectRepository.countTicketsByProjectIds(List.of(TestProjects.PROJECT_ID)))
+				.thenReturn(List.of(counts));
 
 		final var response = projectService.getAllProjects(TestProjects.OWNER, false);
 
@@ -57,6 +71,9 @@ class ProjectQueryTests {
 		assertEquals(TestProjects.PROJECT_ID, response.projects().getFirst().id());
 		assertEquals("Minerva", response.projects().getFirst().name());
 		assertEquals("Ticket project", response.projects().getFirst().description());
+		assertEquals(ProjectRoleName.OWNER, response.projects().getFirst().projectRole());
+		assertEquals(2, response.projects().getFirst().openTicketCount());
+		assertEquals(5, response.projects().getFirst().ticketCount());
 	}
 
 	@Test
