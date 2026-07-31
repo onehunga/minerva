@@ -66,3 +66,9 @@ bun run type-check
 - Add a small number of targeted tests for meaningful branches, transformations, permissions, failure handling, or regressions. Include one representative negative case when it protects real behavior.
 - Do not add tests for trivial rendering, pass-through code, framework behavior, or simple getters/setters.
 - Prefer one or two focused tests for a feature over broad permutations. Reuse existing feature fixtures and repository injection instead of building parallel test infrastructure.
+
+## AI commit style
+
+- When explicitly asked to create a commit, AI-authored commits use an imperative `vibe: <concise summary>` subject.
+- Add an English commit body headed `Changes:` followed by a detailed bullet list of the implemented behavior, relevant architectural decisions, and focused verification or test coverage.
+- Keep a blank line between the subject, heading, and each bullet, matching the existing `vibe:` commits.
