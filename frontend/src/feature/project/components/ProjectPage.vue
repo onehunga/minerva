@@ -402,6 +402,7 @@ async function submitDeleteProject(): Promise<void> {
 					:is-loading="isProjectDashboardLoading"
 					:error-message="projectDashboardError"
 					:show-project-name="false"
+					:show-summary="false"
 				/>
 			</TabsContent>
 

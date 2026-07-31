@@ -7,13 +7,19 @@ import DashboardRecentTickets from "./DashboardRecentTickets.vue";
 import TicketPriorityDistributionChart from "./TicketPriorityDistributionChart.vue";
 import TicketStatusDistributionChart from "./TicketStatusDistributionChart.vue";
 
-const props = defineProps<{
-	data: DashboardResponse | null;
-	isLoading: boolean;
-	errorMessage: string;
-	showProjectName: boolean;
-	projectCount?: number;
-}>();
+const props = withDefaults(
+	defineProps<{
+		data: DashboardResponse | null;
+		isLoading: boolean;
+		errorMessage: string;
+		showProjectName: boolean;
+		projectCount?: number;
+		showSummary?: boolean;
+	}>(),
+	{
+		showSummary: true,
+	},
+);
 
 const openTicketCount = computed(
 	() =>
@@ -44,7 +50,7 @@ const openTicketCount = computed(
 		</Alert>
 
 		<template v-else-if="data != null">
-			<p class="dashboard-overview__summary">
+			<p v-if="showSummary" class="dashboard-overview__summary">
 				<template v-if="projectCount != null">
 					<strong>{{ projectCount }}</strong>
 					{{ projectCount === 1 ? "Projekt" : "Projekte" }},
