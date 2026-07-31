@@ -17,13 +17,19 @@ export default defineConfigWithVueTs(
 				"error",
 				{
 					parameter: true,
-					variableDeclaration: true,
 					propertyDeclaration: true,
 					memberVariableDeclaration: true,
-					arrowParameter: true,
 				},
 			],
-			"@typescript-eslint/explicit-function-return-type": "error",
+			"@typescript-eslint/explicit-function-return-type": "off",
+			"@typescript-eslint/explicit-module-boundary-types": [
+				"error",
+				{
+					allowDirectConstAssertionInArrowFunctions: true,
+					allowHigherOrderFunctions: true,
+					allowTypedFunctionExpressions: true,
+				},
+			],
 
 			"vue/no-unused-vars": "error",
 			"vue/no-unused-components": "error",
@@ -44,4 +50,12 @@ export default defineConfigWithVueTs(
 	...pluginOxlint.buildFromOxlintConfigFile(".oxlintrc.json"),
 
 	skipFormatting,
+
+	{
+		name: "app/shadcn-component-names",
+		files: ["src/components/ui/**/*.vue"],
+		rules: {
+			"vue/multi-word-component-names": "off",
+		},
+	},
 );

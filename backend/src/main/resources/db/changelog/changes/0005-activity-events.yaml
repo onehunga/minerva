@@ -1,0 +1,109 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0005-activity-events
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: activity_events_id_seq
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: activity_events
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: activity_events_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_activity_events
+              - column:
+                  name: type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: schema_version
+                  type: INT
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: actor_user_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_activity_events_actor_user_id
+                    references: users(id)
+              - column:
+                  name: payload_json
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: occurred_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createSequence:
+            sequenceName: activity_scopes_id_seq
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: activity_scopes
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: activity_scopes_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_activity_scopes
+              - column:
+                  name: event_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_activity_scopes_event_id
+                    references: activity_events(id)
+              - column:
+                  name: scope_type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: occurred_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: activity_scopes
+            columnNames: event_id, scope_type, scope_id
+            constraintName: uk_activity_scopes_event_scope
+        - createIndex:
+            tableName: activity_scopes
+            indexName: idx_activity_scopes_scope_occurred_at
+            columns:
+              - column:
+                  name: scope_type
+              - column:
+                  name: scope_id
+              - column:
+                  name: occurred_at
+        - createIndex:
+            tableName: activity_scopes
+            indexName: idx_activity_scopes_event_id
+            columns:
+              - column:
+                  name: event_id
+        - sql:
+            sql: ALTER TABLE activity_scopes ADD CONSTRAINT chk_activity_scopes_scope_type CHECK (scope_type IN ('PROJECT', 'TICKET'));

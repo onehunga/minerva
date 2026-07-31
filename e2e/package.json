@@ -1,0 +1,18 @@
+{
+	"name": "e2e",
+	"version": "1.0.0",
+	"private": true,
+	"scripts": {
+		"test": "./run.sh",
+		"test:ui": "docker compose --project-name minerva-e2e --file ../compose.e2e.yml up --build",
+		"format": "oxfmt playwright.config.ts tests package.json",
+		"format:check": "oxfmt playwright.config.ts tests package.json --check"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.61.1",
+		"@types/node": "^26.1.1",
+		"@types/pg": "^8.15.6",
+		"oxfmt": "^0.45.0",
+		"pg": "^8.16.3"
+	}
+}

@@ -1,0 +1,15 @@
+package de.fallstudie.minerva.backend.auth.internal.utils;
+
+import de.fallstudie.minerva.backend.auth.internal.AuthenticationFailedException;
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
+public class RequestUtils {
+	public String requireValue(String value, String message) {
+		if (value == null || value.isBlank()) {
+			throw new AuthenticationFailedException(message);
+		}
+
+		return value.trim();
+	}
+}

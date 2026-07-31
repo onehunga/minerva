@@ -1,0 +1,416 @@
+package de.fallstudie.minerva.backend.ticket.internal.service;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
+
+import de.fallstudie.minerva.backend.project.ProjectPolicies;
+import de.fallstudie.minerva.backend.ticket.internal.web.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+
+import de.fallstudie.minerva.backend.common.ResourceNotFoundException;
+import de.fallstudie.minerva.backend.common.ReadOnlyException;
+import de.fallstudie.minerva.backend.common.ValidationException;
+import de.fallstudie.minerva.backend.ticket.TicketEvent;
+import de.fallstudie.minerva.backend.ticket.TicketPriorityName;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketModel;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleModel;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketChildRuleRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketCommentRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.TicketTypeRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusModel;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowStatusRepository;
+import de.fallstudie.minerva.backend.ticket.internal.persistence.WorkflowTransitionRepository;
+import de.fallstudie.minerva.backend.user.Identity;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class TicketService {
+	private final ProjectPolicies projectPolicies;
+	private final TicketTypeRepository ticketTypeRepository;
+	private final TicketChildRuleRepository ticketChildRuleRepository;
+	private final WorkflowRepository workflowRepository;
+	private final WorkflowStatusRepository workflowStatusRepository;
+	private final WorkflowTransitionRepository workflowTransitionRepository;
+	private final TicketRepository ticketRepository;
+	private final TicketCommentRepository ticketCommentRepository;
+	private final ApplicationEventPublisher eventPublisher;
+
+	public TicketListResponse getTickets(long projectId, boolean archived) {
+		final var ticketModels = archived
+				? ticketRepository.findAllByProjectIdAndArchivedAtIsNotNullOrderByNameAsc(projectId)
+				: ticketRepository.findAllByProjectIdAndArchivedAtIsNullOrderByNameAsc(projectId);
+		final var tickets = ticketModels.parallelStream()
+				.map(t -> this.toTicketResponse(ticketModels, t)).toList();
+
+		return new TicketListResponse(tickets);
+	}
+
+	@Transactional
+	public void archiveTicket(Identity identity, long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		if (ticket.getArchivedAt() != null) {
+			return;
+		}
+
+		ticket.setArchivedAt(Instant.now());
+		ticketRepository.save(ticket);
+		ticketRepository.flush();
+		eventPublisher.publishEvent(new TicketEvent.TicketArchived(identity.userId(), projectId,
+				ticket.getId(), ticket.getName(), ticket.getAssignedTo()));
+	}
+
+	@Transactional
+	public void restoreTicket(Identity identity, long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		if (ticket.getArchivedAt() == null) {
+			return;
+		}
+
+		ticket.setArchivedAt(null);
+		ticketRepository.save(ticket);
+		ticketRepository.flush();
+		eventPublisher.publishEvent(new TicketEvent.TicketRestored(identity.userId(), projectId,
+				ticket.getId(), ticket.getName(), ticket.getAssignedTo()));
+	}
+
+	public TicketTypeListResponse getTicketTypes(long projectId) {
+		final var ticketTypes = ticketTypeRepository.findAllByProjectIdOrderByNameAsc(projectId)
+				.stream().map(ticketType -> {
+					final var children = ticketChildRuleRepository
+							.findAllByParentTicketIdOrderByIdAsc(ticketType.getId()).stream()
+							.map(TicketChildRuleModel::getChildTicketId).toList();
+					final var workflow = workflowRepository
+							.findByProjectIdAndTicketTypeId(projectId, ticketType.getId())
+							.orElse(null);
+
+					if (workflow == null) {
+						return new TicketTypeResponse(ticketType.getId(), ticketType.getName(),
+								ticketType.getDescription(), List.of(), List.of(), children);
+					}
+
+					final var states = workflowStatusRepository
+							.findAllByWorkflowIdOrderByIdAsc(workflow.getId());
+					final var stateResponses = states.stream()
+							.map(state -> new WorkflowStateResponse(state.getId(), state.getName(),
+									state.getWorkflowStatusCategory()))
+							.toList();
+					final var stateIds = states.stream().map(WorkflowStatusModel::getId).toList();
+					final var transitionResponses = stateIds.isEmpty()
+							? List.<WorkflowTransitionResponse>of()
+							: workflowTransitionRepository.findAllForWorkflowStates(stateIds)
+									.stream()
+									.map(transition -> new WorkflowTransitionResponse(
+											transition.getId(), transition.getName(),
+											transition.getFromState(), transition.getToState()))
+									.toList();
+
+					return new TicketTypeResponse(ticketType.getId(), ticketType.getName(),
+							ticketType.getDescription(), stateResponses, transitionResponses,
+							children);
+				}).toList();
+
+		return new TicketTypeListResponse(ticketTypes);
+	}
+
+	@Transactional
+	public TicketResponse createTicket(Identity identity, long projectId,
+			CreateTicketRequest request) {
+		validateCreateTicketRequest(request);
+		ensureProjectWritable(projectId);
+
+		final var ticketType = ticketTypeRepository
+				.findByIdAndProjectId(request.ticketTypeId(), projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticketart nicht gefunden"));
+		final var workflow = workflowRepository
+				.findByProjectIdAndTicketTypeId(projectId, ticketType.getId())
+				.orElseThrow(() -> new ValidationException("Ticketart hat keinen Workflow"));
+
+		workflowStatusRepository.findByIdAndWorkflowId(request.statusId(), workflow.getId())
+				.orElseThrow(() -> new ValidationException(
+						"Status gehört nicht zur ausgewählten Ticketart"));
+
+		if (request.assignedTo() != null
+				&& !projectPolicies.canBeAssigned(projectId, request.assignedTo())) {
+			throw new ValidationException("Der Nutzer kann diesem Projekt nicht zugewiesen werden");
+		}
+
+		TicketModel parentTicket = null;
+		if (request.parentTicketId() != null) {
+			parentTicket = ticketRepository
+					.findByIdAndProjectId(request.parentTicketId(), projectId)
+					.orElseThrow(() -> new ValidationException(
+							"Parent-Ticket gehört nicht zum Projekt"));
+			ensureTicketWritable(parentTicket);
+
+			ticketChildRuleRepository
+					.findByParentTicketIdAndChildTicketId(parentTicket.getTicketTypeId(),
+							ticketType.getId())
+					.orElseThrow(() -> new ValidationException(
+							"Ticketart ist als Kindticket nicht erlaubt"));
+		}
+
+		final var ticket = new TicketModel();
+		ticket.setProjectId(projectId);
+		ticket.setTicketTypeId(ticketType.getId());
+		ticket.setStatusId(request.statusId());
+		ticket.setParentTicketId(request.parentTicketId());
+		ticket.setName(request.name().trim());
+		ticket.setDescription(request.description() == null ? "" : request.description().trim());
+		ticket.setCreatedBy(identity.userId());
+		ticket.setPriority(
+				request.priority() == null ? TicketPriorityName.NORMAL : request.priority());
+		ticket.setAssignedTo(request.assignedTo());
+
+		final var savedTicket = ticketRepository.save(ticket);
+		eventPublisher.publishEvent(new TicketEvent.TicketCreated(identity.userId(), projectId,
+				savedTicket.getId(), savedTicket.getTicketTypeId(), savedTicket.getStatusId(),
+				savedTicket.getName(), savedTicket.getAssignedTo()));
+		if (parentTicket != null) {
+			eventPublisher.publishEvent(new TicketEvent.SubticketAdded(identity.userId(), projectId,
+					parentTicket.getId(), savedTicket.getId(), savedTicket.getName(),
+					parentTicket.getAssignedTo()));
+		}
+
+		// leere liste, da es keine Kinder geben kann
+		return toTicketResponse(List.of(), savedTicket);
+	}
+
+	@Transactional
+	public void deleteTicket(Identity identity, long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+
+		if (ticketRepository.existsByParentTicketId(ticket.getId())) {
+			throw new ValidationException("Ticket hat noch Kindtickets");
+		}
+
+		ticketCommentRepository.deleteAllByTicketId(ticket.getId());
+		ticketRepository.delete(ticket);
+		eventPublisher.publishEvent(new TicketEvent.TicketDeleted(identity.userId(), projectId,
+				ticket.getId(), ticket.getName(), ticket.getAssignedTo()));
+
+		log.trace("Deleted ticket with ID {} in project with ID {}", ticketId, projectId);
+	}
+
+	@Transactional
+	public void updateTicketStatus(Identity identity, long projectId, long ticketId,
+			UpdateTicketStatusRequest request) {
+		validateUpdateTicketStatusRequest(request);
+
+		final var ticket = findWritableTicket(projectId, ticketId);
+		final var workflow = workflowRepository
+				.findByProjectIdAndTicketTypeId(projectId, ticket.getTicketTypeId())
+				.orElseThrow(() -> new ValidationException("Ticketart hat keinen Workflow"));
+		final var transition = workflowTransitionRepository.findById(request.transitionId())
+				.orElseThrow(() -> new ValidationException("Statusübergang nicht gefunden"));
+
+		final var previousStatus = workflowStatusRepository
+				.findByIdAndWorkflowId(ticket.getStatusId(), workflow.getId())
+				.orElseThrow(() -> new ValidationException(
+						"Aktueller Status gehört nicht zur Ticketart"));
+
+		if (transition.getFromState() != null
+				&& transition.getFromState() != ticket.getStatusId()) {
+			throw new ValidationException(
+					"Statusübergang ist für den aktuellen Status nicht erlaubt");
+		}
+
+		final var targetStatus = workflowStatusRepository
+				.findByIdAndWorkflowId(transition.getToState(), workflow.getId()).orElseThrow(
+						() -> new ValidationException("Zielstatus gehört nicht zur Ticketart"));
+
+		ticket.setStatusId(transition.getToState());
+		ticketRepository.save(ticket);
+		eventPublisher.publishEvent(new TicketEvent.StatusChanged(identity.userId(), projectId,
+				ticket.getId(), previousStatus.getId(), previousStatus.getName(),
+				targetStatus.getId(), targetStatus.getName(), transition.getId(),
+				transition.getName(), ticket.getAssignedTo()));
+	}
+
+	@Transactional
+	public void updateTicketDetails(Identity identity, long projectId, long ticketId,
+			UpdateTicketDetailsRequest request) {
+		validateUpdateTicketDetailsRequest(request);
+
+		final var ticket = findWritableTicket(projectId, ticketId);
+		final var newName = request.name().trim();
+		final var newDescription = request.description() == null
+				? ""
+				: request.description().trim();
+		final var previousName = ticket.getName();
+		final var previousDescription = ticket.getDescription();
+
+		ticket.setName(newName);
+		ticket.setDescription(newDescription);
+		ticketRepository.save(ticket);
+		if (!previousName.equals(newName) || !previousDescription.equals(newDescription)) {
+			eventPublisher.publishEvent(new TicketEvent.DetailsUpdated(identity.userId(), projectId,
+					ticket.getId(), previousName, newName, previousDescription, newDescription,
+					ticket.getAssignedTo()));
+		}
+	}
+
+	@Transactional
+	public void updateTicketPriority(Identity identity, long projectId, long ticketId,
+			UpdateTicketPriorityRequest request) {
+		validateUpdateTicketPriorityRequest(request);
+
+		final var ticket = findWritableTicket(projectId, ticketId);
+
+		final var previousPriority = ticket.getPriority();
+		ticket.setPriority(request.priority());
+		ticketRepository.save(ticket);
+		if (previousPriority != request.priority()) {
+			eventPublisher.publishEvent(
+					new TicketEvent.PriorityChanged(identity.userId(), projectId, ticket.getId(),
+							previousPriority, request.priority(), ticket.getAssignedTo()));
+		}
+	}
+
+	@Transactional
+	public void updateTicketAssignee(Identity identity, long projectId, long ticketId,
+			UpdateTicketAssigneeRequest request) {
+		validateUpdateTicketAssigneeRequest(request);
+
+		final var ticket = findWritableTicket(projectId, ticketId);
+		final var previousAssigneeId = ticket.getAssignedTo();
+
+		if (request.assignedTo() != null) {
+			if (!this.projectPolicies.canBeAssigned(projectId, request.assignedTo())) {
+				throw new ValidationException(
+						"Der Nutzer kann diesem Projekt nicht zugewiesen werden");
+			}
+		}
+
+		ticket.setAssignedTo(request.assignedTo());
+		ticketRepository.save(ticket);
+		if (!Objects.equals(previousAssigneeId, request.assignedTo())) {
+			eventPublisher.publishEvent(new TicketEvent.AssigneeChanged(identity.userId(),
+					projectId, ticket.getId(), previousAssigneeId, request.assignedTo()));
+		}
+	}
+
+	private TicketResponse toTicketResponse(List<TicketModel> list, TicketModel ticket) {
+		final var children = list.stream().filter(t -> t.getParentTicketId() != null)
+				.filter(t -> t.getParentTicketId() == ticket.getId())
+				.map(t -> new TicketChildResponse(t.getId(), t.getName(), t.getDescription()))
+				.toList();
+
+		return new TicketResponse(ticket.getId(), ticket.getProjectId(), ticket.getTicketTypeId(),
+				ticket.getStatusId(), ticket.getPriority(), ticket.getParentTicketId(),
+				ticket.getName(), ticket.getDescription(), children, ticket.getCreatedBy(),
+				ticket.getAssignedTo(), ticket.getCreatedAt(), ticket.getUpdatedAt(),
+				ticket.getArchivedAt() != null);
+	}
+
+	private TicketModel findWritableTicket(long projectId, long ticketId) {
+		ensureProjectWritable(projectId);
+		final var ticket = ticketRepository.findByIdAndProjectId(ticketId, projectId)
+				.orElseThrow(() -> new ResourceNotFoundException("Ticket nicht gefunden"));
+		ensureTicketWritable(ticket);
+		return ticket;
+	}
+
+	private void ensureTicketWritable(TicketModel ticket) {
+		if (ticket.getArchivedAt() != null) {
+			throw new ReadOnlyException("Archivierte Tickets sind schreibgeschützt");
+		}
+	}
+
+	private void ensureProjectWritable(long projectId) {
+		if (projectPolicies.isArchived(projectId)) {
+			throw new ReadOnlyException("Archivierte Projekte sind schreibgeschützt");
+		}
+	}
+
+	private void validateCreateTicketRequest(CreateTicketRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Ticket muss einen Namen haben");
+		}
+
+		if (request.name().length() > 255) {
+			throw new ValidationException("Ticketname darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.description() != null && request.description().length() > 255) {
+			throw new ValidationException("Ticketbeschreibung darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.ticketTypeId() <= 0) {
+			throw new ValidationException("Ticketart ist erforderlich");
+		}
+
+		if (request.statusId() <= 0) {
+			throw new ValidationException("Status ist erforderlich");
+		}
+
+		if (request.parentTicketId() != null && request.parentTicketId() <= 0) {
+			throw new ValidationException("Parent-Ticket ist ungültig");
+		}
+
+		if (request.assignedTo() != null && request.assignedTo() <= 0) {
+			throw new ValidationException("Bearbeiter ist ungültig");
+		}
+	}
+
+	private void validateUpdateTicketStatusRequest(UpdateTicketStatusRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.transitionId() <= 0) {
+			throw new ValidationException("Statusübergang ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketPriorityRequest(UpdateTicketPriorityRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.priority() == null) {
+			throw new ValidationException("Priorität ist erforderlich");
+		}
+	}
+
+	private void validateUpdateTicketDetailsRequest(UpdateTicketDetailsRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+
+		if (request.name() == null || request.name().isBlank()) {
+			throw new ValidationException("Ticket muss einen Namen haben");
+		}
+
+		if (request.name().length() > 255) {
+			throw new ValidationException("Ticketname darf maximal 255 Zeichen lang sein");
+		}
+
+		if (request.description() != null && request.description().length() > 255) {
+			throw new ValidationException("Ticketbeschreibung darf maximal 255 Zeichen lang sein");
+		}
+	}
+
+	private void validateUpdateTicketAssigneeRequest(UpdateTicketAssigneeRequest request) {
+		if (request == null) {
+			throw new IllegalArgumentException("Request must not be null");
+		}
+	}
+}

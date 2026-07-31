@@ -1,0 +1,194 @@
+databaseChangeLog:
+  - changeSet:
+      id: sequence-users
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: users_id_seq
+            incrementBy: 1
+            startValue: 1
+  - changeSet:
+      id: sequence-refresh-tokens
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: refresh_tokens_id_seq
+            incrementBy: 1
+            startValue: 1
+  - changeSet:
+      id: sequence-workspace-roles
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: workspace_roles_id_seq
+            incrementBy: 1
+            startValue: 1
+  - changeSet:
+      id: 1778689677087-1
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: refresh_tokens
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: refresh_tokens_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_refresh_tokens
+              - column:
+                  name: user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: VARCHAR(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: DATETIME
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: DATETIME
+                  constraints:
+                    nullable: false
+  - changeSet:
+      id: 1778689677087-2
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            tableName: users
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: users_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_users
+              - column:
+                  name: username
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: password
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: workspace_role_id
+                  type: BIGINT
+  - changeSet:
+      id: 1778689677087-3
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            tableName: refresh_tokens
+            columnNames: token_hash
+            constraintName: uc_refresh_tokens_token_hash
+  - changeSet:
+      id: 1778689677087-4
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            tableName: users
+            columnNames: username
+            constraintName: uc_users_username
+  - changeSet:
+      id: 1778689677087-5
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: user_id
+            baseTableName: refresh_tokens
+            constraintName: FK_REFRESH_TOKENS_ON_USER
+            referencedColumnNames: id
+            referencedTableName: users
+            onDelete: CASCADE
+  - changeSet:
+      id: 1778757202712-4
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createTable:
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: workspace_roles_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_workspace_roles
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+            tableName: workspace_roles
+  - changeSet:
+      id: 1778757202712-5
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addUniqueConstraint:
+            tableName: workspace_roles
+            columnNames: name
+            constraintName: uc_workspace_roles_name
+  - changeSet:
+      id: 1778757202712-6
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - sql:
+            sql: ALTER TABLE workspace_roles ADD CONSTRAINT chk_workspace_roles_name CHECK (name IN ('ADMIN', 'USER'))
+  - changeSet:
+      id: 1778757202712-7
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - insert:
+            tableName: workspace_roles
+            columns:
+              - column:
+                  name: id
+                  valueComputed: nextval('workspace_roles_id_seq')
+              - column:
+                  name: name
+                  value: ADMIN
+        - insert:
+            tableName: workspace_roles
+            columns:
+              - column:
+                  name: id
+                  valueComputed: nextval('workspace_roles_id_seq')
+              - column:
+                  name: name
+                  value: USER
+  - changeSet:
+      id: 1778757202712-8
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: workspace_role_id
+            baseTableName: users
+            constraintName: FK_USERS_ON_WORKSPACE_ROLE
+            referencedColumnNames: id
+            referencedTableName: workspace_roles

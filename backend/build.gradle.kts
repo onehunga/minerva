@@ -27,8 +27,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security-oauth2-resource-server")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
-    implementation("org.springframework.modulith:spring-modulith-starter-jpa")
+//    implementation("org.springframework.modulith:spring-modulith-starter-jpa")
+    implementation("io.jsonwebtoken:jjwt-api:0.13.0")
+    implementation("org.springframework.boot:spring-boot-starter-liquibase")
     compileOnly("org.projectlombok:lombok")
+    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.13.0")
+    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.13.0")
     runtimeOnly("org.postgresql:postgresql")
     annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     annotationProcessor("org.projectlombok:lombok")
@@ -37,9 +41,8 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-security-test")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
-    testCompileOnly("org.projectlombok:lombok")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-    testAnnotationProcessor("org.projectlombok:lombok")
+    testRuntimeOnly("com.h2database:h2")
 }
 
 dependencyManagement {
@@ -58,6 +61,7 @@ spotless {
             org.eclipse.jdt.core.formatter.tabulation.size=4
             org.eclipse.jdt.core.formatter.indentation.size=4
             org.eclipse.jdt.core.formatter.lineSplit=100
+            org.eclipse.jdt.core.formatter.alignment_for_enum_constants=49
             """.trimIndent(),
         )
 

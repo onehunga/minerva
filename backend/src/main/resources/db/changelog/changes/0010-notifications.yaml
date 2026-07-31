@@ -1,0 +1,57 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0010-notifications
+      author: julian
+      objectQuotingStrategy: QUOTE_ONLY_RESERVED_WORDS
+      changes:
+        - createSequence:
+            sequenceName: notifications_id_seq
+            startValue: 1
+            incrementBy: 1
+        - createTable:
+            tableName: notifications
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  defaultValueSequenceNext: notifications_id_seq
+                  constraints:
+                    nullable: false
+                    primaryKey: true
+                    primaryKeyName: pk_notifications
+              - column:
+                  name: recipient_user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_notifications_recipient_user_id
+                    references: users(id)
+              - column:
+                  name: type
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload_json
+                  type: TEXT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: read_at
+                  type: TIMESTAMP
+        - createIndex:
+            tableName: notifications
+            indexName: idx_notifications_recipient_created_at
+            columns:
+              - column:
+                  name: recipient_user_id
+              - column:
+                  name: created_at
+              - column:
+                  name: id
