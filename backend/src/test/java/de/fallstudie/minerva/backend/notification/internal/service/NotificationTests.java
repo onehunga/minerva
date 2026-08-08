@@ -4,6 +4,7 @@ import de.fallstudie.minerva.backend.notification.internal.Notification;
 import de.fallstudie.minerva.backend.notification.internal.NotificationType;
 import de.fallstudie.minerva.backend.notification.internal.persistence.NotificationModel;
 import de.fallstudie.minerva.backend.notification.internal.persistence.NotificationRepository;
+import de.fallstudie.minerva.backend.realtime.UserEventStream;
 import de.fallstudie.minerva.backend.testsupport.TestProjects;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ class NotificationTests {
 	@Test
 	void assigneeChangeCreatesNotificationsWithTheCompleteChangeForBothUsers() {
 		final var notificationService = Mockito.mock(NotificationService.class);
-		final var handler = new NotificationEventHandler(notificationService);
+		final var userEventStream = Mockito.mock(UserEventStream.class);
+		final var handler = new NotificationEventHandler(notificationService, userEventStream);
 		final var event = new TicketEvent.AssigneeChanged(TestProjects.OWNER_USER_ID,
 				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID,
 				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.VIEWER_USER_ID);
@@ -43,6 +45,21 @@ class NotificationTests {
 	}
 
 	@Test
+	void createdNotificationsInvalidateTheNotificationDataOfTheirRecipient() {
+		final var notificationService = Mockito.mock(NotificationService.class);
+		final var userEventStream = Mockito.mock(UserEventStream.class);
+		final var handler = new NotificationEventHandler(notificationService, userEventStream);
+		when(notificationService.saveAll(Mockito.any()))
+				.thenReturn(List.of(TestProjects.VIEWER_USER_ID));
+
+		handler.on(new TicketEvent.TicketCreated(TestProjects.OWNER_USER_ID,
+				TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID, 1L, 1L, "Ticket",
+				TestProjects.VIEWER_USER_ID));
+
+		verify(userEventStream).invalidate(TestProjects.VIEWER_USER_ID, "notifications");
+	}
+
+	@Test
 	@SuppressWarnings("unchecked")
 	void serviceStoresTheNotificationTypeAndAdtAsJson() throws JacksonException {
 		final var repository = Mockito.mock(NotificationRepository.class);
@@ -52,8 +69,10 @@ class NotificationTests {
 				TestProjects.OWNER_USER_ID, TestProjects.PROJECT_ID, TestProjects.CHILD_TICKET_ID,
 				TestProjects.CONTRIBUTOR_USER_ID, TestProjects.VIEWER_USER_ID);
 
-		service.saveAll(List.of(notification));
+		when(repository.saveAll(Mockito.any())).thenAnswer(invocation -> invocation.getArgument(0));
+		final var recipientUserIds = service.saveAll(List.of(notification));
 
+		assertEquals(List.of(TestProjects.VIEWER_USER_ID), recipientUserIds);
 		final var modelsCaptor = ArgumentCaptor.forClass(List.class);
 		verify(repository).saveAll(modelsCaptor.capture());
 		final var model = ((List<NotificationModel>) modelsCaptor.getValue()).getFirst();

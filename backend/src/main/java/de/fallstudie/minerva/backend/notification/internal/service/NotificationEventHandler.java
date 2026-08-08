@@ -2,6 +2,7 @@ package de.fallstudie.minerva.backend.notification.internal.service;
 
 import de.fallstudie.minerva.backend.notification.internal.Notification;
 import de.fallstudie.minerva.backend.project.ProjectEvent;
+import de.fallstudie.minerva.backend.realtime.UserEventStream;
 import de.fallstudie.minerva.backend.ticket.TicketEvent;
 import de.fallstudie.minerva.backend.user.UserEvent;
 import lombok.RequiredArgsConstructor;
@@ -17,23 +18,32 @@ import java.util.function.LongFunction;
 @RequiredArgsConstructor
 public class NotificationEventHandler {
 	private final NotificationService notificationService;
+	private final UserEventStream userEventStream;
 
 	@Async
 	@TransactionalEventListener
 	public void on(TicketEvent event) {
-		notificationService.saveAll(map(event));
+		publish(notificationService.saveAll(map(event)));
 	}
 
 	@Async
 	@TransactionalEventListener
 	public void on(ProjectEvent event) {
-		notificationService.saveAll(map(event));
+		publish(notificationService.saveAll(map(event)));
 	}
 
 	@Async
 	@TransactionalEventListener
 	public void on(UserEvent event) {
-		notificationService.saveAll(map(event));
+		publish(notificationService.saveAll(map(event)));
+	}
+
+	private void publish(List<Long> recipientUserIds) {
+		// saveAll has completed its transaction before this asynchronous listener
+		// sends live data. The REST endpoint can therefore always retrieve the
+		// notifications a client is asked to refetch.
+		recipientUserIds.stream().distinct().forEach(
+				recipientUserId -> userEventStream.invalidate(recipientUserId, "notifications"));
 	}
 
 	private List<Notification> map(TicketEvent event) {

@@ -7,6 +7,7 @@ import { TicketRepository, TicketRepositoryKey } from "@/feature/ticket";
 import { ActivityRepository, ActivityRepositoryKey } from "@/feature/activity";
 import { DashboardRepository, DashboardRepositoryKey } from "@/feature/dashboard";
 import { NotificationRepository, NotificationRepositoryKey } from "@/feature/notification";
+import { initializeRealtime } from "@/realtime/initialize-realtime";
 
 import App from "./App.vue";
 import router from "./router";
@@ -27,5 +28,7 @@ app.provide(ActivityRepositoryKey, new ActivityRepository());
 app.provide(UserRepositoryKey, new UserRepository());
 app.provide(DashboardRepositoryKey, new DashboardRepository());
 app.provide(NotificationRepositoryKey, new NotificationRepository());
+
+initializeRealtime();
 
 app.mount("#app");

@@ -23,14 +23,16 @@ public class NotificationService {
 	private final ObjectMapper objectMapper;
 
 	@Transactional
-	public void saveAll(List<Notification> notifications) {
+	public List<Long> saveAll(List<Notification> notifications) {
 		if (notifications.isEmpty()) {
-			return;
+			return List.of();
 		}
 
 		final var createdAt = Instant.now();
-		notificationRepository.saveAll(notifications.stream()
-				.map(notification -> toModel(notification, createdAt)).toList());
+		return notificationRepository
+				.saveAll(notifications.stream()
+						.map(notification -> toModel(notification, createdAt)).toList())
+				.stream().map(NotificationModel::getRecipientUserId).toList();
 	}
 
 	public NotificationListResponse getAll(long recipientUserId) {
